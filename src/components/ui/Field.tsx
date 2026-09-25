@@ -2,10 +2,10 @@ import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "rea
 
 export function Label({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="block space-y-1">
-      <span className="text-sm font-medium text-ink">{title}</span>
-      {hint && <span className="block text-xs text-ink-dim">{hint}</span>}
-      {children}
+    <label className="block">
+      <span className="block text-sm font-medium">{title}</span>
+      {hint && <span className="mt-0.5 block text-sm text-muted">{hint}</span>}
+      <span className="mt-2 block">{children}</span>
     </label>
   );
 }
@@ -15,5 +15,5 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={4} {...props} className={`field font-mono text-sm leading-relaxed ${props.className ?? ""}`} />;
+  return <textarea rows={4} {...props} className={`field leading-relaxed ${props.className ?? ""}`} />;
 }

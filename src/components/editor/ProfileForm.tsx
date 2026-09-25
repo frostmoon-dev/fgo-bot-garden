@@ -9,7 +9,9 @@ import { Label, TextArea, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 
-const TEXT_FIELDS: { key: keyof CharacterProfileInput; title: string; hint?: string; rows?: number }[] = [
+type TextField = { key: keyof CharacterProfileInput; title: string; hint?: string; rows?: number };
+
+const TEXT_FIELDS: TextField[] = [
   { key: "description", title: "Description", hint: "Appearance and who they are." },
   { key: "personality", title: "Personality" },
   { key: "speechStyle", title: "Speech style", hint: "How they talk: verbal tics, formality, favourite words." },
@@ -25,10 +27,20 @@ const TEXT_FIELDS: { key: keyof CharacterProfileInput; title: string; hint?: str
   {
     key: "exampleDialogues",
     title: "Example dialogues",
-    hint: "Short samples in the tag format. They teach the model the voice.",
+    hint: "A few short exchanges.",
     rows: 8,
   },
 ];
+
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-line py-10 first:border-t-0 first:pt-0">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
+      <div className="mt-6 space-y-8">{children}</div>
+    </section>
+  );
+}
 
 function toInput(c: CharacterView): CharacterProfileInput {
   return {
@@ -67,9 +79,17 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
     });
   }
 
+  const field = (f: TextField) => (
+    <Label key={f.key} title={f.title} hint={f.hint}>
+      <TextArea rows={f.rows ?? 4} value={form[f.key] as string} onChange={(e) => set(f.key, e.target.value as never)} />
+    </Label>
+  );
+  const byKey = (...keys: (keyof CharacterProfileInput)[]) => TEXT_FIELDS.filter((f) => keys.includes(f.key)).map(field);
+
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+    <div className="max-w-3xl">
+      <Section title="Identity">
+      <div className="grid gap-6 sm:grid-cols-[1fr_auto]">
         <Label title="Name">
           <TextInput value={form.name} onChange={(e) => set("name", e.target.value)} maxLength={80} />
         </Label>
@@ -78,14 +98,16 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
             type="color"
             value={form.color}
             onChange={(e) => set("color", e.target.value)}
-            className="h-10 w-20 cursor-pointer rounded border border-night-3 bg-night"
+            className="h-11 w-20 cursor-pointer rounded-lg border border-line bg-canvas p-1"
           />
         </Label>
       </div>
       <Label title="Other names" hint="Comma separated. The AI may use these in [Name|…] tags.">
         <TextInput value={aliases} onChange={(e) => { setSaved(false); setAliases(e.target.value); }} placeholder="BB-chan, Kouhai" />
       </Label>
-      <div className="grid gap-4 sm:grid-cols-2">
+      </Section>
+      <Section title="Stage defaults">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Label title="Default sprite set">
           <select
             className="field"
@@ -115,20 +137,17 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
           </select>
         </Label>
       </div>
-      {TEXT_FIELDS.map((f) => (
-        <Label key={f.key} title={f.title} hint={f.hint}>
-          <TextArea
-            rows={f.rows ?? 4}
-            value={form[f.key] as string}
-            onChange={(e) => set(f.key, e.target.value as never)}
-          />
-        </Label>
-      ))}
-      <div className="sticky bottom-0 flex items-center gap-3 border-t border-night-3 bg-night/95 py-3">
+      </Section>
+      <Section title="Character">{byKey("description", "personality", "speechStyle", "lore")}</Section>
+      <Section title="Story">{byKey("relationship", "scenario")}</Section>
+      <Section title="Writing samples" hint="Written in the tag format. They teach the model the voice.">
+        {byKey("greeting", "exampleDialogues")}
+      </Section>
+      <div className="sticky bottom-0 mt-10 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending}>
           {pending ? "Saving…" : "Save profile"}
         </Button>
-        {saved && <span className="text-sm text-ink-dim">Saved.</span>}
+        {saved && <span className="text-sm text-muted">Saved</span>}
         <ErrorText error={error} />
       </div>
     </div>

@@ -1,17 +1,16 @@
 import { CharacterGallery } from "@/components/home/CharacterGallery";
 import { SessionList } from "@/components/home/SessionList";
+import { PageHeader, SectionTitle } from "@/components/ui/PageHeader";
 import { listCharacters, listSessions } from "@/lib/data/queries";
 
 export default async function HomePage() {
   const [characters, sessions] = await Promise.all([listCharacters(), listSessions()]);
   return (
-    <div className="space-y-10">
-      <section className="space-y-4">
-        <h1 className="font-display text-2xl text-gold">Choose a Servant</h1>
-        <CharacterGallery characters={characters} />
-      </section>
-      <section className="space-y-4">
-        <h2 className="font-display text-xl text-gold">Continue</h2>
+    <>
+      <PageHeader title="Choose a Servant" description="Start a new story, or continue one below." />
+      <CharacterGallery characters={characters} />
+      <section className="mt-16">
+        <SectionTitle>Continue a story</SectionTitle>
         <SessionList
           sessions={sessions.map((s) => ({
             id: s.id,
@@ -24,6 +23,6 @@ export default async function HomePage() {
           }))}
         />
       </section>
-    </div>
+    </>
   );
 }

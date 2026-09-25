@@ -26,14 +26,14 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
   };
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-ink-dim">
+    <div className="max-w-4xl space-y-8">
+      <p className="max-w-2xl text-muted">
         The AI picks an expression id for every line. The description tells it when to use it, for example
-        <span className="text-ink"> smirk — mocking, pleased with herself</span>. Assign face cells in the Sprites tab.
+        <span className="text-ink"> smirk — teasing, pleased with herself</span>. Assign face cells in the Sprites tab.
       </p>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {rows.map((r, i) => (
-          <li key={r.id ?? `new-${i}`} className="grid gap-2 rounded-md border border-night-3 p-2 sm:grid-cols-[10rem_10rem_1fr_auto]">
+          <li key={r.id ?? `new-${i}`} className="card grid gap-3 p-3 sm:grid-cols-[10rem_10rem_1fr_auto]">
             <input
               className="field font-mono text-sm"
               value={r.key}
@@ -63,7 +63,7 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4 border-t border-line pt-6">
         <Button onClick={() => setRows((rs) => [...rs, { key: "", label: "", description: "" }])}>Add expression</Button>
         <Button
           variant="primary"
@@ -77,7 +77,7 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
         >
           {pending ? "Saving…" : "Save expressions"}
         </Button>
-        {saved && <span className="text-sm text-ink-dim">Saved.</span>}
+        {saved && <span className="text-sm text-muted">Saved</span>}
         <ErrorText error={error} />
       </div>
     </div>

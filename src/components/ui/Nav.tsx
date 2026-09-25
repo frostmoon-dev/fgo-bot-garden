@@ -26,30 +26,33 @@ export function Nav() {
   const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-night-3 bg-night/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <Link href="/" className="font-display text-lg tracking-wide text-gold">
+    <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5 sm:px-8">
+        <Link href="/" className="font-semibold tracking-tight">
           Bot Garden
         </Link>
         <button
-          className="ml-auto rounded border border-night-3 px-2 py-1 text-sm md:hidden"
+          className="ml-auto min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          Menu
+          {open ? "Close" : "Menu"}
         </button>
-        <nav className={`${open ? "flex" : "hidden"} absolute inset-x-0 top-full flex-col gap-1 border-b border-night-3 bg-night p-3 md:static md:ml-auto md:flex md:flex-row md:border-0 md:bg-transparent md:p-0`}>
+        <nav
+          className={`${open ? "flex" : "hidden"} absolute inset-x-0 top-full flex-col gap-1 border-b border-line bg-canvas px-5 py-4 md:static md:ml-auto md:flex md:flex-row md:items-center md:border-0 md:bg-transparent md:p-0`}
+        >
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`rounded px-2.5 py-1.5 text-sm ${active(l.href) ? "bg-night-3 text-gold" : "text-ink-dim hover:text-ink"}`}
+              aria-current={active(l.href) ? "page" : undefined}
+              className={`rounded-lg px-3 py-2.5 text-sm md:py-2 ${active(l.href) ? "bg-raised text-ink" : "text-muted hover:text-ink"}`}
             >
               {l.label}
             </Link>
           ))}
-          <button onClick={logout} className="rounded px-2.5 py-1.5 text-left text-sm text-ink-dim hover:text-danger">
+          <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm text-muted hover:text-ink md:ml-2 md:py-2">
             Log out
           </button>
         </nav>

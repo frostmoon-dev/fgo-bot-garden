@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { activeContent, type MessageView } from "@/lib/types";
+import { ColorDot } from "@/components/ui/ColorDot";
 import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
 
@@ -16,13 +17,13 @@ function MessageBlock({ message }: { message: MessageView }) {
 
   if (editing) {
     return (
-      <div className="space-y-2 rounded-md border border-gold-dim p-3">
-        <p className="text-xs text-ink-dim">Raw text. Use the tag format for AI lines.</p>
+      <div className="card my-3 space-y-3 p-4">
+        <p className="text-sm text-muted">Raw text. AI lines use the tag format, for example [BB|smirk] Hello.</p>
         <textarea className="field min-h-40 font-mono text-sm" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded bg-gold px-3 py-1 text-sm font-semibold text-night"
+            className="min-h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent"
             onClick={() => {
               editMessage(message.id, draft);
               setEditing(false);
@@ -30,7 +31,7 @@ function MessageBlock({ message }: { message: MessageView }) {
           >
             Save
           </button>
-          <button type="button" className="rounded border border-night-3 px-3 py-1 text-sm" onClick={() => setEditing(false)}>
+          <button type="button" className="min-h-10 rounded-lg px-4 text-sm text-muted hover:bg-raised" onClick={() => setEditing(false)}>
             Cancel
           </button>
         </div>
@@ -39,31 +40,29 @@ function MessageBlock({ message }: { message: MessageView }) {
   }
 
   return (
-    <div className="group rounded-md border border-transparent p-2 hover:border-night-3">
-      {lines.length === 0 && <p className="text-sm italic text-ink-dim">(no visible lines)</p>}
+    <div className="group border-b border-line py-4 last:border-b-0">
+      {lines.length === 0 && <p className="text-sm italic text-muted">(no visible lines)</p>}
       {lines.map((b) => (
-        <p key={b.key} className={`text-sm leading-relaxed ${b.kind === "narration" ? "italic text-ink-dim" : ""}`}>
+        <p key={b.key} className={`leading-relaxed [&+p]:mt-2 ${b.kind === "narration" ? "italic text-muted" : ""}`}>
           {b.speakerName && (
-            <span
-              className="mr-2 font-display"
-              style={{ color: b.kind === "user" ? "var(--ink-dim)" : (b.speakerId && characters[b.speakerId]?.color) || "var(--gold)" }}
-            >
+            <span className="mr-2 inline-flex items-center gap-1.5 font-semibold">
+              {b.kind !== "user" && b.speakerId && characters[b.speakerId] && <ColorDot color={characters[b.speakerId].color} />}
               {b.speakerName}
             </span>
           )}
           {b.text}
         </p>
       ))}
-      <div className="mt-1 flex gap-3 text-xs text-ink-dim sm:opacity-0 sm:group-hover:opacity-100">
+      <div className="mt-2 flex items-center gap-1 text-sm text-muted sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
         {message.variants.length > 1 && (
-          <span>
+          <span className="mr-2">
             version {message.activeVariant + 1}/{message.variants.length}
           </span>
         )}
         <button
           type="button"
           disabled={streaming}
-          className="hover:text-gold disabled:opacity-40"
+          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
           onClick={() => {
             setDraft(activeContent(message));
             setEditing(true);
@@ -74,7 +73,7 @@ function MessageBlock({ message }: { message: MessageView }) {
         <button
           type="button"
           disabled={streaming}
-          className="hover:text-danger disabled:opacity-40"
+          className="min-h-9 rounded-lg px-2 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
           onClick={() => {
             if (confirm("Delete this message?")) deleteMessage(message.id);
           }}
@@ -92,8 +91,8 @@ export function BacklogPanel() {
   useEffect(() => endRef.current?.scrollIntoView(), []);
   return (
     <PanelShell title="Backlog">
-      <div className="space-y-1">
-        {messages.length === 0 && <p className="text-sm text-ink-dim">Nothing yet.</p>}
+      <div>
+        {messages.length === 0 && <p className="text-sm text-muted">Nothing yet.</p>}
         {messages.map((m) => (
           <MessageBlock key={m.id} message={m} />
         ))}

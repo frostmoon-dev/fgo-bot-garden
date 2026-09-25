@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { ColorDot } from "@/components/ui/ColorDot";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 import { ExpressionEditor } from "./ExpressionEditor";
 import { ManageTab } from "./ManageTab";
@@ -13,21 +15,22 @@ type Tab = (typeof TABS)[number];
 export function CharacterEditor({ character, backgrounds }: { character: CharacterView; backgrounds: BackgroundView[] }) {
   const [tab, setTab] = useState<Tab>("Profile");
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <span className="size-3 rounded-full" style={{ background: character.color }} />
-        <h1 className="font-display text-2xl" style={{ color: character.color }}>
-          {character.name}
-        </h1>
-      </div>
-      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-night-3">
+    <div>
+      <Link href="/characters" className="text-sm text-muted hover:text-ink">
+        ← Characters
+      </Link>
+      <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight">
+        <ColorDot color={character.color} className="size-3.5" />
+        {character.name}
+      </h1>
+      <div role="tablist" className="mb-10 mt-8 flex gap-2 overflow-x-auto border-b border-line">
         {TABS.map((t) => (
           <button
             key={t}
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === t ? "border-gold text-gold" : "border-transparent text-ink-dim hover:text-ink"}`}
+            className={`-mb-px min-h-11 border-b-2 px-3 text-sm ${tab === t ? "border-accent font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
           >
             {t}
           </button>

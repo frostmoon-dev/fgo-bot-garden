@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Mode } from "@/lib/parser/types";
+import { ColorDot } from "@/components/ui/ColorDot";
 import { PanelShell } from "./PanelShell";
 import { usePlay } from "./usePlay";
 
@@ -22,20 +23,21 @@ function CastManager() {
     setCast(session.cast.map((c) => (c.characterId === id ? { ...c, spriteSetId } : c)));
 
   return (
-    <ul className="space-y-2">
+    <ul className="divide-y divide-line">
       {all.map((c) => {
         const entry = session.cast.find((x) => x.characterId === c.id);
         const isMain = c.id === session.mainCharacterId;
         return (
-          <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-md border border-night-3 p-2">
-            <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-              <input type="checkbox" checked={!!entry} disabled={isMain} onChange={(e) => toggle(c.id, e.target.checked)} />
-              <span style={{ color: c.color }}>{c.name}</span>
-              {isMain && <span className="text-xs text-ink-dim">(main)</span>}
+          <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
+            <label className="flex min-h-10 min-w-0 flex-1 items-center gap-3">
+              <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={!!entry} disabled={isMain} onChange={(e) => toggle(c.id, e.target.checked)} />
+              <ColorDot color={c.color} />
+              <span>{c.name}</span>
+              {isMain && <span className="text-sm text-muted">main</span>}
             </label>
             {entry && c.spriteSets.length > 0 && (
               <select
-                className="field w-auto py-1 text-sm"
+                className="field w-auto text-sm"
                 value={entry.spriteSetId ?? ""}
                 onChange={(e) => setSprite(c.id, e.target.value || null)}
                 aria-label={`${c.name} sprite set`}
@@ -63,14 +65,14 @@ export function MenuPanel() {
 
   return (
     <PanelShell title="Menu">
-      <div className="space-y-6">
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium">Title</h3>
+      <div className="divide-y divide-line [&>section]:py-6 [&>section:first-child]:pt-2">
+        <section>
+          <h3 className="mb-3 font-medium">Title</h3>
           <div className="flex gap-2">
             <input className="field" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
             <button
               type="button"
-              className="rounded border border-night-3 px-3 text-sm hover:border-gold"
+              className="min-h-10 rounded-lg border border-line bg-raised px-4 text-sm disabled:opacity-40"
               disabled={!title.trim() || title === session.title}
               onClick={() => patchSession({ title: title.trim() })}
             >
@@ -79,8 +81,8 @@ export function MenuPanel() {
           </div>
         </section>
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium">Mode</h3>
+        <section>
+          <h3 className="mb-3 font-medium">Mode</h3>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -92,17 +94,17 @@ export function MenuPanel() {
                 key={mode}
                 type="button"
                 onClick={() => patchSession({ mode })}
-                className={`rounded-md border p-3 text-left ${session.mode === mode ? "border-gold bg-gold/10" : "border-night-3 hover:border-gold-dim"}`}
+                className={`rounded-xl border p-4 text-left ${session.mode === mode ? "border-accent bg-accent-soft" : "border-line hover:border-muted"}`}
               >
-                <span className="block text-sm font-medium">{label}</span>
-                <span className="block text-xs text-ink-dim">{hint}</span>
+                <span className="block font-medium">{label}</span>
+                <span className="mt-1 block text-sm text-muted">{hint}</span>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium">Starting background</h3>
+        <section>
+          <h3 className="mb-3 font-medium">Starting background</h3>
           <select
             className="field"
             value={session.backgroundId ?? ""}
@@ -118,23 +120,23 @@ export function MenuPanel() {
         </section>
 
         {session.mode === "narrative" && (
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium">Cast</h3>
-            <p className="text-xs text-ink-dim">Characters the AI may bring on stage. Their definitions are sent with every message.</p>
+          <section>
+            <h3 className="font-medium">Cast</h3>
+            <p className="mb-2 mt-1 text-sm text-muted">Characters the AI may bring on stage. Their definitions are sent with every message.</p>
             <CastManager />
           </section>
         )}
 
         {session.summary && (
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium">Story summary (automatic)</h3>
-            <p className="whitespace-pre-wrap rounded-md bg-night p-3 text-sm text-ink-dim">{session.summary}</p>
+          <section>
+            <h3 className="mb-3 font-medium">Story summary</h3>
+            <p className="card whitespace-pre-wrap p-4 text-sm text-muted">{session.summary}</p>
           </section>
         )}
 
-        <Link href={`/characters/${session.mainCharacterId}`} className="inline-block text-sm text-gold underline">
+        <section><Link href={`/characters/${session.mainCharacterId}`} className="text-sm underline underline-offset-4">
           Edit the main character
-        </Link>
+        </Link></section>
       </div>
     </PanelShell>
   );

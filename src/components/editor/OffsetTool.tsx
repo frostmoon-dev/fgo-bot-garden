@@ -47,7 +47,7 @@ export function OffsetTool({ grid, sheetUrl, cell, onChange, onAutoAlign, aligni
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-md border border-night-3 bg-[repeating-conic-gradient(#1c2542_0_25%,#131a30_0_50%)] bg-[length:24px_24px]">
+      <div className="overflow-hidden rounded-xl border border-line bg-[repeating-conic-gradient(var(--raised)_0_25%,var(--surface)_0_50%)] bg-[length:24px_24px]">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${grid.sheetWidth} ${grid.bodyHeight}`}
@@ -68,12 +68,12 @@ export function OffsetTool({ grid, sheetUrl, cell, onChange, onAutoAlign, aligni
             onPointerCancel={onUp}
           >
             <image href={sheetUrl} width={grid.sheetWidth} height={grid.sheetHeight} />
-            <rect x={o.x} y={o.y} width={grid.cellSize} height={grid.cellSize} fill="none" stroke="#d8b56a" strokeWidth={3} strokeDasharray="10 6" />
+            <rect x={o.x} y={o.y} width={grid.cellSize} height={grid.cellSize} fill="none" stroke="var(--accent)" strokeWidth={3} strokeDasharray="10 6" />
           </svg>
         </svg>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-ink-dim">
+        <span className="mr-2 tabular-nums text-muted">
           x {grid.faceX} · y {grid.faceY}
         </span>
         <Button onClick={() => nudge(-1, 0)} aria-label="Left">←</Button>

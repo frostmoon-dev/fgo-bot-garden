@@ -18,8 +18,8 @@ function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id:
   const set = (patch: Partial<BackgroundInput>) => setForm((f) => ({ ...f, ...patch }));
 
   return (
-    <div className="panel space-y-3 rounded-lg p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="card max-w-3xl space-y-6 p-6">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Label title="Id" hint="Used in {scene:id}. Lowercase, no spaces.">
           <TextInput
             value={form.key}
@@ -34,7 +34,7 @@ function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id:
       <Label title="Description" hint="The AI reads this to pick a scene.">
         <TextInput value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </Label>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Label title="Image path or URL" hint="Example: /assets/backgrounds/hall.webp">
           <TextInput value={form.imageUrl} onChange={(e) => set({ imageUrl: e.target.value })} />
         </Label>
@@ -42,7 +42,7 @@ function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id:
           <input
             type="file"
             accept="image/png,image/webp,image/jpeg"
-            className="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-night-3 file:px-3 file:py-1.5 file:text-ink"
+            className="block w-full text-sm file:mr-4 file:min-h-10 file:rounded-lg file:border-0 file:bg-raised file:px-4 file:text-ink"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) run(async () => set({ imageUrl: await uploadImage(file, "backgrounds") }));
@@ -52,9 +52,9 @@ function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id:
       </div>
       {form.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- user-supplied URLs of any size
-        <img src={form.imageUrl} alt="" className="aspect-video w-full max-w-md rounded object-cover" />
+        <img src={form.imageUrl} alt="" className="aspect-video w-full max-w-md rounded-lg object-cover" />
       )}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3 border-t border-line pt-6">
         <Button
           variant="primary"
           disabled={pending}
@@ -79,7 +79,7 @@ export function BackgroundManager({ backgrounds }: { backgrounds: BackgroundView
   const { pending, error, run } = useAsync();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {editing === "new" ? (
         <BackgroundForm initial={EMPTY} id={null} onDone={() => setEditing(null)} />
       ) : (
@@ -88,20 +88,21 @@ export function BackgroundManager({ backgrounds }: { backgrounds: BackgroundView
         </Button>
       )}
       <ErrorText error={error} />
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {backgrounds.map((b) =>
           editing === b.id ? (
             <li key={b.id} className="sm:col-span-2 lg:col-span-3">
               <BackgroundForm initial={b} id={b.id} onDone={() => setEditing(null)} />
             </li>
           ) : (
-            <li key={b.id} className="panel overflow-hidden rounded-lg">
+            <li key={b.id} className="card overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element -- user-supplied URLs */}
               <img src={b.imageUrl} alt="" className="aspect-video w-full object-cover" />
-              <div className="space-y-1 p-3">
-                <p className="font-mono text-sm text-gold">{b.key}</p>
-                <p className="text-xs text-ink-dim">{b.description || b.label}</p>
-                <div className="flex gap-2 pt-1">
+              <div className="p-4">
+                <p className="font-medium">{b.label || b.key}</p>
+                <p className="mt-0.5 font-mono text-sm text-muted">{b.key}</p>
+                <p className="mt-2 line-clamp-2 text-sm text-muted">{b.description}</p>
+                <div className="mt-4 flex gap-2">
                   <Button onClick={() => setEditing(b.id)}>Edit</Button>
                   <Button
                     variant="danger"

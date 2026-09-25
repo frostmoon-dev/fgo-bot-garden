@@ -180,4 +180,7 @@ model Settings {
   contextBudget Int     @default(6000)
   keepRecent    Int     @default(12)
   devMode       Boolean @default(false)
+  theme         String  @default("night")
+  customBg      String  @default("")
+  font          String  @default("clear")
 }

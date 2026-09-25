@@ -42,11 +42,13 @@ export function NewSpriteSetForm({ characterId, onCreated }: { characterId: stri
   }
 
   return (
-    <div className="panel space-y-3 rounded-lg p-4">
-      <h3 className="font-display text-gold">Add a sprite sheet</h3>
-      <p className="text-xs text-ink-dim">
+    <div className="card max-w-2xl space-y-8 p-6">
+      <div>
+      <h2 className="text-lg font-semibold">Add a sprite sheet</h2>
+      <p className="mt-1 text-sm text-muted">
         FGO format: body on top (1024×768), 256×256 face cells below in 4 columns. The face count and face position are detected for you.
       </p>
+      </div>
       <Label title="Set name">
         <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       </Label>
@@ -55,7 +57,7 @@ export function NewSpriteSetForm({ characterId, onCreated }: { characterId: stri
           type="file"
           accept="image/png,image/webp"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-night-3 file:px-3 file:py-1.5 file:text-ink"
+          className="block w-full text-sm file:mr-4 file:min-h-10 file:rounded-lg file:border-0 file:bg-raised file:px-4 file:text-ink"
         />
       </Label>
       <Label title="…or use a file from /public" hint="Example: /assets/sprites/bb/ascension1.webp">

@@ -67,6 +67,9 @@ export interface SettingsView {
   contextBudget: number;
   keepRecent: number;
   devMode: boolean;
+  theme: string;
+  customBg: string;
+  font: string;
 }
 
 export interface MessageView {

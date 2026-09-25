@@ -1,22 +1,24 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "quiet" | "danger";
 
 const styles: Record<Variant, string> = {
-  primary: "bg-gold text-night hover:brightness-110 font-semibold",
-  ghost: "border border-night-3 text-ink hover:border-gold-dim hover:text-gold",
-  danger: "border border-danger/50 text-danger hover:bg-danger/10",
+  // One filled button per view: the main action.
+  primary: "bg-accent text-on-accent font-semibold shadow-sm hover:brightness-105 active:brightness-95",
+  secondary: "border border-line bg-raised text-ink hover:border-muted",
+  quiet: "text-muted hover:text-ink hover:bg-raised",
+  danger: "text-danger hover:bg-danger/10",
 };
 
 export function Button({
-  variant = "ghost",
+  variant = "secondary",
   className = "",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
       {...props}
     />
   );

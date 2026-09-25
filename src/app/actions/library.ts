@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/actionResult";
+import { isFontId, isThemeId } from "@/lib/appearance";
 import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
@@ -93,8 +94,11 @@ const settingsSchema = z.object({
   contextBudget: z.number().int().min(1000).max(100000),
   keepRecent: z.number().int().min(2).max(100),
   devMode: z.boolean(),
+  theme: z.string().refine(isThemeId, "Unknown theme"),
+  customBg: z.string().regex(/^(#[0-9a-fA-F]{6})?$/),
+  font: z.string().refine(isFontId, "Unknown font"),
 });
-export type SettingsInput = z.infer<typeof settingsSchema>;
+export type SettingsInput = z.input<typeof settingsSchema>;
 
 export async function saveSettings(input: SettingsInput): Promise<ActionResult<void>> {
   return safe(async () => {

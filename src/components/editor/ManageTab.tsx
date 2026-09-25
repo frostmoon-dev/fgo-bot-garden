@@ -24,18 +24,19 @@ export function ManageTab({ character }: { character: CharacterView }) {
     });
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-2">
-        <h3 className="font-display text-gold">Export</h3>
-        <p className="text-sm text-ink-dim">
+    <div className="max-w-2xl divide-y divide-line">
+      <section className="space-y-3 pb-8">
+        <h2 className="text-lg font-semibold">Export</h2>
+        <p className="text-sm text-muted">
           Saves the profile, expressions and sprite set settings as JSON. Sprite images are linked by URL, not copied into the file.
         </p>
         <Button onClick={download} disabled={pending}>
           Download JSON
         </Button>
       </section>
-      <section className="space-y-2">
-        <h3 className="font-display text-gold">Duplicate</h3>
+      <section className="space-y-3 py-8">
+        <h2 className="text-lg font-semibold">Duplicate</h2>
+        <p className="text-sm text-muted">Copies the profile, expressions and sprite settings into a new bot.</p>
         <Button
           disabled={pending}
           onClick={() =>
@@ -48,11 +49,12 @@ export function ManageTab({ character }: { character: CharacterView }) {
           Make a copy
         </Button>
       </section>
-      <section className="space-y-2">
-        <h3 className="font-display text-danger">Delete</h3>
-        <p className="text-sm text-ink-dim">Also deletes every session where this bot is the main character.</p>
+      <section className="space-y-3 pt-8">
+        <h2 className="text-lg font-semibold">Delete</h2>
+        <p className="text-sm text-muted">Also deletes every story where this bot is the main character.</p>
         <Button
           variant="danger"
+          className="border border-danger/40"
           disabled={pending}
           onClick={() => {
             if (!confirm(`Delete ${character.name} and their sessions? This cannot be undone.`)) return;

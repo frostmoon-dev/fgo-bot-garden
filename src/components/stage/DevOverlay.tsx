@@ -9,7 +9,7 @@ export function DevOverlay() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="absolute left-2 top-14 z-30 max-w-[90%] text-xs" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute left-3 top-16 z-30 max-w-[90%] text-xs sm:left-5" onClick={(e) => e.stopPropagation()}>
       <button type="button" onClick={() => setOpen((o) => !o)} className="rounded bg-black/70 px-2 py-1 font-mono text-green-300">
         ~{tokens ?? "?"} prompt tokens · {warnings.length} warnings
       </button>

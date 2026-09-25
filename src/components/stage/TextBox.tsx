@@ -1,5 +1,6 @@
 "use client";
 
+import { ColorDot } from "@/components/ui/ColorDot";
 import type { Beat } from "@/lib/stage";
 
 interface Props {
@@ -16,28 +17,28 @@ export function TextBox({ beat, typed, color, waiting, done }: Props) {
   const narration = beat?.kind === "narration";
 
   return (
-    <div className="relative mx-auto w-full max-w-5xl">
+    <div className="relative mx-auto w-full max-w-[52rem]">
       {name && !waiting && (
-        <div
-          className="panel absolute -top-5 left-3 z-10 rounded-t-md border-b-0 px-4 py-1 font-display text-[1.05em] tracking-wide sm:left-6"
-          style={{ color: color ?? "var(--gold)", borderColor: color ?? undefined }}
-        >
+        <div className="vn-box absolute -top-4 left-4 z-10 flex items-center gap-2 rounded-lg px-4 py-1.5 text-[0.95em] font-semibold sm:left-6">
+          {color && <ColorDot color={color} />}
           {name}
         </div>
       )}
-      <div
-        className="panel min-h-[7.5em] rounded-md px-5 pb-6 pt-6 text-[1.05em] leading-relaxed sm:px-8"
-        aria-live="polite"
-      >
+      <div className="vn-box min-h-[7.5em] px-6 pb-7 pt-7 text-[1.1em] leading-[1.7] sm:px-8" aria-live="polite">
         {waiting ? (
-          <p className="text-ink-dim">
-            <span className="blink">●</span> <span className="blink [animation-delay:200ms]">●</span>{" "}
-            <span className="blink [animation-delay:400ms]">●</span>
+          <p className="flex gap-1.5 pt-1 text-muted" aria-label="Writing…">
+            <span className="pulse-dot size-2 rounded-full bg-current" />
+            <span className="pulse-dot size-2 rounded-full bg-current [animation-delay:200ms]" />
+            <span className="pulse-dot size-2 rounded-full bg-current [animation-delay:400ms]" />
           </p>
         ) : (
-          <p className={`whitespace-pre-wrap ${narration ? "italic text-ink-dim" : ""}`}>{text}</p>
+          <p className={`whitespace-pre-wrap ${narration ? "italic text-muted" : ""}`}>{text}</p>
         )}
-        {done && !waiting && <span className="blink absolute bottom-2 right-4 text-gold">▼</span>}
+        {done && !waiting && (
+          <span aria-hidden className="pulse-dot absolute bottom-3 right-5 text-xs text-muted">
+            ▼
+          </span>
+        )}
       </div>
     </div>
   );

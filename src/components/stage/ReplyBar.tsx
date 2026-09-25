@@ -21,28 +21,35 @@ export function ReplyBar({ userName }: { userName: string }) {
 
   return (
     <form
-      className="mx-auto mt-2 flex w-full max-w-5xl items-end gap-2"
+      className="vn-box mx-auto mt-3 flex w-full max-w-[52rem] items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-accent/50"
       onClick={(e) => e.stopPropagation()}
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
     >
-      <textarea
-        ref={ref}
-        rows={2}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        placeholder={`${userName}'s reply… (Enter to send, empty = continue)`}
-        className="field max-h-40 min-h-[3em] flex-1 resize-y bg-night/90 text-[1em]"
-      />
-      <button type="submit" className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-night">
+      <label className="min-w-0 flex-1">
+        <span className="sr-only">Your reply as {userName}</span>
+        <textarea
+          ref={ref}
+          rows={1}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={`Reply as ${userName}…`}
+          className="block max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 leading-relaxed outline-none placeholder:text-muted focus-visible:outline-none"
+        />
+      </label>
+      <button
+        type="submit"
+        className="min-h-11 shrink-0 rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent"
+        title={text.trim() ? "Send (Enter)" : "Let the story continue without a reply"}
+      >
         {text.trim() ? "Send" : "Continue"}
       </button>
     </form>

@@ -42,23 +42,23 @@ function Stage() {
       <TopBar />
       {s.settings.devMode && <DevOverlay />}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
+      <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
         {s.error && (
           <div
-            className="mx-auto mb-2 flex max-w-5xl items-center gap-3 rounded-md border border-danger/60 bg-night/90 px-3 py-2 text-sm text-danger"
+            className="vn-box mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
             onClick={(e) => e.stopPropagation()}
           >
             <span className="flex-1">{s.error}</span>
             {lastMessage?.role === "user" && (
               <StageButton onClick={() => void s.regenerate()}>Retry</StageButton>
             )}
-            <button type="button" onClick={() => s.setError(null)} aria-label="Dismiss">
-              ✕
+            <button type="button" className="min-h-10 rounded-lg px-3 text-muted hover:text-ink" onClick={() => s.setError(null)}>
+              Dismiss
             </button>
           </div>
         )}
         {(onLatest || waiting) && (
-          <div className="mx-auto mb-6 flex max-w-5xl justify-end" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-7 flex max-w-[52rem] justify-end" onClick={(e) => e.stopPropagation()}>
             {onLatest && lastMessage && <VariantControls messageId={lastMessage.id} />}
           </div>
         )}

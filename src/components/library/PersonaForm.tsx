@@ -1,12 +1,12 @@
 "use client";
 
-import { unwrap } from "@/lib/actionResult";
 import { useState } from "react";
 import { savePersona } from "@/app/actions/library";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextArea, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
+import { unwrap } from "@/lib/actionResult";
 import type { PersonaView } from "@/lib/types";
 
 export function PersonaForm({ persona }: { persona: PersonaView }) {
@@ -19,17 +19,17 @@ export function PersonaForm({ persona }: { persona: PersonaView }) {
   };
 
   return (
-    <div className="panel max-w-2xl space-y-4 rounded-lg p-4">
+    <div className="max-w-xl space-y-8">
       <Label title="Name" hint="Replaces {{user}} everywhere.">
         <TextInput value={form.name} onChange={(e) => set({ name: e.target.value })} />
       </Label>
       <Label title="How characters address you" hint="For example: Master, Senpai, Ritsuka-kun.">
         <TextInput value={form.addressAs} onChange={(e) => set({ addressAs: e.target.value })} />
       </Label>
-      <Label title="Short description" hint="Appearance, role, anything the characters would know.">
-        <TextArea value={form.description} onChange={(e) => set({ description: e.target.value })} />
+      <Label title="Short description" hint="Appearance, role, and anything the characters would know.">
+        <TextArea rows={5} value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </Label>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4 border-t border-line pt-6">
         <Button
           variant="primary"
           disabled={pending}
@@ -40,11 +40,11 @@ export function PersonaForm({ persona }: { persona: PersonaView }) {
             })
           }
         >
-          Save persona
+          {pending ? "Saving…" : "Save persona"}
         </Button>
-        {saved && <span className="text-sm text-ink-dim">Saved.</span>}
-        <ErrorText error={error} />
+        {saved && <span className="text-sm text-muted">Saved</span>}
       </div>
+      <ErrorText error={error} />
     </div>
   );
 }

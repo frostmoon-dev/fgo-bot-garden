@@ -55,29 +55,29 @@ export function SavePanel() {
     });
 
   return (
-    <PanelShell title="Save / Load">
+    <PanelShell title="Save and load">
       {error && <p className="mb-3 text-sm text-danger">{error}</p>}
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {SLOTS.map((slot) => {
           const s = saves.find((x) => x.slot === slot);
           return (
-            <li key={slot} className="flex items-center gap-3 rounded-md border border-night-3 p-3">
-              <span className="font-display text-xl text-gold">{slot}</span>
+            <li key={slot} className="card flex items-center gap-4 p-4">
+              <span className="w-6 text-center text-lg font-semibold tabular-nums text-muted">{slot}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{s ? s.label || "Saved" : <span className="text-ink-dim">Empty</span>}</p>
-                {s && <p className="text-xs text-ink-dim">{new Date(s.createdAt).toLocaleString()}</p>}
+                <p className="truncate font-medium">{s ? s.label || "Saved" : <span className="font-normal text-muted">Empty</span>}</p>
+                {s && <p className="mt-0.5 text-sm text-muted">{new Date(s.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>}
               </div>
-              <div className="flex gap-1.5 text-xs">
-                <button type="button" disabled={busy !== null || streaming} className="rounded border border-night-3 px-2 py-1 hover:border-gold" onClick={() => save(slot)}>
+              <div className="flex gap-1 text-sm">
+                <button type="button" disabled={busy !== null || streaming} className="min-h-10 rounded-lg px-3 hover:bg-raised disabled:opacity-40" onClick={() => save(slot)}>
                   Save
                 </button>
                 {s && (
                   <>
-                    <button type="button" disabled={busy !== null || streaming} className="rounded border border-night-3 px-2 py-1 hover:border-gold" onClick={() => load(slot)}>
+                    <button type="button" disabled={busy !== null || streaming} className="min-h-10 rounded-lg bg-accent px-3 font-semibold text-on-accent disabled:opacity-40" onClick={() => load(slot)}>
                       Load
                     </button>
-                    <button type="button" disabled={busy !== null} className="rounded border border-night-3 px-2 py-1 text-danger" onClick={() => remove(slot)}>
-                      ✕
+                    <button type="button" disabled={busy !== null} aria-label={`Delete slot ${slot}`} className="min-h-10 rounded-lg px-3 text-danger hover:bg-danger/10" onClick={() => remove(slot)}>
+                      Delete
                     </button>
                   </>
                 )}

@@ -28,21 +28,32 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      <form onSubmit={submit} className="panel w-full max-w-sm space-y-4 rounded-lg p-6">
-        <h1 className="font-display text-2xl text-gold">Bot Garden</h1>
-        <input
-          type="password"
-          autoFocus
-          autoComplete="current-password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="field"
-        />
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <button disabled={pending || !password} className="w-full rounded-md bg-gold py-2 font-semibold text-night disabled:opacity-50">
-          {pending ? "Checking…" : "Enter"}
+    <main className="flex min-h-dvh items-center justify-center px-5">
+      <form onSubmit={submit} className="w-full max-w-sm">
+        <h1 className="text-3xl font-semibold tracking-tight">Bot Garden</h1>
+        <p className="mt-2 text-muted">Enter your password to continue.</p>
+        <label className="mt-8 block">
+          <span className="sr-only">Password</span>
+          <input
+            type="password"
+            autoFocus
+            autoComplete="current-password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="field"
+          />
+        </label>
+        {error && (
+          <p role="alert" className="mt-3 text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <button
+          disabled={pending || !password}
+          className="mt-4 min-h-11 w-full rounded-lg bg-accent font-semibold text-on-accent disabled:opacity-40"
+        >
+          {pending ? "Checking…" : "Sign in"}
         </button>
       </form>
     </main>

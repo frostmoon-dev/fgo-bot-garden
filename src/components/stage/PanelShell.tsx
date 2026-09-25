@@ -7,7 +7,7 @@ export function PanelShell({ title, children }: { title: string; children: React
   const setPanel = usePlay((s) => s.setPanel);
   return (
     <div
-      className="absolute inset-0 z-40 flex items-stretch justify-center bg-black/60 p-2 backdrop-blur-sm sm:items-center sm:p-6"
+      className="absolute inset-0 z-40 flex items-end justify-center bg-black/55 sm:items-center sm:p-8"
       onClick={(e) => {
         e.stopPropagation();
         setPanel(null);
@@ -15,17 +15,18 @@ export function PanelShell({ title, children }: { title: string; children: React
     >
       <div
         role="dialog"
+        aria-modal="true"
         aria-label={title}
-        className="panel flex max-h-full w-full max-w-3xl flex-col rounded-lg"
+        className="flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line bg-canvas shadow-2xl sm:max-h-full sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-night-3 px-4 py-3">
-          <h2 className="font-display text-lg text-gold">{title}</h2>
-          <button type="button" className="text-sm text-ink-dim hover:text-ink" onClick={() => setPanel(null)}>
-            Close ✕
+        <div className="flex items-center justify-between px-6 pb-2 pt-5">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink" onClick={() => setPanel(null)}>
+            Close
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">{children}</div>
       </div>
     </div>
   );

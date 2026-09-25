@@ -1,12 +1,13 @@
 import { LoreManager } from "@/components/library/LoreManager";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { db } from "@/lib/db";
 
 export default async function LorebookPage() {
   const entries = await db.lorebookEntry.findMany({ orderBy: { createdAt: "asc" } });
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl text-gold">Lorebook</h1>
+    <>
+      <PageHeader title="Lorebook" description="World facts. An entry is added to the prompt when one of its keywords appears in recent messages." />
       <LoreManager entries={entries} />
-    </div>
+    </>
   );
 }

@@ -79,8 +79,8 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
   const previewCell = resolveCell({ faces, faceCount: grid.faceCount }, selected);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-12">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Label title="Set name">
           <TextInput value={name} onChange={(e) => { setDirty(true); setName(e.target.value); }} />
         </Label>
@@ -89,7 +89,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         </Label>
       </div>
 
-      <details className="rounded-md border border-night-3 p-3">
+      <details className="card p-4">
         <summary className="cursor-pointer text-sm">
           Sheet grid ({grid.sheetWidth}×{grid.sheetHeight}, {grid.faceCount} faces)
         </summary>
@@ -110,9 +110,9 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         </Button>
       </details>
 
-      <section className="space-y-2">
-        <h3 className="font-display text-gold">Face position</h3>
-        <p className="text-xs text-ink-dim">Drag the dashed face until it covers the face on the body. One offset works for every expression.</p>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">Face position</h2>
+        <p className="text-sm text-muted">Drag the dashed face until it covers the face on the body. One offset works for every expression.</p>
         <OffsetTool
           grid={grid}
           sheetUrl={sheetUrl}
@@ -123,8 +123,8 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         />
       </section>
 
-      <section className="space-y-2">
-        <h3 className="font-display text-gold">Expressions</h3>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">Faces for each expression</h2>
         <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
           <FaceAssigner
             grid={grid}
@@ -144,15 +144,15 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
             }}
           />
           <div className="space-y-1">
-            <p className="text-sm text-ink-dim">
-              Live preview: <span className="font-mono text-gold">{selected}</span>
+            <p className="text-sm text-muted">
+              Live preview: <span className="font-mono text-accent">{selected}</span>
             </p>
-            <SpriteView grid={grid} sheetUrl={sheetUrl} cell={previewCell} className="w-full rounded-md bg-night-2" />
+            <SpriteView grid={grid} sheetUrl={sheetUrl} cell={previewCell} className="card w-full" />
           </div>
         </div>
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-night-3 bg-night/95 py-3">
+      <div className="sticky bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending || !dirty}>
           {pending ? "Saving…" : dirty ? "Save sprite set" : "Saved"}
         </Button>

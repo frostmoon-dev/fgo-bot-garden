@@ -6,7 +6,7 @@ import { useFadeLayers } from "@/components/sprite/useFadeLayers";
 export const BackgroundLayer = memo(function BackgroundLayer({ url }: { url: string | null }) {
   const layers = useFadeLayers(url, url, 600);
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-night-3 to-night">
+    <div className="absolute inset-0 bg-gradient-to-b from-line to-canvas">
       {layers.map((l) => (
         <div
           key={l.key}

@@ -1,12 +1,12 @@
 "use client";
 
-import { unwrap } from "@/lib/actionResult";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSession } from "@/app/actions/sessions";
-import { Button } from "@/components/ui/Button";
+import { ColorDot } from "@/components/ui/ColorDot";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
+import { unwrap } from "@/lib/actionResult";
 import type { CharacterView } from "@/lib/types";
 import { Portrait } from "./Portrait";
 
@@ -23,33 +23,47 @@ export function CharacterGallery({ characters }: { characters: CharacterView[] }
 
   if (!characters.length) {
     return (
-      <div className="panel rounded-lg p-6 text-ink-dim">
-        No bots yet.{" "}
-        <Link href="/characters" className="text-gold underline">
-          Create your first one
+      <div className="card px-6 py-12 text-center">
+        <p className="font-medium">No bots yet</p>
+        <p className="mt-1 text-sm text-muted">Create one and give it an FGO sprite sheet.</p>
+        <Link href="/characters" className="mt-6 inline-flex min-h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent">
+          Create a bot
         </Link>
-        .
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       <ErrorText error={error} />
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
         {characters.map((c) => (
-          <li key={c.id} className="panel flex flex-col overflow-hidden rounded-lg">
-            <Portrait character={c} className="aspect-square w-full" />
-            <div className="flex flex-1 flex-col gap-2 p-3">
-              <p className="font-display text-base" style={{ color: c.color }}>
-                {c.name}
+          <li key={c.id} className="card group overflow-hidden">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => start(c.id)}
+              className="block w-full text-left disabled:opacity-60"
+              aria-label={`Start a new story with ${c.name}`}
+            >
+              <Portrait character={c} className="aspect-square w-full transition-transform duration-300 group-hover:scale-[1.03]" />
+            </button>
+            <div className="p-4">
+              <p className="flex items-center gap-2 font-semibold">
+                <ColorDot color={c.color} />
+                <span className="truncate">{c.name}</span>
               </p>
-              <p className="line-clamp-2 flex-1 text-xs text-ink-dim">{c.description || "No description."}</p>
-              <div className="flex gap-2">
-                <Button variant="primary" className="flex-1" disabled={pending} onClick={() => start(c.id)}>
+              <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-muted">{c.description || "No description yet."}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => start(c.id)}
+                  className="min-h-10 flex-1 rounded-lg bg-accent px-3 text-sm font-semibold text-on-accent disabled:opacity-40"
+                >
                   Start
-                </Button>
-                <Link href={`/characters/${c.id}`} className="rounded-md border border-night-3 px-3 py-1.5 text-sm hover:border-gold-dim">
+                </button>
+                <Link href={`/characters/${c.id}`} className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink">
                   Edit
                 </Link>
               </div>

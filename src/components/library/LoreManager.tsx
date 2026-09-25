@@ -24,7 +24,7 @@ function LoreForm({ entry, onDone }: { entry: LoreEntry | null; onDone: () => vo
   });
 
   return (
-    <div className="panel space-y-3 rounded-lg p-4">
+    <div className="card max-w-3xl space-y-6 p-6">
       <Label title="Title">
         <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Moon Cell" />
       </Label>
@@ -34,10 +34,10 @@ function LoreForm({ entry, onDone }: { entry: LoreEntry | null; onDone: () => vo
       <Label title="Content" hint="Inserted into the prompt when a keyword appears in recent messages.">
         <TextArea rows={5} value={content} onChange={(e) => setContent(e.target.value)} />
       </Label>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> Enabled
+      <label className="flex min-h-10 items-center gap-3 text-sm">
+        <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> Enabled
       </label>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3 border-t border-line pt-6">
         <Button
           variant="primary"
           disabled={pending}
@@ -62,7 +62,7 @@ export function LoreManager({ entries }: { entries: LoreEntry[] }) {
   const { pending, error, run } = useAsync();
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-3xl space-y-8">
       {editing === "new" ? (
         <LoreForm entry={null} onDone={() => setEditing(null)} />
       ) : (
@@ -71,19 +71,28 @@ export function LoreManager({ entries }: { entries: LoreEntry[] }) {
         </Button>
       )}
       <ErrorText error={error} />
-      <ul className="space-y-2">
+      <ul className="card divide-y divide-line empty:hidden">
         {entries.map((e) =>
           editing === e.id ? (
             <li key={e.id}>
               <LoreForm entry={e} onDone={() => setEditing(null)} />
             </li>
           ) : (
-            <li key={e.id} className={`panel rounded-lg p-3 ${e.enabled ? "" : "opacity-50"}`}>
+            <li key={e.id} className={`px-5 py-4 ${e.enabled ? "" : "opacity-55"}`}>
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{e.title || "(untitled)"}</p>
-                  <p className="text-xs text-gold">{e.keywords.join(", ")}</p>
-                  <p className="mt-1 line-clamp-2 text-sm text-ink-dim">{e.content}</p>
+                  <p className="font-medium">
+                    {e.title || "Untitled"}
+                    {!e.enabled && <span className="ml-2 text-sm font-normal text-muted">off</span>}
+                  </p>
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    {e.keywords.map((k) => (
+                      <span key={k} className="rounded-md bg-raised px-2 py-0.5 text-sm">
+                        {k}
+                      </span>
+                    ))}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm text-muted">{e.content}</p>
                 </div>
                 <Button onClick={() => setEditing(e.id)}>Edit</Button>
                 <Button

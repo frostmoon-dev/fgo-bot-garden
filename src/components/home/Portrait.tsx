@@ -6,10 +6,10 @@ export function Portrait({ character, className = "" }: { character: CharacterVi
   const set = character.spriteSets.find((s) => s.id === character.defaultSpriteSetId) ?? character.spriteSets[0];
   if (!set) {
     return (
-      <div className={`flex items-center justify-center bg-night-3 font-display text-3xl ${className}`} style={{ color: character.color }}>
+      <div className={`flex items-center justify-center bg-raised text-2xl font-semibold text-muted ${className}`}>
         {character.name.slice(0, 1)}
       </div>
     );
   }
-  return <FaceThumb grid={set} sheetUrl={set.sheetUrl} cell={resolveCell(set, "neutral")} className={`bg-night-3 ${className}`} />;
+  return <FaceThumb grid={set} sheetUrl={set.sheetUrl} cell={resolveCell(set, "neutral")} className={`bg-raised ${className}`} />;
 }
