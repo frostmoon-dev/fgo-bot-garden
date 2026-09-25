@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #e9e4d6;
+  --ink-dim: #a9a393;
+  --night: #0b1020;
+  --night-2: #131a30;
+  --night-3: #1c2542;
+  --gold: #d8b56a;
+  --gold-dim: #8f7640;
+  --danger: #e0715f;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-night-3: var(--night-3);
+  --color-gold: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+html,
+body {
+  background: var(--night);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+
+.panel {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--night-2) 94%, transparent), color-mix(in srgb, var(--night) 94%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--night-3);
+  background: var(--night);
+  padding: 0.5rem 0.65rem;
+  color: var(--ink);
+  outline: none;
+}
+.field:focus {
+  border-color: var(--gold-dim);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.fade-in {
+  animation: fade-in var(--fade, 350ms) ease-out both;
+}
+.fade-out {
+  animation: fade-out var(--fade, 350ms) ease-in both;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+.blink {
+  animation: blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .fade-out {
+    animation-duration: 1ms;
+  }
+}
+
+/* ---------- VN stage ---------- */
+.stage {
+  container-type: size;
+}
+.sprite-slot {
+  position: absolute;
+  bottom: 0;
+  width: min(calc(96cqh * var(--ar)), 100cqw);
+  aspect-ratio: var(--ar);
+  transform: translateX(-50%);
+  transition:
+    left 450ms ease,
+    filter 300ms ease;
+}
+.sprite-slot[data-pos="left"] {
+  left: 22%;
+}
+.sprite-slot[data-pos="center"] {
+  left: 50%;
+}
+.sprite-slot[data-pos="right"] {
+  left: 78%;
+}
+.sprite-slot[data-dim="true"] {
+  filter: brightness(0.55) saturate(0.8);
+}
+/* Portrait phones: bigger sprites, lifted above the textbox. */
+@container (max-aspect-ratio: 1/1) {
+  .sprite-slot {
+    width: min(calc(66cqh * var(--ar)), 190cqw);
+    bottom: 22cqh;
+  }
+  .sprite-slot[data-pos="left"] {
+    left: 12%;
+  }
+  .sprite-slot[data-pos="right"] {
+    left: 88%;
+  }
+}

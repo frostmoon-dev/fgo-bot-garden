@@ -1,0 +1,85 @@
+"use client";
+
+import { unwrap } from "@/lib/actionResult";
+import { useState } from "react";
+import { saveExpressions } from "@/app/actions/characters";
+import { Button } from "@/components/ui/Button";
+import { ErrorText } from "@/components/ui/ErrorText";
+import { useAsync } from "@/components/ui/useAsync";
+import type { CharacterView } from "@/lib/types";
+
+interface Row {
+  id?: string;
+  key: string;
+  label: string;
+  description: string;
+}
+
+export function ExpressionEditor({ character }: { character: CharacterView }) {
+  const [rows, setRows] = useState<Row[]>(() => character.expressions.map((e) => ({ ...e })));
+  const [saved, setSaved] = useState(false);
+  const { pending, error, run } = useAsync();
+
+  const update = (i: number, patch: Partial<Row>) => {
+    setSaved(false);
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-dim">
+        The AI picks an expression id for every line. The description tells it when to use it, for example
+        <span className="text-ink"> smirk — mocking, pleased with herself</span>. Assign face cells in the Sprites tab.
+      </p>
+      <ul className="space-y-2">
+        {rows.map((r, i) => (
+          <li key={r.id ?? `new-${i}`} className="grid gap-2 rounded-md border border-night-3 p-2 sm:grid-cols-[10rem_10rem_1fr_auto]">
+            <input
+              className="field font-mono text-sm"
+              value={r.key}
+              disabled={r.key === "neutral" && !!r.id}
+              placeholder="id (smirk)"
+              onChange={(e) => update(i, { key: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_") })}
+              aria-label="Expression id"
+            />
+            <input className="field text-sm" value={r.label} placeholder="Label" onChange={(e) => update(i, { label: e.target.value })} aria-label="Label" />
+            <input
+              className="field text-sm"
+              value={r.description}
+              placeholder="When to use it"
+              onChange={(e) => update(i, { description: e.target.value })}
+              aria-label="Description"
+            />
+            <Button
+              variant="danger"
+              disabled={r.key === "neutral"}
+              onClick={() => {
+                setSaved(false);
+                setRows((rs) => rs.filter((_, j) => j !== i));
+              }}
+            >
+              Remove
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={() => setRows((rs) => [...rs, { key: "", label: "", description: "" }])}>Add expression</Button>
+        <Button
+          variant="primary"
+          disabled={pending}
+          onClick={() =>
+            run(async () => {
+              setRows(unwrap(await saveExpressions(character.id, rows)));
+              setSaved(true);
+            })
+          }
+        >
+          {pending ? "Saving…" : "Save expressions"}
+        </Button>
+        {saved && <span className="text-sm text-ink-dim">Saved.</span>}
+        <ErrorText error={error} />
+      </div>
+    </div>
+  );
+}

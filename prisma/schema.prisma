@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Character {
+  id                  String   @id @default(cuid())
+  name                String
+  aliases             String[]
+  color               String   @default("#c9a86a")
+  description         String   @default("")
+  personality         String   @default("")
+  speechStyle         String   @default("")
+  lore                String   @default("")
+  relationship        String   @default("")
+  scenario            String   @default("")
+  greeting            String   @default("")
+  exampleDialogues    String   @default("")
+  defaultSpriteSetId  String?
+  defaultBackgroundId String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  expressions  Expression[]
+  spriteSets   SpriteSet[]
+  casts        SessionCast[]
+  mainSessions Session[]
+}
+
+model Expression {
+  id          String @id @default(cuid())
+  characterId String
+  key         String
+  label       String @default("")
+  description String @default("")
+  sortOrder   Int    @default(0)
+
+  character Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  faces     SpriteFace[]
+
+  @@unique([characterId, key])
+}
+
+// One FGO-style sprite sheet: body on top, face cells in a grid below it.
+model SpriteSet {
+  id          String @id @default(cuid())
+  characterId String
+  name        String
+  sheetUrl    String
+  sheetWidth  Int    @default(1024)
+  sheetHeight Int    @default(1792)
+  bodyHeight  Int    @default(768)
+  cellSize    Int    @default(256)
+  columns     Int    @default(4)
+  faceCount   Int    @default(0)
+  faceX       Int    @default(384)
+  faceY       Int    @default(160)
+  sortOrder   Int    @default(0)
+
+  character Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  faces     SpriteFace[]
+}
+
+// Which face cell a sprite set uses for an expression. cellIndex -1 = the face drawn on the body.
+model SpriteFace {
+  id           String @id @default(cuid())
+  spriteSetId  String
+  expressionId String
+  cellIndex    Int
+
+  spriteSet  SpriteSet  @relation(fields: [spriteSetId], references: [id], onDelete: Cascade)
+  expression Expression @relation(fields: [expressionId], references: [id], onDelete: Cascade)
+
+  @@unique([spriteSetId, expressionId])
+}
+
+model Background {
+  id          String @id @default(cuid())
+  key         String @unique
+  label       String @default("")
+  imageUrl    String
+  description String @default("")
+}
+
+model Persona {
+  id          Int    @id @default(1)
+  name        String @default("Master")
+  description String @default("")
+  addressAs   String @default("Master")
+}
+
+model LorebookEntry {
+  id        String   @id @default(cuid())
+  title     String   @default("")
+  keywords  String[]
+  content   String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  title           String
+  mode            String   @default("narrative")
+  mainCharacterId String
+  backgroundId    String?
+  summary         String   @default("")
+  summarizedUntil Int      @default(-1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mainCharacter Character     @relation(fields: [mainCharacterId], references: [id], onDelete: Cascade)
+  cast          SessionCast[]
+  messages      Message[]
+  saves         SaveSlot[]
+}
+
+model SessionCast {
+  sessionId   String
+  characterId String
+  spriteSetId String?
+
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, characterId])
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  sessionId     String
+  order         Int
+  role          String
+  activeVariant Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  session  Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  variants MessageVariant[]
+
+  @@index([sessionId, order])
+}
+
+model MessageVariant {
+  id        String   @id @default(cuid())
+  messageId String
+  position  Int
+  content   String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, position])
+}
+
+model SaveSlot {
+  id        String   @id @default(cuid())
+  sessionId String
+  slot      Int
+  label     String   @default("")
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, slot])
+}
+
+model Settings {
+  id            Int     @id @default(1)
+  temperature   Float   @default(0.9)
+  maxTokens     Int     @default(900)
+  textSpeed     Int     @default(45)
+  autoSpeed     Int     @default(1600)
+  uiScale       Float   @default(1)
+  loreScanDepth Int     @default(4)
+  contextBudget Int     @default(6000)
+  keepRecent    Int     @default(12)
+  devMode       Boolean @default(false)
+}
