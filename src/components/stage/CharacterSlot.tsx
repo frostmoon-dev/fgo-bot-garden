@@ -48,7 +48,7 @@ function Sprite({
 
   return (
     <div
-      className={`sprite-slot pointer-events-none ${leaving ? "fade-out" : "fade-in"}`}
+      className={`sprite-slot pointer-events-none ${leaving ? "sprite-leave" : "sprite-enter"}`}
       data-pos={position}
       data-dim={dim}
       data-front={front}
