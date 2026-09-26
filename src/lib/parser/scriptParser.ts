@@ -80,10 +80,12 @@ const DEPART_TWO = [
 // Words between the name and the verb that mean someone else leaves, or nobody does:
 // "Oberon watches as BB walks out", "BB almost leaves".
 const NOT_LEAVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|don't|didn't|won't|wouldn't|can't|cannot|couldn't|isn't|wasn't|refuses?|refused|tries|tried|wants?|wanted|pretends?|pretended)$/i;
-// Coming into the scene: "BB walks in", "Ishtar manages to come in", "Oberon appears", "Ishtar dusts off her
-// sleeves, stepping past the threshold". Present and past forms, and "to come in" after a verb like "manages".
+// Coming into the scene: "BB walks in", "Ishtar manages to come in", "Oberon appears", "BB and Meltryllis are here",
+// "Ishtar dusts off her sleeves, stepping past the threshold". Present and past forms, and "to come in" after a
+// verb like "manages".
 const ARRIVE =
-  String.raw`(?:enters|entered|arrives|arrived|appears|appeared|reappears|reappeared|materiali[sz]es|materiali[sz]ed|returns|returned|` +
+  String.raw`(?:enters|entered|enter|arrives|arrived|arrive|appears|appeared|appear|reappears|reappeared|materiali[sz]es|materiali[sz]ed|returns|returned|` +
+  String.raw`(?:is|are|was|were)\s+(?:here|back|in\s+the\s+room)(?![\p{L}])|` +
   String.raw`(?:shows|showed|turns|turned)\s+up|(?:comes|came|come|coming)\s+(?:in|inside|back|through)|` +
   String.raw`(?:walks|walked|walk|walking|steps|stepped|step|stepping|bursts|burst|bursting|barges|barged|barge|strolls|strolled|` +
   String.raw`storms|stormed|slips|slipped|strides|strode|marches|marched|wanders|wandered|hurries|hurried|rushes|rushed|runs|ran|` +
@@ -91,6 +93,8 @@ const ARRIVE =
   String.raw`joins\s+(?:them|you|us|the)|joined\s+(?:them|you|us|the))`;
 // "…revealing Ishtar leaning against the frame", "In walks BB."
 const REVEAL = String.raw`(?:reveal(?:s|ed|ing)?|in\s+(?:walks|comes|steps|strides|marches|bursts|storms)|there\s+(?:stands|stood))\s+(?:a\s+[\p{L}-]+\s+|an\s+[\p{L}-]+\s+)?`;
+// Words just before the name that make it a question or a wish.
+const NOT_YET = /(?:^|[\s,])(?:if|whether|unless|wish(?:es|ed)?|hopes?|hoped|wonders?|wondered|asks?|asked|imagines?|pretends?|until|once|when|in\s+case)\s+$/i;
 // Words between the name and the verb that mean they don't come in (or someone else does).
 const NOT_ARRIVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|if|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|don't|didn't|won't|wouldn't|can't|cannot|couldn't|isn't|wasn't|refuses?|refused|wants?|wanted|would|could|should|might|may|will|waits?|waiting|hopes?|expects?|imagines?|pictures?|thinks?|remembers?|forgets?)$/i;
 
@@ -186,6 +190,25 @@ function readHead(text: string): { kind: HeadKind; rest: string } | null {
   return m && kind ? { kind, rest: text.slice(m[0].length) } : null;
 }
 
+// *Emphasis* inside a sentence is part of the speech, not an action: "In *that*?", "I *really* mean it."
+// It is short and sits mid-sentence: a word right before it, and punctuation or a lower-case word right after.
+// "Hi *waves* there" and "Fine. *sighs* Let's go." stay actions.
+// Roleplay actions often written mid-line ("Hi *waves* there"): these stay actions wherever they are.
+const ACTION_WORD =
+  /^(?:sighs?|waves?|laughs?|giggles?|chuckles?|smiles?|grins?|smirks?|nods?|shrugs?|winks?|blushes|pouts?|huffs?|snorts?|yawns?|gasps?|coughs?|hums?|frowns?|groans?|whimpers?|sniffs?|scoffs?|blinks?|stares?|glares?|beams?|cries|sobs?|hugs?|bows?|clears?|leans?|looks?|turns?|points?|claps?|stretches|tilts?|rolls?|crosses?|taps?|pats?|puffs?|mutters?|whispers?)$/i;
+
+function unwrapEmphasis(text: string): string {
+  return text.replace(ACTION, (whole, inner: string, at: number) => {
+    const words = inner.trim().split(/\s+/);
+    if (words.length > 3 || ACTION_WORD.test(words[0])) return whole;
+    const before = text.slice(0, at).trimEnd();
+    const after = text.slice(at + whole.length);
+    const continues = /^[?!.,;:…—–~-]/.test(after) || /^\s+[\p{Ll}\p{N}]/u.test(after);
+    const midSentence = /[\p{L}\p{N}'’]$/u.test(before) || (!before && /^[?!]/.test(after));
+    return continues && midSentence ? inner : whole;
+  });
+}
+
 // Whatever format tokens are left in a line's text: a doubled tag, stray braces, lone asterisks.
 function sanitize(text: string): string {
   return text
@@ -225,6 +248,7 @@ export class ScriptParser {
   private readonly departure: RegExp | null;
   private readonly arrival: RegExp | null;
   private readonly revealed: RegExp | null;
+  private readonly castNames: RegExp | null;
 
   constructor(private readonly ctx: ParserContext) {
     const parts = ctx.userName.split(/\s+/).filter((w) => w.length >= 3);
@@ -254,6 +278,7 @@ export class ScriptParser {
       ? new RegExp(`(?<![\\p{L}])(${castName})(?![\\p{L}'’])((?:[,\\s]+[\\p{L}'’-]+){0,6}?)[,\\s]+${ARRIVE}(?![\\p{L}])`, "iu")
       : null;
     this.revealed = castName ? new RegExp(`${REVEAL}(${castName})(?![\\p{L}'’])`, "iu") : null;
+    this.castNames = castName ? new RegExp(`(?<![\\p{L}])(?:${castName})(?![\\p{L}'’])`, "giu") : null;
     this.departure = castName
       ? new RegExp(
           `^(?:[^,.!?"“”]{0,40},\\s*)?(?:then\\s+|finally\\s+)?(${castName})(?:(?:,\\s*|\\s+)and\\s+(${castName}))?` +
@@ -329,7 +354,7 @@ export class ScriptParser {
       // as an untagged line, which keeps the current expression.
       const tag = piece.match(/^\[[^\]]*\]\s*:?/)?.[0] ?? "";
       // "Hello *waves" and "She smiles.*": a lone asterisk still marks an action.
-      const body = closeAsterisks(piece.slice(tag.length));
+      const body = unwrapEmphasis(closeAsterisks(piece.slice(tag.length)));
       let last = 0;
       let first = true;
       const pushText = (text: string) => {
@@ -546,7 +571,7 @@ export class ScriptParser {
     return this.ctx.mode === "dialogue" ? [] : this.departures(text);
   }
 
-  // Arrivals in the user's own actions: "*Ishtar manages to come in.*" brings Ishtar on stage.
+  // Arrivals in the user's own message: "*Ishtar manages to come in.*" or "BB and Meltryllis are here."
   arrivalsIn(text: string): ScriptLine[] {
     return this.ctx.mode === "dialogue" ? [] : this.arrivals(text);
   }
@@ -565,10 +590,17 @@ export class ScriptParser {
       }
       const m = plain.match(this.arrival);
       if (!m) continue;
-      const gap = m[2].split(/[\s,]+/).filter(Boolean);
-      if (gap.some((w) => NOT_ARRIVING.test(w) || this.findCharacter(w) || this.isUser(w) || /^(?:he|she|they)$/i.test(w))) continue;
-      const character = this.findCharacter(m[1]);
-      if (character) ids.add(character.id);
+      // "BB wonders if Oberon is here", "I wish BB were here": nobody comes in.
+      if (NOT_YET.test(plain.slice(0, m.index))) continue;
+      // "BB and Meltryllis are here": everyone named before the verb comes in.
+      const together = [...m[2].matchAll(this.castNames!)].map((n) => n[0]);
+      const rest = m[2].replace(this.castNames!, " ").split(/[\s,]+/).filter(Boolean);
+      const group = together.length > 0 && rest.every((w) => /^(?:and|&)$/i.test(w));
+      if (!group && m[2].split(/[\s,]+/).filter(Boolean).some((w) => NOT_ARRIVING.test(w) || this.findCharacter(w) || this.isUser(w) || /^(?:he|she|they)$/i.test(w))) continue;
+      for (const name of [m[1], ...(group ? together : [])]) {
+        const character = this.findCharacter(name);
+        if (character) ids.add(character.id);
+      }
     }
     return [...ids].map((characterId) => ({ type: "arrive" as const, characterId }));
   }

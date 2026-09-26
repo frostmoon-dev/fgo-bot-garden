@@ -128,4 +128,20 @@ describe("arrivals", () => {
     );
     expect(Object.values(beats.at(-1)!.stage.slots).map((s) => s?.characterId)).toContain("oberon");
   });
+
+  it("brings in characters the user says are here", () => {
+    const { ctx } = makeCtx();
+    const { beats } = buildBeats(
+      [
+        { id: "u1", role: "user", content: "BB and Oberon is here." },
+        { id: "a1", role: "assistant", content: "(The room falls quiet.)" },
+      ],
+      ctx,
+      narrative,
+      initialStage(null, "bb"),
+      { user: "Ritsuka", char: "BB" },
+      "Ritsuka",
+    );
+    expect(Object.values(beats.at(-1)!.stage.slots).map((s) => s?.characterId)).toEqual(expect.arrayContaining(["bb", "oberon"]));
+  });
 });

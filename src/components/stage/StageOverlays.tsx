@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseScene } from "@/lib/scene";
+import { parseScene, titleCase } from "@/lib/scene";
 import { activeContent } from "@/lib/types";
 import { SHORTCUTS } from "./usePlaybackEffects";
 import { PanelShell } from "./PanelShell";
-import { usePlay } from "./usePlay";
+import { listNames, usePlay } from "./usePlay";
 
 function PlaceCardInner({ location, time }: { location: string; time?: string }) {
   const [visible, setVisible] = useState(true);
@@ -15,15 +15,15 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    // A small label under the top bar, top-left, so it never covers a face. Capitals like the top bar's
-    // buttons, with the same light tracking: the place in bold, the time smaller and muted below it.
+    // A small label under the top bar, top-left, so it never covers a face. Title Case, whatever case the
+    // model wrote: the place in bold, the time smaller and muted below it.
     <div
       className="place-card pointer-events-none absolute left-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.75rem)] z-20 max-w-[min(20rem,calc(100%-1.5rem))] sm:left-5 sm:top-24"
       aria-live="polite"
     >
       <div className="vn-banner rounded-md border-l-[3px] border-accent bg-canvas/85 py-2.5 pl-3.5 pr-4 shadow-md ring-1 ring-ink/10">
-        <p className="text-[0.95rem] font-bold uppercase sm:text-base leading-snug tracking-[0.04em] text-balance">{location}</p>
-        {time && <p className="vn-banner-sub mt-1 text-xs font-semibold uppercase sm:text-[0.8rem] leading-snug tracking-[0.06em] text-muted">{time}</p>}
+        <p className="text-[0.95rem] font-bold leading-snug text-balance sm:text-base">{titleCase(location)}</p>
+        {time && <p className="vn-banner-sub mt-0.5 text-sm font-medium leading-snug text-muted">{titleCase(time)}</p>}
       </div>
     </div>
   );
@@ -47,10 +47,41 @@ export function StageToast() {
   }, [toast]);
   if (!toast || hidden === toast.id) return null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-40 flex justify-center px-4">
-      <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
-        {toast.text}
+    <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
+      {toast.text}
+    </p>
+  );
+}
+
+// A character the story named isn't in the cast, so they can't appear: offer to add them. It stays until
+// answered, since it asks for a choice.
+export function CastSuggestionCard() {
+  const suggestion = usePlay((s) => s.castSuggestion);
+  const characters = usePlay((s) => s.characters);
+  const accept = usePlay((s) => s.acceptCastSuggestion);
+  const decline = usePlay((s) => s.declineCastSuggestion);
+  if (!suggestion) return null;
+  const names = suggestion.characterIds.map((id) => characters[id]?.name ?? "Someone");
+  return (
+    <div
+      key={suggestion.id}
+      role="status"
+      className="toast-in vn-box pointer-events-auto flex max-w-md flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="min-w-0 flex-1 basis-60">
+        <span className="font-semibold">{listNames(names)}</span> {names.length > 1 ? "aren't" : "isn't"} in this
+        story&apos;s cast, so they can&apos;t appear. Add them?{" "}
+        <span className="text-muted">Cast definitions are sent with every message.</span>
       </p>
+      <div className="ml-auto flex shrink-0 gap-2">
+        <button type="button" className="btn btn-quiet min-h-10" onClick={decline}>
+          Not now
+        </button>
+        <button type="button" className="btn btn-outline min-h-10" onClick={accept}>
+          Add to cast
+        </button>
+      </div>
     </div>
   );
 }

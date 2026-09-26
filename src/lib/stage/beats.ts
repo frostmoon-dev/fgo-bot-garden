@@ -128,11 +128,13 @@ export function buildBeats(
   let arrived = new Set<string>();
   for (const [i, message] of messages.entries()) {
     if (message.role === "user") {
-      const actions = stageOpts.mode === "narrative" ? splitUserText(message.content, userName).filter((s) => s.kind === "do") : [];
+      const segments = stageOpts.mode === "narrative" ? splitUserText(message.content, userName) : [];
+      const actions = segments.filter((s) => s.kind === "do");
       const parser = new ScriptParser(parserCtx);
-      // Someone arriving in the user's own actions ("Ishtar manages to come in") is on stage as the line shows.
+      // Someone the user brings in ("*Ishtar manages to come in*", or saying "BB is here") is on stage as the
+      // line shows.
       arrived = new Set();
-      for (const s of actions) {
+      for (const s of segments) {
         for (const arrive of parser.arrivalsIn(s.text)) {
           stage = applyLine(stage, arrive, stageOpts);
           if (arrive.type === "arrive") arrived.add(arrive.characterId);

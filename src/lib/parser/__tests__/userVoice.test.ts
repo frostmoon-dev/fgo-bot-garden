@@ -121,6 +121,9 @@ describe("arrivals", () => {
     expect(arrivals("(narration) Oberon manages to come in.")).toEqual(["oberon"]);
     expect(arrivals("(narration) Just then, Oberon appears at the door.")).toEqual(["oberon"]);
     expect(arrivals("(narration) In walks Oberon, all smiles.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) Oberon is here.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) BB and Oberon are here.")).toEqual(["bb", "oberon"]);
+    expect(arrivals("(narration) BB and Oberon walk in together.")).toEqual(["bb", "oberon"]);
   });
 
   it("ignores lines where nobody comes in", () => {
@@ -129,5 +132,8 @@ describe("arrivals", () => {
     expect(arrivals("(narration) Oberon's smile appears.")).toEqual([]);
     expect(arrivals("(narration) BB thinks of Oberon.")).toEqual([]);
     expect(arrivals("(narration) BB watches as she walks in.")).toEqual([]);
+    expect(arrivals("(narration) BB wonders if Oberon is here.")).toEqual([]);
+    expect(arrivals("(narration) Oberon is not here.")).toEqual([]);
+    expect(arrivals("(narration) BB wishes Oberon were here.")).toEqual([]);
   });
 });

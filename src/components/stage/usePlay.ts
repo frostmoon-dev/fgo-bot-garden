@@ -15,8 +15,9 @@ import {
 import { refreshScene as refreshSceneAction, suggestChoices as suggestChoicesAction } from "@/app/actions/story";
 import { unwrap } from "@/lib/actionResult";
 import { bondLevel } from "@/lib/bond";
+import { namedOutsideCast } from "@/lib/story/formerCast";
 import type { Choice } from "@/lib/story/choices";
-import type { MessageView, SessionView, SettingsView } from "@/lib/types";
+import { activeContent, type MessageView, type SessionView, type SettingsView } from "@/lib/types";
 import { buildScene, type Scene, type SceneData } from "./buildScene";
 import { runChat, type PromptBreakdown } from "./chatStream";
 
@@ -33,6 +34,12 @@ export interface Toast {
   text: string;
 }
 
+// Library characters the story named who aren't in its cast, offered with an Add button.
+export interface CastSuggestion {
+  id: number;
+  characterIds: string[];
+}
+
 interface PlayState extends PlayData {
   messages: MessageView[];
   scene: Scene;
@@ -46,6 +53,9 @@ interface PlayState extends PlayData {
   panel: Panel;
   error: string | null;
   toast: Toast | null;
+  castSuggestion: CastSuggestion | null;
+  // Characters the user said "Not now" to in this visit, so the offer doesn't repeat.
+  declinedCast: string[];
   promptTokens: number | null;
   promptBreakdown: PromptBreakdown | null;
   sceneBusy: boolean;
@@ -74,6 +84,13 @@ interface PlayState extends PlayData {
   setHideUi: (on: boolean) => void;
   setError: (error: string | null) => void;
   showToast: (text: string) => void;
+  acceptCastSuggestion: () => void;
+  declineCastSuggestion: () => void;
+}
+
+// "BB", "BB and Meltryllis", "BB, Meltryllis and Kiara".
+export function listNames(names: string[]): string {
+  return names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
 // The whole history is re-parsed on every change, so only log each warning once.
@@ -125,9 +142,23 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   const showToast = (text: string) => set({ toast: { id: Date.now(), text } });
 
+  // Offers to add library characters the text names who aren't in the cast: they can't appear until they join.
+  const suggestCast = (text: string) => {
+    const s = get();
+    if (s.session.mode !== "narrative") return;
+    const castIds = new Set(s.session.cast.map((c) => c.characterId));
+    const skip = new Set([...s.declinedCast, ...(s.castSuggestion?.characterIds ?? [])]);
+    const found = namedOutsideCast(text, Object.values(s.characters), castIds).filter((c) => !skip.has(c.id));
+    if (!found.length) return;
+    const characterIds = [...(s.castSuggestion?.characterIds ?? []), ...found.map((c) => c.id)];
+    set({ castSuggestion: { id: Date.now(), characterIds } });
+  };
+
   // After a reply: bond for everyone who spoke (the server counts the same), then the scene box and choices.
   const afterReply = (messageId: string, answered: boolean) => {
     const s = get();
+    const reply = s.messages.find((m) => m.id === messageId);
+    if (reply) suggestCast(activeContent(reply));
     if (answered) {
       const speakers = [
         ...new Set(s.scene.beats.filter((b) => b.messageId === messageId && b.kind === "dialogue" && b.speakerId).map((b) => b.speakerId!)),
@@ -200,6 +231,8 @@ export function createPlayStore(data: PlayData): PlayStore {
     panel: null,
     error: null,
     toast: null,
+    castSuggestion: null,
+    declinedCast: [],
     promptTokens: null,
     promptBreakdown: null,
     sceneBusy: false,
@@ -228,6 +261,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         : null;
       const withUser = tempUser ? [...before, tempUser] : before;
       const scene = commit({ messages: withUser, choices: null });
+      if (trimmed) suggestCast(trimmed);
       // Your own line shows on stage while the reply is written.
       set({ cursor: tempUser ? startCursor : scene.stageBeats.length, typed: 0 });
       let started = false;
@@ -355,6 +389,20 @@ export function createPlayStore(data: PlayData): PlayStore {
       const scene = commit({ session: { ...get().session, ...patch } });
       if (get().cursor >= scene.stageBeats.length) showEnd(scene);
       updateSession(get().session.id, patch).then(unwrap).catch(reportError);
+    },
+
+    acceptCastSuggestion: () => {
+      const s = get();
+      const ids = (s.castSuggestion?.characterIds ?? []).filter((id) => !s.session.cast.some((c) => c.characterId === id));
+      set({ castSuggestion: null });
+      if (!ids.length) return;
+      s.setCast([...s.session.cast, ...ids.map((characterId) => ({ characterId, spriteSetId: null }))]);
+      showToast(`Added ${listNames(ids.map((id) => s.characters[id]?.name ?? "them"))} to the cast.`);
+    },
+
+    declineCastSuggestion: () => {
+      const s = get();
+      set({ castSuggestion: null, declinedCast: [...s.declinedCast, ...(s.castSuggestion?.characterIds ?? [])] });
     },
 
     setCast: (cast) => {

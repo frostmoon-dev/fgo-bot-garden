@@ -14,7 +14,7 @@ import { SavePanel } from "./SavePanel";
 import { SceneBox } from "./SceneBox";
 import { ScenePanel } from "./ScenePanel";
 import { StageButton } from "./StageButton";
-import { HelpPanel, PlaceCard, RecapCard, StageToast } from "./StageOverlays";
+import { CastSuggestionCard, HelpPanel, PlaceCard, RecapCard, StageToast } from "./StageOverlays";
 import { TextBox } from "./TextBox";
 import { TopBar } from "./TopBar";
 import { createPlayStore, PlayStoreProvider, usePlay, type PlayData } from "./usePlay";
@@ -141,7 +141,11 @@ function Stage() {
         </div>
       )}
 
-      <StageToast />
+      {/* Notices at the top: the offer to add someone to the cast, with short toasts below it. */}
+      <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-40 flex flex-col items-center gap-2 px-4">
+        {!s.hideUi && <CastSuggestionCard />}
+        <StageToast />
+      </div>
       <RecapCard />
       {s.panel === "log" && <BacklogPanel />}
       {s.panel === "saves" && <SavePanel />}
