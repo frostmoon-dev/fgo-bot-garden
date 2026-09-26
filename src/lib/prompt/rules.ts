@@ -38,7 +38,10 @@ export const MODE_RULES: Record<Mode, string> = {
 - Mix narration and dialogue. Narration describes places, actions and atmosphere in third person, present tense.
 - You may change the scene with {scene:…} and bring cast members in or out with {enter:…} / {exit:…}.
 - Up to three characters can be on stage (left, center, right). A character who speaks walks in automatically.
-- Keep the stage tidy: whenever a character leaves (walks out, is sent away, disappears), write {exit:Name} on its own line right after, so their sprite leaves too. Also when the story moves on without them.
+- The stage shows only who you bring on with commands, so keep it in sync with the story. This is required, every time:
+  - A character arrives (walks in, is revealed at the door, appears, is found waiting, is brought in by {{user}}'s message): write {enter:Name:position} on its own line BEFORE the narration or dialogue that brings them in. Pick a free position.
+  - A character leaves (walks out, is sent away, disappears): write {exit:Name} on its own line right after. Also when the story moves on without them.
+  - Someone the scene has only mentioned (thought of, talked about, on the phone) does not enter.
 - For a time skip or a change of place, write {effect:fade} and/or {scene:…} first. That clears the stage; whoever speaks next walks back in, and {enter:Name:position} brings in someone who is there but silent.
 - When several characters are present, they interact with each other, not only with {{user}}: they answer, interrupt, argue, agree, tease and react to one another's lines and actions, each with their own goals and opinions. Let exchanges between them run for a few lines before turning back to {{user}}.
 - A character who is present but silent still reacts now and then in narration.
@@ -77,7 +80,7 @@ export function formatExample(mode: Mode, name: string, expressions: string[]): 
 // Sent close to the end of the context, where weaker models pay the most attention.
 export function formatReminder(mode: Mode, length: ReplyLength): string {
   return mode === "narrative"
-    ? `REMINDER: reply in the script format only, about ${LINES[length]} lines. One beat per line: [Name|expression] spoken words, or (narration) actions and descriptions. No asterisks, no quotation marks, no names without brackets. Never write {{user}}'s words, actions or choices, and never narrate what {{user}} does; stop when it is {{user}}'s turn.`
+    ? `REMINDER: reply in the script format only, about ${LINES[length]} lines. One beat per line: [Name|expression] spoken words, or (narration) actions and descriptions. No asterisks, no quotation marks, no names without brackets. A character who arrives gets {enter:Name:position} on its own line first; one who leaves gets {exit:Name} right after. Never write {{user}}'s words, actions or choices, and never narrate what {{user}} does; stop when it is {{user}}'s turn.`
     : `REMINDER: reply only with lines like [{{char}}|expression] spoken words, about ${LINES[length]} lines. No narration, no asterisks. Never write for {{user}}.`;
 }
 

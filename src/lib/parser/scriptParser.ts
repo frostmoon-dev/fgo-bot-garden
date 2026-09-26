@@ -80,6 +80,19 @@ const DEPART_TWO = [
 // Words between the name and the verb that mean someone else leaves, or nobody does:
 // "Oberon watches as BB walks out", "BB almost leaves".
 const NOT_LEAVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|don't|didn't|won't|wouldn't|can't|cannot|couldn't|isn't|wasn't|refuses?|refused|tries|tried|wants?|wanted|pretends?|pretended)$/i;
+// Coming into the scene: "BB walks in", "Ishtar manages to come in", "Oberon appears", "Ishtar dusts off her
+// sleeves, stepping past the threshold". Present and past forms, and "to come in" after a verb like "manages".
+const ARRIVE =
+  String.raw`(?:enters|entered|arrives|arrived|appears|appeared|reappears|reappeared|materiali[sz]es|materiali[sz]ed|returns|returned|` +
+  String.raw`(?:shows|showed|turns|turned)\s+up|(?:comes|came|come|coming)\s+(?:in|inside|back|through)|` +
+  String.raw`(?:walks|walked|walk|walking|steps|stepped|step|stepping|bursts|burst|bursting|barges|barged|barge|strolls|strolled|` +
+  String.raw`storms|stormed|slips|slipped|strides|strode|marches|marched|wanders|wandered|hurries|hurried|rushes|rushed|runs|ran|` +
+  String.raw`sweeps|swept|saunters|sauntered|peeks|peeked|pokes|poked)\s+(?:in|inside|into|through|past\s+the\s+(?:threshold|door))|` +
+  String.raw`joins\s+(?:them|you|us|the)|joined\s+(?:them|you|us|the))`;
+// "…revealing Ishtar leaning against the frame", "In walks BB."
+const REVEAL = String.raw`(?:reveal(?:s|ed|ing)?|in\s+(?:walks|comes|steps|strides|marches|bursts|storms)|there\s+(?:stands|stood))\s+(?:a\s+[\p{L}-]+\s+|an\s+[\p{L}-]+\s+)?`;
+// Words between the name and the verb that mean they don't come in (or someone else does).
+const NOT_ARRIVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|if|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|don't|didn't|won't|wouldn't|can't|cannot|couldn't|isn't|wasn't|refuses?|refused|wants?|wanted|would|could|should|might|may|will|waits?|waiting|hopes?|expects?|imagines?|pictures?|thinks?|remembers?|forgets?)$/i;
 
 // Names a model uses for the user's character in a tag: [You|smile], [Senpai|…], [Master|…].
 const USER_WORDS = ["you", "user", "player", "senpai", "master"];
@@ -210,6 +223,8 @@ export class ScriptParser {
   private readonly anyName: string;
   // "BB waves and heads out." / "With a sigh, Oberon leaves the room." / "BB and Oberon walk away."
   private readonly departure: RegExp | null;
+  private readonly arrival: RegExp | null;
+  private readonly revealed: RegExp | null;
 
   constructor(private readonly ctx: ParserContext) {
     const parts = ctx.userName.split(/\s+/).filter((w) => w.length >= 3);
@@ -235,6 +250,10 @@ export class ScriptParser {
       .concat(["\\{\\{user\\}\\}", "you", ...PRONOUNS])
       .join("|");
     const castName = [...cast].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|");
+    this.arrival = castName
+      ? new RegExp(`(?<![\\p{L}])(${castName})(?![\\p{L}'’])((?:[,\\s]+[\\p{L}'’-]+){0,6}?)[,\\s]+${ARRIVE}(?![\\p{L}])`, "iu")
+      : null;
+    this.revealed = castName ? new RegExp(`${REVEAL}(${castName})(?![\\p{L}'’])`, "iu") : null;
     this.departure = castName
       ? new RegExp(
           `^(?:[^,.!?"“”]{0,40},\\s*)?(?:then\\s+|finally\\s+)?(${castName})(?:(?:,\\s*|\\s+)and\\s+(${castName}))?` +
@@ -519,12 +538,39 @@ export class ScriptParser {
       this.warn("Narration dropped in dialogue mode");
       return [];
     }
-    return [{ type: "narration", text }, ...this.departures(text)];
+    return [...this.arrivals(text), { type: "narration", text }, ...this.departures(text)];
   }
 
   // Exits in the user's own actions: "*BB is gone.*" takes BB off the stage too.
   exitsIn(text: string): ScriptLine[] {
     return this.ctx.mode === "dialogue" ? [] : this.departures(text);
+  }
+
+  // Arrivals in the user's own actions: "*Ishtar manages to come in.*" brings Ishtar on stage.
+  arrivalsIn(text: string): ScriptLine[] {
+    return this.ctx.mode === "dialogue" ? [] : this.arrivals(text);
+  }
+
+  // Narration that brings a character into the scene puts their sprite on stage before the line, so they
+  // are seen as the line announces them. Models often forget {enter:…}, and a silent newcomer stayed invisible.
+  private arrivals(text: string): ScriptLine[] {
+    if (!this.arrival || !this.revealed) return [];
+    const ids = new Set<string>();
+    for (const sentence of text.replace(QUOTED, '""').match(SENTENCE) ?? []) {
+      const plain = sentence.trim();
+      const shown = plain.match(this.revealed);
+      if (shown) {
+        const character = this.findCharacter(shown[1]);
+        if (character) ids.add(character.id);
+      }
+      const m = plain.match(this.arrival);
+      if (!m) continue;
+      const gap = m[2].split(/[\s,]+/).filter(Boolean);
+      if (gap.some((w) => NOT_ARRIVING.test(w) || this.findCharacter(w) || this.isUser(w) || /^(?:he|she|they)$/i.test(w))) continue;
+      const character = this.findCharacter(m[1]);
+      if (character) ids.add(character.id);
+    }
+    return [...ids].map((characterId) => ({ type: "arrive" as const, characterId }));
   }
 
   // Narration that has a character leave also takes their sprite off the stage, after the line.
@@ -702,9 +748,13 @@ export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, 
           return `{enter:${nameOf(l.characterId)}:${l.position}}`;
         case "exit":
           return `{exit:${nameOf(l.characterId)}}`;
+        // Read from the narration itself, so writing the narration back is enough.
+        case "arrive":
+          return "";
         case "effect":
           return `{effect:${l.effect}}`;
       }
     })
+    .filter(Boolean)
     .join("\n");
 }

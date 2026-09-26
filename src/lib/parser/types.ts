@@ -12,7 +12,9 @@ export type ScriptLine =
   | { type: "narration"; text: string }
   | { type: "scene"; backgroundKey: string }
   | { type: "enter"; characterId: string; position: Position }
-  | { type: "exit"; characterId: string };
+  | { type: "exit"; characterId: string }
+  // Narration brought them into the scene: they take a free spot, and stay put if already on stage.
+  | { type: "arrive"; characterId: string };
 
 export interface ParserCharacter {
   id: string;

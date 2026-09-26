@@ -147,8 +147,11 @@ describe("ScriptParser — commands", () => {
     // The user's character has no sprite: dropped, never shown as narration.
     expect(parser.parseLine("(Enter:Ritsuka:center)")).toEqual([]);
     expect(parser.parseLine("Exit: BB")).toEqual([{ type: "exit", characterId: "bb" }]);
-    // Ordinary narration stays narration.
-    expect(parser.parseLine("(Oberon enters the room.)")).toEqual([{ type: "narration", text: "Oberon enters the room." }]);
+    // Ordinary narration stays narration (and brings Oberon on stage if he isn't there yet).
+    expect(parser.parseLine("(Oberon enters the room.)")).toEqual([
+      { type: "arrive", characterId: "oberon" },
+      { type: "narration", text: "Oberon enters the room." },
+    ]);
   });
 
   it("ignores enter/exit for an unknown character", () => {
