@@ -10,7 +10,7 @@ export const BackgroundLayer = memo(function BackgroundLayer({ url }: { url: str
       {layers.map((l) => (
         <div
           key={l.key}
-          className={`absolute inset-0 bg-cover bg-center ${l.leaving ? "" : "fade-in"}`}
+          className={`absolute inset-0 bg-cover bg-center ${l.leaving ? "" : "bg-enter"}`}
           style={{ backgroundImage: `url("${l.value}")`, ["--fade" as string]: "600ms" }}
         />
       ))}

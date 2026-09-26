@@ -7,7 +7,7 @@ export function PanelShell({ title, children }: { title: string; children: React
   const setPanel = usePlay((s) => s.setPanel);
   return (
     <div
-      className="absolute inset-0 z-40 flex items-end justify-center bg-black/55 sm:items-center sm:p-8"
+      className="fade-in absolute inset-0 z-40 flex items-end justify-center bg-black/55 [--fade:180ms] sm:items-center sm:p-8"
       onClick={(e) => {
         e.stopPropagation();
         setPanel(null);
@@ -17,7 +17,7 @@ export function PanelShell({ title, children }: { title: string; children: React
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="vn-box vn-panel flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line bg-canvas shadow-2xl sm:max-h-full sm:rounded-2xl"
+        className="vn-box vn-panel panel-in flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line bg-canvas shadow-2xl sm:max-h-full sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 pb-2 pt-5">

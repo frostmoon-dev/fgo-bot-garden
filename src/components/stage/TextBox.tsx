@@ -34,8 +34,10 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
   return (
     <div className="vn-lane relative mx-auto w-full max-w-[52rem]">
       {name && !waiting && (
+        // Keyed by name, so the tab slides in again when the speaker changes.
         <div
-          className={`vn-box vn-name absolute -top-4 z-10 flex items-center gap-2 rounded-lg px-4 py-1.5 font-name text-[1em] font-bold ${mine ? "vn-name-mine right-4 sm:right-6" : "left-4 sm:left-6"}`}
+          key={`${mine ? "me" : "them"}:${name}`}
+          className={`vn-box vn-name name-in absolute -top-4 z-10 flex items-center gap-2 rounded-lg px-4 py-1.5 font-name text-[1em] font-bold ${mine ? "vn-name-mine right-4 sm:right-6" : "left-4 sm:left-6"}`}
         >
           <ColorDot className="vn-dot" color={mine ? "var(--accent)" : (color ?? "var(--muted)")} />
           {name}
