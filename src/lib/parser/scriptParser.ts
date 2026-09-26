@@ -190,6 +190,25 @@ function readHead(text: string): { kind: HeadKind; rest: string } | null {
   return m && kind ? { kind, rest: text.slice(m[0].length) } : null;
 }
 
+// *Emphasis* inside a sentence is part of the speech, not an action: "In *that*?", "I *really* mean it."
+// It is short and sits mid-sentence: a word right before it, and punctuation or a lower-case word right after.
+// "Hi *waves* there" and "Fine. *sighs* Let's go." stay actions.
+// Roleplay actions often written mid-line ("Hi *waves* there"): these stay actions wherever they are.
+const ACTION_WORD =
+  /^(?:sighs?|waves?|laughs?|giggles?|chuckles?|smiles?|grins?|smirks?|nods?|shrugs?|winks?|blushes|pouts?|huffs?|snorts?|yawns?|gasps?|coughs?|hums?|frowns?|groans?|whimpers?|sniffs?|scoffs?|blinks?|stares?|glares?|beams?|cries|sobs?|hugs?|bows?|clears?|leans?|looks?|turns?|points?|claps?|stretches|tilts?|rolls?|crosses?|taps?|pats?|puffs?|mutters?|whispers?)$/i;
+
+function unwrapEmphasis(text: string): string {
+  return text.replace(ACTION, (whole, inner: string, at: number) => {
+    const words = inner.trim().split(/\s+/);
+    if (words.length > 3 || ACTION_WORD.test(words[0])) return whole;
+    const before = text.slice(0, at).trimEnd();
+    const after = text.slice(at + whole.length);
+    const continues = /^[?!.,;:…—–~-]/.test(after) || /^\s+[\p{Ll}\p{N}]/u.test(after);
+    const midSentence = /[\p{L}\p{N}'’]$/u.test(before) || (!before && /^[?!]/.test(after));
+    return continues && midSentence ? inner : whole;
+  });
+}
+
 // Whatever format tokens are left in a line's text: a doubled tag, stray braces, lone asterisks.
 function sanitize(text: string): string {
   return text
@@ -335,7 +354,7 @@ export class ScriptParser {
       // as an untagged line, which keeps the current expression.
       const tag = piece.match(/^\[[^\]]*\]\s*:?/)?.[0] ?? "";
       // "Hello *waves" and "She smiles.*": a lone asterisk still marks an action.
-      const body = closeAsterisks(piece.slice(tag.length));
+      const body = unwrapEmphasis(closeAsterisks(piece.slice(tag.length)));
       let last = 0;
       let first = true;
       const pushText = (text: string) => {

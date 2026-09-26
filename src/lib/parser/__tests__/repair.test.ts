@@ -179,3 +179,22 @@ describe("ScriptParser — strict about misspelled tags", () => {
     expect(parser.parseLine("[BB|smirk, happy] Hi.")[0]).toMatchObject({ expression: "smirk" });
   });
 });
+
+describe("ScriptParser — *emphasis* inside speech", () => {
+  const parse = (line: string) => new ScriptParser(makeCtx().ctx).parseLine(line);
+
+  it("keeps an emphasised word in the spoken line", () => {
+    expect(parse("[Oberon|smile] Sweetener? In *that*?")).toEqual([
+      { type: "dialogue", characterId: "oberon", name: "Oberon", expression: "smile", text: "Sweetener? In that?" },
+    ]);
+    expect(parse("[BB|smirk] I *really* mean it, Senpai.")[0]).toMatchObject({ type: "dialogue", text: "I really mean it, Senpai." });
+    expect(parse("[BB|smirk] You did *what* now?")).toHaveLength(1);
+  });
+
+  it("still splits real actions out", () => {
+    expect(parse("[BB|smirk] Hi *waves*").map((l) => l.type)).toEqual(["dialogue", "narration"]);
+    expect(parse("[BB|smirk] Well *sighs* fine.").map((l) => l.type)).toEqual(["dialogue", "narration", "dialogue"]);
+    expect(parse("[BB|smirk] Fine. *sighs* Let's go.").map((l) => l.type)).toEqual(["dialogue", "narration", "dialogue"]);
+    expect(parse("[BB|smirk] Hey. *She leans in close.* Miss me?").map((l) => l.type)).toEqual(["dialogue", "narration", "dialogue"]);
+  });
+});
