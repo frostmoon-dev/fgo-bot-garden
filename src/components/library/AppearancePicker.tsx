@@ -1,12 +1,13 @@
 "use client";
 
-import { FONTS, THEMES, themeColors, themeStyle, type FontId } from "@/lib/appearance";
+import { FONTS, FRAME_STYLES, schemeOf, THEMES, themeColors, themeStyle, type FontId, type FrameStyle } from "@/lib/appearance";
 
 interface Props {
   theme: string;
   customBg: string;
   font: string;
-  onChange: (patch: { theme?: string; customBg?: string; font?: string }) => void;
+  frameStyle: FrameStyle;
+  onChange: (patch: { theme?: string; customBg?: string; font?: string; frameStyle?: FrameStyle }) => void;
 }
 
 const SAMPLE = "Welcome back, Senpai. Il1 O0 rn m";
@@ -14,7 +15,9 @@ const SAMPLE = "Welcome back, Senpai. Il1 O0 rn m";
 // Applies a theme/font to the page right away so it can be judged before saving.
 export function previewAppearance(theme: string, customBg: string, font: string) {
   const root = document.documentElement;
-  for (const [k, v] of Object.entries(themeStyle(themeColors(theme, customBg)))) {
+  const colors = themeColors(theme, customBg);
+  root.dataset.scheme = schemeOf(colors);
+  for (const [k, v] of Object.entries(themeStyle(colors))) {
     if (k.startsWith("--")) root.style.setProperty(k, v);
     else root.style.colorScheme = v;
   }
@@ -29,7 +32,17 @@ const FONT_VARS: Record<FontId, string> = {
   dyslexic: '"OpenDyslexic"',
 };
 
-export function AppearancePicker({ theme, customBg, font, onChange }: Props) {
+// A miniature of the story text box in each style.
+function FramePreview({ style }: { style: FrameStyle }) {
+  return (
+    <span data-frames-preview={style} className="relative block h-20 overflow-hidden rounded-lg bg-[#1d2233]">
+      <span className="vn-box vn-name absolute left-3 top-2 z-10 px-3 py-0.5 font-name text-xs font-bold">Oberon</span>
+      <span className="vn-box absolute inset-x-2 bottom-2 top-5 flex items-center px-4 pt-2 text-xs">Welcome back to Chaldea.</span>
+    </span>
+  );
+}
+
+export function AppearancePicker({ theme, customBg, font, frameStyle, onChange }: Props) {
   return (
     <div className="space-y-10">
       <fieldset>
@@ -72,8 +85,26 @@ export function AppearancePicker({ theme, customBg, font, onChange }: Props) {
       </fieldset>
 
       <fieldset>
+        <legend className="text-sm font-medium">Story screen</legend>
+        <p className="mt-0.5 text-sm text-muted">The message window, name tab and buttons while you play.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {(Object.entries(FRAME_STYLES) as [FrameStyle, (typeof FRAME_STYLES)[FrameStyle]][]).map(([id, s]) => (
+            <label
+              key={id}
+              className={`flex cursor-pointer flex-col rounded-xl border p-3 transition-colors ${frameStyle === id ? "border-accent bg-accent-soft" : "border-line hover:border-muted"}`}
+            >
+              <input type="radio" name="frameStyle" value={id} checked={frameStyle === id} onChange={() => onChange({ frameStyle: id })} className="sr-only" />
+              <FramePreview style={id} />
+              <span className="mt-3 px-1 font-semibold">{s.label}</span>
+              <span className="mt-0.5 px-1 text-sm text-muted">{s.hint}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend className="text-sm font-medium">Font</legend>
-        <p className="mt-0.5 text-sm text-muted">Used everywhere, including the story text. FGO also gives names and titles a serif, like the game.</p>
+        <p className="mt-0.5 text-sm text-muted">Used everywhere, including the story text. Character names are always in a flowing script (except with Dyslexic).</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {(Object.entries(FONTS) as [FontId, (typeof FONTS)[FontId]][]).map(([id, f]) => (
             <label
@@ -82,7 +113,7 @@ export function AppearancePicker({ theme, customBg, font, onChange }: Props) {
             >
               <input type="radio" name="font" value={id} checked={font === id} onChange={() => onChange({ font: id })} className="sr-only" />
               <span className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold" style={id === "fgo" ? { fontFamily: "var(--font-shippori)" } : undefined}>
+                <span className="font-semibold" style={id === "fgo" ? { fontFamily: "var(--font-zen-old)" } : undefined}>
                   {f.label}
                 </span>
                 <span className="text-xs text-muted">{f.family}</span>

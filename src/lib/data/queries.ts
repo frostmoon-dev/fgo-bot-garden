@@ -95,6 +95,7 @@ export const getSettings = unstable_cache(
       exampleMode: oneOf(row.exampleMode, ["auto", "always", "never"]),
       replyLength: oneOf(row.replyLength, ["scene", "short", "long"]),
       narrationStyle: oneOf(row.narrationStyle, ["italic", "plain"]),
+      frameStyle: oneOf(row.frameStyle, ["fgo", "simple"]),
     };
   },
   ["settings"],

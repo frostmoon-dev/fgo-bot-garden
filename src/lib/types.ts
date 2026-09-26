@@ -2,7 +2,7 @@
 import type { Mode } from "@/lib/parser/types";
 import type { ExampleMode, MemoryPlacement, PromptProfile, ReplyLength } from "@/lib/prompt/builder";
 import type { AscensionProfile } from "@/lib/ascension";
-import type { NarrationStyle } from "@/lib/appearance";
+import type { NarrationStyle, FrameStyle } from "@/lib/appearance";
 
 export interface ExpressionView {
   id: string;
@@ -70,6 +70,7 @@ export interface SettingsView {
   customBg: string;
   font: string;
   narrationStyle: NarrationStyle;
+  frameStyle: FrameStyle;
   promptProfile: PromptProfile;
   contextSize: number;
   topP: number;

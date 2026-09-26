@@ -92,7 +92,7 @@ function Stage() {
           <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
             {s.error && (
               <div
-                className="vn-box mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
+                className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
                 onClick={(e) => e.stopPropagation()}
               >
                 <span className="flex-1">{s.error}</span>
@@ -104,7 +104,7 @@ function Stage() {
             )}
             {inputOpen && <ChoiceList />}
             {(onLatest || waiting) && !s.choices && (
-              <div className="mx-auto mb-7 flex max-w-[52rem] justify-end" onClick={(e) => e.stopPropagation()}>
+              <div className="vn-lane mx-auto mb-7 flex max-w-[52rem] justify-end" onClick={(e) => e.stopPropagation()}>
                 {onLatest && lastMessage && <VariantControls messageId={lastMessage.id} />}
               </div>
             )}
@@ -116,6 +116,7 @@ function Stage() {
                 waiting={waiting}
                 pending={pending}
                 done={typedDone && !inputOpen}
+                onLog={() => s.setPanel("log")}
               />
             )}
             {inputOpen && <ReplyBar userName={s.persona.name} />}

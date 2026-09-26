@@ -15,12 +15,12 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    <div className="place-card pointer-events-none absolute inset-x-0 top-[22%] z-20 flex justify-center px-6" aria-live="polite">
-      <div className="text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
-        <div className="mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+    <div className="place-card pointer-events-none absolute inset-x-0 top-[11%] z-20 flex justify-center px-6" aria-live="polite">
+      <div className="vn-banner text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
+        <div className="vn-rule mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         <p className="font-title text-2xl font-semibold tracking-wide sm:text-3xl">{location}</p>
-        {time && <p className="mt-1 text-sm uppercase tracking-[0.25em] text-white/80">{time}</p>}
-        <div className="mx-auto mt-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+        {time && <p className="vn-banner-sub mt-1 text-sm uppercase tracking-[0.25em] text-white/80">{time}</p>}
+        <div className="vn-rule mx-auto mt-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
       </div>
     </div>
   );

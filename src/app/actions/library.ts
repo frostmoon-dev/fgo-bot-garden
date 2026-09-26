@@ -113,6 +113,7 @@ const settingsSchema = z.object({
   customBg: z.string().regex(/^(#[0-9a-fA-F]{6})?$/),
   font: z.string().refine(isFontId, "Unknown font"),
   narrationStyle: z.enum(["italic", "plain"]),
+  frameStyle: z.enum(["fgo", "simple"]),
   promptProfile: z.enum(["balanced", "compact", "strict"]),
   contextSize: z.number().int().min(2048).max(2_000_000),
   topP: z.number().min(0.01).max(1),

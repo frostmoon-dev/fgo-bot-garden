@@ -17,7 +17,7 @@ export function VariantControls({ messageId }: { messageId: string }) {
           <StageButton aria-label="Previous version" disabled={streaming || message.activeVariant === 0} onClick={() => swipe(messageId, -1)}>
             ‹
           </StageButton>
-          <span className="min-w-12 rounded-lg bg-canvas/75 px-2 py-2 text-center text-sm tabular-nums backdrop-blur-md">
+          <span className="vn-pill min-w-12 rounded-lg bg-canvas/75 px-2 py-2 text-center text-sm tabular-nums backdrop-blur-md">
             {message.activeVariant + 1}/{count}
           </span>
           <StageButton aria-label="Next version" disabled={streaming || message.activeVariant >= count - 1} onClick={() => swipe(messageId, 1)}>

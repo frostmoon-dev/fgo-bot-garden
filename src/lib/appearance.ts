@@ -20,8 +20,8 @@ export type ThemeId = keyof typeof THEMES | "custom";
 export const FONTS = {
   fgo: {
     label: "FGO",
-    family: "M PLUS 1 · Shippori Mincho",
-    hint: "Like the game: a clear gothic for the story text (as FGO's Skip) and a serif for names and titles (as Matisse).",
+    family: "M PLUS 1 · Zen Old Mincho",
+    hint: "Like the game: a clear gothic for the story text (as FGO's Skip) and a mincho serif for titles.",
   },
   clear: { label: "Clear", family: "Atkinson Hyperlegible Next", hint: "Made by the Braille Institute. Every letter is easy to tell apart." },
   plain: { label: "Plain", family: "Inter", hint: "A neutral, compact interface font." },
@@ -38,6 +38,15 @@ export const NARRATION_STYLES = {
 } as const;
 
 export type NarrationStyle = keyof typeof NARRATION_STYLES;
+
+// The story screen's frames. FGO follows the game's story screen: a wide navy message window, the name
+// on a blue tab, outline buttons, and pieces of the game's UI (public/assets/ui/fgo) for menus and place cards.
+export const FRAME_STYLES = {
+  fgo: { label: "FGO", hint: "Like the game: a wide navy message window, the name on a blue tab, outline buttons." },
+  simple: { label: "Simple", hint: "Plain translucent boxes in your color theme." },
+} as const;
+
+export type FrameStyle = keyof typeof FRAME_STYLES;
 
 export function isThemeId(value: string): value is ThemeId {
   return value === "custom" || value in THEMES;
@@ -64,6 +73,11 @@ export function themeColors(theme: string, customBg: string): ThemeColors {
   }
   const preset = THEMES[theme as keyof typeof THEMES] ?? THEMES.night;
   return { bg: preset.bg, fg: preset.fg, accent: preset.accent, danger: preset.danger };
+}
+
+// Light or dark, for styles that need a different texture on light themes.
+export function schemeOf(colors: ThemeColors): "light" | "dark" {
+  return luminance(colors.bg) > 0.35 ? "light" : "dark";
 }
 
 export function themeStyle(colors: ThemeColors): Record<string, string> {

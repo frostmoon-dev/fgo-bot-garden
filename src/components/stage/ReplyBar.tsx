@@ -35,7 +35,7 @@ export function ReplyBar({ userName }: { userName: string }) {
 
   return (
     <form
-      className="vn-box mx-auto mt-3 flex w-full max-w-[52rem] flex-wrap items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-accent/50 sm:flex-nowrap"
+      className="vn-box vn-lane mx-auto mt-3 flex w-full max-w-[52rem] flex-wrap items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-accent/50 sm:flex-nowrap"
       onClick={(e) => e.stopPropagation()}
       onSubmit={(e) => {
         e.preventDefault();

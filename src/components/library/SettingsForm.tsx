@@ -159,6 +159,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
       const next = { ...f, ...patch };
       if ("theme" in patch || "customBg" in patch || "font" in patch) previewAppearance(next.theme, next.customBg, next.font);
       if (patch.narrationStyle) document.documentElement.dataset.narration = patch.narrationStyle;
+      if (patch.frameStyle) document.documentElement.dataset.frames = patch.frameStyle;
       return next;
     });
   };
@@ -195,7 +196,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
     <div className="max-w-3xl">
       <section>
         <SectionTitle>Appearance</SectionTitle>
-        <AppearancePicker theme={form.theme} customBg={form.customBg} font={form.font} onChange={update} />
+        <AppearancePicker theme={form.theme} customBg={form.customBg} font={form.font} frameStyle={form.frameStyle} onChange={update} />
       </section>
 
       <section className="mt-14 border-t border-line pt-10">

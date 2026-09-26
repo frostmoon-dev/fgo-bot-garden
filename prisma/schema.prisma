@@ -211,6 +211,8 @@ model Settings {
   font          String  @default("fgo")
   // How narration and actions look: italic, or plain (as in FGO).
   narrationStyle String @default("italic")
+  // Story screen frames: "fgo" (like the game's story screen) or "simple" (theme colors).
+  frameStyle     String @default("fgo")
   // Prompt tuning for the model in use.
   promptProfile    String  @default("balanced")
   contextSize      Int     @default(16384)
