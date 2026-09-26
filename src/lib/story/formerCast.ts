@@ -46,3 +46,21 @@ export function presentIds(scene: string, cast: NamedCharacter[]): Set<string> |
     .filter((p) => !/\b(?:left|gone|absent|away|not|no longer|asleep elsewhere)\b/i.test(p));
   return new Set(cast.filter((c) => parts.some((p) => mentions(p, [c.name, ...c.aliases]))).map((c) => c.id));
 }
+
+// Library characters named in a text who are not in the story's cast, in the order they are first named.
+// They can't appear on stage until they join the cast, so the story screen offers to add them.
+export function namedOutsideCast(text: string, all: NamedCharacter[], castIds: Set<string>): NamedCharacter[] {
+  const at = (c: NamedCharacter) =>
+    Math.min(
+      ...[c.name, ...c.aliases]
+        .filter((n) => n.trim().length >= 2)
+        .map((n) => text.search(new RegExp(`(?<![\\p{L}\\p{N}])${n.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "iu")))
+        .filter((i) => i >= 0),
+    );
+  return all
+    .filter((c) => !castIds.has(c.id))
+    .map((c) => ({ c, i: at(c) }))
+    .filter(({ i }) => Number.isFinite(i))
+    .sort((a, b) => a.i - b.i)
+    .map(({ c }) => c);
+}

@@ -5,7 +5,7 @@ import { parseScene, titleCase } from "@/lib/scene";
 import { activeContent } from "@/lib/types";
 import { SHORTCUTS } from "./usePlaybackEffects";
 import { PanelShell } from "./PanelShell";
-import { usePlay } from "./usePlay";
+import { listNames, usePlay } from "./usePlay";
 
 function PlaceCardInner({ location, time }: { location: string; time?: string }) {
   const [visible, setVisible] = useState(true);
@@ -47,10 +47,41 @@ export function StageToast() {
   }, [toast]);
   if (!toast || hidden === toast.id) return null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-40 flex justify-center px-4">
-      <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
-        {toast.text}
+    <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
+      {toast.text}
+    </p>
+  );
+}
+
+// A character the story named isn't in the cast, so they can't appear: offer to add them. It stays until
+// answered, since it asks for a choice.
+export function CastSuggestionCard() {
+  const suggestion = usePlay((s) => s.castSuggestion);
+  const characters = usePlay((s) => s.characters);
+  const accept = usePlay((s) => s.acceptCastSuggestion);
+  const decline = usePlay((s) => s.declineCastSuggestion);
+  if (!suggestion) return null;
+  const names = suggestion.characterIds.map((id) => characters[id]?.name ?? "Someone");
+  return (
+    <div
+      key={suggestion.id}
+      role="status"
+      className="toast-in vn-box pointer-events-auto flex max-w-md flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="min-w-0 flex-1 basis-60">
+        <span className="font-semibold">{listNames(names)}</span> {names.length > 1 ? "aren't" : "isn't"} in this
+        story&apos;s cast, so they can&apos;t appear. Add them?{" "}
+        <span className="text-muted">Cast definitions are sent with every message.</span>
       </p>
+      <div className="ml-auto flex shrink-0 gap-2">
+        <button type="button" className="btn btn-quiet min-h-10" onClick={decline}>
+          Not now
+        </button>
+        <button type="button" className="btn btn-outline min-h-10" onClick={accept}>
+          Add to cast
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeCtx } from "@/lib/parser/__tests__/fixtures";
 import { buildBeats, initialStage } from "@/lib/stage";
-import { formerCast, presentIds, withoutPresent } from "../story/formerCast";
+import { formerCast, namedOutsideCast, presentIds, withoutPresent } from "../story/formerCast";
 
 const bb = { id: "bb", name: "BB", aliases: ["BB-chan"] };
 const oberon = { id: "oberon", name: "Oberon", aliases: ["Vortigern"] };
@@ -70,5 +70,21 @@ describe("the stage follows who is present", () => {
       "Ritsuka",
     );
     expect(onStage(lines.finalStage)).toEqual(["bb", "oberon"]);
+  });
+});
+
+describe("namedOutsideCast", () => {
+  const all = [
+    { id: "bb", name: "BB", aliases: ["BB-chan"] },
+    { id: "melt", name: "Meltryllis", aliases: ["Melt"] },
+    { id: "kiara", name: "Kiara", aliases: [] },
+  ];
+
+  it("finds library characters named outside the cast, in order", () => {
+    expect(namedOutsideCast("Meltryllis and BB is here.", all, new Set(["kiara"])).map((c) => c.id)).toEqual(["melt", "bb"]);
+  });
+
+  it("ignores cast members and names inside other words", () => {
+    expect(namedOutsideCast("Kiara smiles at the BBQ.", all, new Set(["kiara"]))).toEqual([]);
   });
 });
