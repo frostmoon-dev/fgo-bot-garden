@@ -11,7 +11,7 @@ function MessageBlock({ message }: { message: MessageView }) {
   const beats = usePlay((s) => s.scene.beats);
   const characters = usePlay((s) => s.characters);
   const streaming = usePlay((s) => s.streaming);
-  const { editMessage, deleteMessage, togglePin } = usePlayApi().getState();
+  const { editMessage, deleteMessage, togglePin, replay } = usePlayApi().getState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const lines = beats.filter((b) => b.messageId === message.id);
@@ -61,6 +61,15 @@ function MessageBlock({ message }: { message: MessageView }) {
             version {message.activeVariant + 1}/{message.variants.length}
           </span>
         )}
+        <button
+          type="button"
+          disabled={streaming}
+          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          title="Close the log and play the story again from this message"
+          onClick={() => replay(message.id)}
+        >
+          Replay
+        </button>
         <button
           type="button"
           disabled={streaming || message.id.startsWith("temp")}

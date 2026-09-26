@@ -11,6 +11,7 @@ export const SHORTCUTS: [string, string][] = [
   ["H", "Hide the interface to see the scene"],
   ["L", "Log (backlog)"],
   ["M", "Menu"],
+  ["R", "Replay the latest reply from its first line"],
   ["?", "This list"],
   ["Ctrl+I", "In the reply box: mark text as an action"],
   ["Esc", "Close a panel"],
@@ -99,6 +100,7 @@ export function usePlaybackEffects() {
         h: () => s.setHideUi(true),
         l: () => s.setPanel("log"),
         m: () => s.setPanel("menu"),
+        r: () => s.replay(),
         "?": () => s.setPanel("help"),
       };
       const action = actions[e.key.toLowerCase()];

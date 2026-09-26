@@ -70,6 +70,8 @@ interface PlayState extends PlayData {
   // direction: the user's note for this reply only, from outside the story (never saved).
   send: (text: string, direction?: string) => Promise<void>;
   regenerate: (direction?: string) => Promise<void>;
+  // Plays a message again from its first line (the latest reply when none is given). Nothing changes in the story.
+  replay: (messageId?: string) => void;
   stop: () => void;
   swipe: (messageId: string, dir: -1 | 1) => void;
   editMessage: (messageId: string, content: string) => void;
@@ -295,6 +297,16 @@ export function createPlayStore(data: PlayData): PlayStore {
         if (get().cursor >= get().scene.stageBeats.length) showEnd(get().scene);
         reportError(e);
       }
+    },
+
+    replay: (messageId) => {
+      const s = get();
+      if (s.streaming) return;
+      const id = messageId ?? s.messages.findLast((m) => m.role === "assistant")?.id;
+      if (!id) return;
+      const cursor = firstBeatOf(s.scene, s.messages, id);
+      if (cursor >= s.scene.stageBeats.length) return;
+      set({ cursor, typed: 0, panel: null, hideUi: false });
     },
 
     regenerate: async (direction) => {
