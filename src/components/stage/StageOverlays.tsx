@@ -179,6 +179,11 @@ export function HelpPanel() {
         <li>
           <span className="text-ink">Continue</span> (send with an empty box) lets the story go on without you.
         </li>
+        <li>
+          <span className="text-ink">Direct</span> adds a note on where the next reply should go (&ldquo;BB gets jealous&rdquo;). It
+          isn&apos;t part of the story and isn&apos;t saved. <span className="text-ink">Steer</span> does the same when you regenerate a
+          reply; the new version is kept next to the old ones.
+        </li>
         <li>The scene box (top left) tracks where you are. Click it for details or to edit it.</li>
         <li>Pin important moments in the Log so the AI never forgets them. Write your own notes in Menu → Story memory.</li>
         <li>Bond grows each time a character answers you, and they open up as it rises.</li>

@@ -26,6 +26,9 @@ const bodySchema = z.object({
   sessionId: z.string().min(1),
   action: z.enum(["reply", "regenerate"]),
   text: z.string().max(20000).optional(),
+  // The user's note on where this one reply should go ("BB gets jealous", "make it shorter"). Out of the
+  // story: it goes into the prompt for this reply only and is never saved.
+  direction: z.string().max(1000).optional(),
 });
 
 function jsonError(status: number, error: string) {
@@ -171,6 +174,7 @@ export async function POST(request: Request) {
       .filter((m) => m.order > session.summarizedUntil && m.content.trim())
       .map(({ role, content, pinned }) => ({ role, content, pinned })),
     continueScene: action === "reply" && !userText,
+    direction: parsed.data.direction?.trim() || undefined,
     options: {
       profile: settings.promptProfile,
       exampleMode: settings.exampleMode,

@@ -67,8 +67,9 @@ interface PlayState extends PlayData {
 
   advance: () => void;
   setTyped: (n: number) => void;
-  send: (text: string) => Promise<void>;
-  regenerate: () => Promise<void>;
+  // direction: the user's note for this reply only, from outside the story (never saved).
+  send: (text: string, direction?: string) => Promise<void>;
+  regenerate: (direction?: string) => Promise<void>;
   stop: () => void;
   swipe: (messageId: string, dir: -1 | 1) => void;
   editMessage: (messageId: string, content: string) => void;
@@ -183,7 +184,7 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   // Streams lines into one variant of one message. Returns the message id.
   const stream = async (
-    body: { action: "reply" | "regenerate"; text?: string },
+    body: { action: "reply" | "regenerate"; text?: string; direction?: string },
     target: (info: { messageId: string; userMessageId: string | null }) => { messageIndex: number },
   ) => {
     const abort = new AbortController();
@@ -254,7 +255,7 @@ export function createPlayStore(data: PlayData): PlayStore {
 
     setTyped: (n) => set({ typed: n }),
 
-    send: async (text) => {
+    send: async (text, direction) => {
       const s = get();
       if (s.streaming) return;
       const trimmed = text.trim();
@@ -271,7 +272,7 @@ export function createPlayStore(data: PlayData): PlayStore {
       set({ cursor: tempUser ? startCursor : scene.stageBeats.length, typed: 0 });
       let started = false;
       try {
-        const messageId = await stream({ action: "reply", text: trimmed }, ({ messageId, userMessageId }) => {
+        const messageId = await stream({ action: "reply", text: trimmed, direction }, ({ messageId, userMessageId }) => {
           started = true;
           const msgs = get().messages.map((m) => (m.id === "temp-user" && userMessageId ? { ...m, id: userMessageId } : m));
           const assistant: MessageView = {
@@ -296,7 +297,7 @@ export function createPlayStore(data: PlayData): PlayStore {
       }
     },
 
-    regenerate: async () => {
+    regenerate: async (direction) => {
       const s = get();
       if (s.streaming) return;
       const index = s.messages.length - 1;
@@ -306,7 +307,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         // No reply yet: generate one.
         set({ cursor: s.scene.stageBeats.length, typed: 0 });
         try {
-          const messageId = await stream({ action: "regenerate" }, ({ messageId }) => {
+          const messageId = await stream({ action: "regenerate", direction }, ({ messageId }) => {
             const msgs = get().messages;
             commit({
               messages: [
@@ -335,7 +336,7 @@ export function createPlayStore(data: PlayData): PlayStore {
       const scene = commit({ messages });
       set({ cursor: firstBeatOf(scene, messages, last.id), typed: 0 });
       try {
-        const messageId = await stream({ action: "regenerate" }, () => ({ messageIndex: index }));
+        const messageId = await stream({ action: "regenerate", direction }, () => ({ messageIndex: index }));
         if (!get().messages[index].variants.at(-1)?.content.trim()) throw new Error("The AI returned an empty reply.");
         afterReply(messageId, false);
       } catch (e) {

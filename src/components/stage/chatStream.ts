@@ -32,7 +32,7 @@ function parseBreakdown(header: string | null): PromptBreakdown | null {
 
 // Calls /api/chat and hands back complete lines as they arrive.
 export async function runChat(
-  body: { sessionId: string; action: "reply" | "regenerate"; text?: string },
+  body: { sessionId: string; action: "reply" | "regenerate"; text?: string; direction?: string },
   handlers: StreamHandlers,
   signal: AbortSignal,
 ): Promise<void> {
