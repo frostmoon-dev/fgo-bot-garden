@@ -9,10 +9,10 @@ export interface ThemeColors {
 }
 
 export const THEMES = {
-  night: { label: "Night", hint: "Neutral dark grey", bg: "#16181d", fg: "#e3e0d9", accent: "#d2b273", danger: "#ec8b7c" },
-  chaldea: { label: "Chaldea", hint: "Deep blue-grey", bg: "#131a25", fg: "#dde3ea", accent: "#dcb56c", danger: "#ef8f80" },
-  dusk: { label: "Dusk", hint: "Warm, less blue light at night", bg: "#1c1814", fg: "#e9dfd0", accent: "#d9a86a", danger: "#ee8d77" },
-  paper: { label: "Paper", hint: "Light, for daytime", bg: "#f3efe7", fg: "#2b2824", accent: "#8a5a12", danger: "#b3372b" },
+  night: { label: "Night", hint: "Deep navy with warm gold accents", bg: "#0f1724", fg: "#edf1f4", accent: "#d7b06a", danger: "#e17c67" },
+  chaldea: { label: "Chaldea", hint: "Blue steel with brass highlights", bg: "#111d2b", fg: "#e8edf4", accent: "#d0a35d", danger: "#ea8379" },
+  dusk: { label: "Dusk", hint: "Low-light umber with soft gold", bg: "#191511", fg: "#f3eadc", accent: "#d7a96b", danger: "#eb7c69" },
+  paper: { label: "Paper", hint: "Warm parchment with dark ink", bg: "#f6f0e8", fg: "#2d2a27", accent: "#8a5b2b", danger: "#b9483f" },
 } satisfies Record<string, ThemeColors & { label: string; hint: string }>;
 
 export type ThemeId = keyof typeof THEMES | "custom";

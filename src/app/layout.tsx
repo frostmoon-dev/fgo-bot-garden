@@ -1,7 +1,7 @@
 import "@fontsource/opendyslexic/400.css";
 import "@fontsource/opendyslexic/700.css";
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible_Next, Inter, M_PLUS_1, Nunito, Parisienne, Zen_Old_Mincho } from "next/font/google";
+import { Allura, Atkinson_Hyperlegible_Next, Inter, M_PLUS_1, Nunito, Zen_Old_Mincho } from "next/font/google";
 import { schemeOf, themeColors, themeStyle } from "@/lib/appearance";
 import { getSettings } from "@/lib/data/queries";
 import "./globals.css";
@@ -11,7 +11,7 @@ import "./globals.css";
 // Character names are in a flowing script with every font. Only the Latin subset is downloaded.
 const mplus = M_PLUS_1({ variable: "--font-mplus", subsets: ["latin"] });
 const zenOld = Zen_Old_Mincho({ variable: "--font-zen-old", subsets: ["latin"], weight: ["600"], preload: false });
-const script = Parisienne({ variable: "--font-script", subsets: ["latin"], weight: "400" });
+const script = Allura({ variable: "--font-script", subsets: ["latin"], weight: "400" });
 
 // Next.js has no size metrics for this newer font, so it can't build a size-matched fallback
 // (and warns on every compile). Use plain system fallbacks instead.

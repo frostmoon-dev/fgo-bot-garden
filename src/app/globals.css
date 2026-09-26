@@ -10,12 +10,14 @@
   --accent: #d2b273;
   --danger: #ec8b7c;
 
-  --surface: color-mix(in oklab, var(--bg) 95%, var(--fg));
-  --raised: color-mix(in oklab, var(--bg) 91%, var(--fg));
-  --line: color-mix(in oklab, var(--bg) 84%, var(--fg));
-  --muted: color-mix(in oklab, var(--fg) 70%, var(--bg));
+  --surface: color-mix(in oklab, var(--bg) 93%, var(--fg));
+  --raised: color-mix(in oklab, var(--bg) 88%, var(--fg));
+  --line: color-mix(in oklab, var(--fg) 12%, transparent);
+  --muted: color-mix(in oklab, var(--fg) 74%, var(--bg));
   --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--bg));
   --on-accent: color-mix(in oklab, var(--bg) 92%, black);
+  --shadow-soft: 0 18px 40px rgb(0 0 0 / 0.22);
+  --shadow-card: 0 8px 18px rgb(0 0 0 / 0.18);
 
   --font-ui: var(--font-atkinson);
   /* Character names are in a flowing script. Titles use the text font, except in FGO, which pairs a serif. */
@@ -34,9 +36,11 @@
 :root[data-font="plain"] {
   --font-ui: var(--font-inter);
 }
+
 :root[data-font="rounded"] {
   --font-ui: var(--font-nunito);
 }
+
 :root[data-font="dyslexic"] {
   --font-ui: "OpenDyslexic";
   /* A script is hard to read with dyslexia, so names use the text font here. */
@@ -63,91 +67,127 @@
 }
 
 @layer base {
-html {
-  background: var(--bg);
-  color: var(--fg);
-}
+  html {
+    background: var(--bg);
+    color: var(--fg);
+  }
 
-body {
-  font-family: var(--font-ui), system-ui, sans-serif;
-  letter-spacing: var(--tracking);
-  word-spacing: var(--word-spacing);
-  line-height: 1.6;
-}
+  body {
+    font-family: var(--font-ui), system-ui, sans-serif;
+    letter-spacing: var(--tracking);
+    word-spacing: var(--word-spacing);
+    line-height: 1.6;
+    background:
+      radial-gradient(circle at top, color-mix(in oklab, var(--accent) 12%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, black), var(--bg));
+    color: var(--fg);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
 
-::selection {
-  background: color-mix(in oklab, var(--accent) 35%, transparent);
-}
+  p,
+  li,
+  button,
+  input,
+  select,
+  textarea {
+    text-wrap: pretty;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  main,
+  section,
+  header,
+  footer {
+    position: relative;
+  }
 }
 
 @layer components {
-/* A card: one step lighter than the page, a hairline border, a soft shadow below (light from above). */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--fg) 4%, transparent),
-    0 1px 2px rgb(0 0 0 / 0.18);
-}
 
-.field {
-  width: 100%;
-  min-height: 2.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--line);
-  background: color-mix(in oklab, var(--bg) 97%, black);
-  padding: 0.6rem 0.8rem;
-  color: var(--fg);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.15);
-}
-.field::placeholder {
-  color: color-mix(in oklab, var(--muted) 80%, var(--bg));
-}
-.field:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-/* Dropdowns draw their own chevron, a comfortable distance from the edge and in the theme's color. */
-select.field {
-  appearance: none;
-  padding-right: 2.75rem;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position:
-    calc(100% - 1.3rem) 55%,
-    calc(100% - 0.95rem) 55%;
-  background-size: 0.35rem 0.35rem;
-  background-repeat: no-repeat;
-  cursor: pointer;
-}
+  /* A card: calm, slightly elevated surfaces with restrained shadows and subtle gradients. */
+  .card {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--raised) 95%, transparent), var(--surface));
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--fg) 5%, transparent),
+      var(--shadow-card);
+  }
+
+  .field {
+    width: 100%;
+    min-height: 2.85rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--line);
+    background: color-mix(in oklab, var(--bg) 87%, black);
+    padding: 0.7rem 0.85rem;
+    color: var(--fg);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .field::placeholder {
+    color: color-mix(in oklab, var(--muted) 82%, var(--bg));
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--accent) 72%, transparent);
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent),
+      inset 0 1px 2px rgb(0 0 0 / 0.15);
+  }
+
+  /* Dropdowns draw their own chevron, a comfortable distance from the edge and in the theme's color. */
+  select.field {
+    appearance: none;
+    padding-right: 2.75rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.3rem) 55%,
+      calc(100% - 0.95rem) 55%;
+    background-size: 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
 }
 
 @keyframes fade-in {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
+
 @keyframes fade-out {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
 }
+
 .fade-in {
   animation: fade-in var(--fade, 350ms) ease-out both;
 }
+
 .fade-out {
   animation: fade-out var(--fade, 350ms) ease-in both;
 }
@@ -157,11 +197,13 @@ select.field {
     opacity: 0.25;
   }
 }
+
 .pulse-dot {
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .fade-in,
   .fade-out,
   .pulse-dot {
@@ -173,6 +215,7 @@ select.field {
 .stage {
   container-type: size;
 }
+
 .sprite-slot {
   position: absolute;
   bottom: 0;
@@ -183,53 +226,63 @@ select.field {
     left 450ms ease,
     filter 300ms ease;
 }
+
 .sprite-slot[data-pos="left"] {
   left: 22%;
 }
+
 .sprite-slot[data-pos="center"] {
   left: 50%;
 }
+
 .sprite-slot[data-pos="right"] {
   left: 78%;
 }
+
 .sprite-slot[data-dim="true"] {
   filter: brightness(0.6) saturate(0.85);
 }
+
 /* Portrait phones: bigger sprites, lifted above the textbox. */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
     width: min(calc(66cqh * var(--ar)), 190cqw);
     bottom: 22cqh;
   }
+
   .sprite-slot[data-pos="left"] {
     left: 12%;
   }
+
   .sprite-slot[data-pos="right"] {
     left: 88%;
   }
 }
 
 @layer components {
-/* The textbox sits on top of busy art, so it gets a nearly solid backing. */
-.vn-box {
-  background: color-mix(in oklab, var(--bg) 88%, transparent);
-  border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
-  border-radius: 0.75rem;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
-  backdrop-filter: blur(6px);
-}
 
-/* Narration and actions, set apart from speech. Settings > Reading picks the style (data-narration). */
-.vn-narration,
-.vn-action {
-  color: var(--muted);
-}
-:root[data-narration="italic"] :is(.vn-narration, .vn-action) {
-  font-style: italic;
-}
-:root[data-narration="plain"] :is(.vn-narration, .vn-action) {
-  color: color-mix(in oklab, var(--fg) 80%, var(--bg));
-}
+  /* The textbox sits on top of busy art, so it gets a nearly solid backing. */
+  .vn-box {
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Narration and actions, set apart from speech. Settings > Reading picks the style (data-narration). */
+  .vn-narration,
+  .vn-action {
+    color: var(--muted);
+  }
+
+  :root[data-narration="italic"] :is(.vn-narration, .vn-action) {
+    font-style: italic;
+  }
+
+  :root[data-narration="plain"] :is(.vn-narration, .vn-action) {
+    color: color-mix(in oklab, var(--fg) 80%, var(--bg));
+  }
 }
 
 /* FGO's text box: slightly heavy text with a soft shadow, and a gold rule under the name. */
@@ -237,10 +290,36 @@ select.field {
   font-weight: 500;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
 }
+
 :root[data-font="fgo"] .vn-name {
+  border: 1px solid color-mix(in oklab, var(--accent) 48%, transparent);
+  background: linear-gradient(180deg, rgba(18, 22, 29, 0.94), rgba(10, 13, 19, 0.9));
   box-shadow:
     inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent),
-    0 8px 24px rgb(0 0 0 / 0.35);
+    0 10px 24px rgb(0 0 0 / 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+  letter-spacing: 0.06em;
+}
+
+.vn-name {
+  font-family: var(--font-script), cursive;
+  line-height: 1;
+  padding-top: 0.6rem;
+  padding-bottom: 0.55rem;
+  transform: translateY(-2px);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, rgba(28, 30, 38, 0.96), rgba(18, 20, 26, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom-color: color-mix(in oklab, var(--accent) 65%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.vn-name .vn-dot {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+
+.vn-name-mine {
+  transform: translateY(-3px) skewX(-4deg);
 }
 
 /* ---------- A living stage: light, weather, effects ---------- */
@@ -251,6 +330,7 @@ select.field {
     transform: scaleY(1.006) translateY(-0.15%);
   }
 }
+
 .sprite-body {
   width: 100%;
   height: 100%;
@@ -266,18 +346,23 @@ select.field {
   pointer-events: none;
   transition: background 1.5s ease;
 }
+
 .tint-bg[data-time="dawn"] {
   background: linear-gradient(to top, rgb(255 170 140 / 0.22), rgb(150 170 255 / 0.12));
 }
+
 .tint-bg[data-time="dusk"] {
   background: linear-gradient(to top, rgb(255 130 50 / 0.3), rgb(120 50 130 / 0.22));
 }
+
 .tint-bg[data-time="night"] {
   background: radial-gradient(ellipse at 50% 30%, rgb(30 45 110 / 0.3), rgb(5 10 35 / 0.55));
 }
+
 .tint-all[data-time="dusk"] {
   background: rgb(255 140 60 / 0.07);
 }
+
 .tint-all[data-time="night"] {
   background: rgb(20 35 100 / 0.12);
 }
@@ -289,17 +374,20 @@ select.field {
   overflow: hidden;
   pointer-events: none;
 }
+
 .weather i {
   position: absolute;
   top: -12%;
   display: block;
   will-change: transform;
 }
+
 @keyframes fall {
   to {
     transform: translate3d(var(--drift, 0), 120cqh, 0) rotate(var(--spin, 0deg));
   }
 }
+
 .weather[data-kind="rain"] i,
 .weather[data-kind="storm"] i {
   width: 1px;
@@ -309,6 +397,7 @@ select.field {
   --drift: -6cqw;
   rotate: 8deg;
 }
+
 .weather[data-kind="snow"] i {
   width: var(--size);
   height: var(--size);
@@ -318,6 +407,7 @@ select.field {
   animation: fall calc(var(--dur) * 5) linear var(--delay) infinite;
   --drift: 5cqw;
 }
+
 .weather[data-kind="petals"] i {
   width: calc(var(--size) * 1.6);
   height: var(--size);
@@ -327,14 +417,17 @@ select.field {
   --drift: 18cqw;
   --spin: 540deg;
 }
+
 @keyframes fog-drift {
   from {
     transform: translateX(-10%);
   }
+
   to {
     transform: translateX(10%);
   }
 }
+
 .weather[data-kind="fog"]::before,
 .weather[data-kind="fog"]::after {
   content: "";
@@ -344,18 +437,27 @@ select.field {
     radial-gradient(ellipse at 75% 80%, rgb(220 225 235 / 0.3), transparent 55%);
   animation: fog-drift 18s ease-in-out infinite alternate;
 }
+
 .weather[data-kind="fog"]::after {
   animation-duration: 26s;
   animation-direction: alternate-reverse;
 }
+
 @keyframes lightning {
-  0%, 93%, 96%, 100% {
+
+  0%,
+  93%,
+  96%,
+  100% {
     opacity: 0;
   }
-  94%, 97% {
+
+  94%,
+  97% {
     opacity: 0.55;
   }
 }
+
 .weather[data-kind="storm"]::after {
   content: "";
   position: absolute;
@@ -370,14 +472,18 @@ select.field {
     opacity: 0;
     transform: translateY(6px);
   }
-  12%, 80% {
+
+  12%,
+  80% {
     opacity: 1;
     transform: none;
   }
+
   100% {
     opacity: 0;
   }
 }
+
 .place-card {
   animation: place-card 3.4s ease both;
 }
@@ -388,6 +494,7 @@ select.field {
     transform: translateY(-6px);
   }
 }
+
 .toast-in {
   animation: toast-in 250ms ease-out both;
 }
@@ -398,6 +505,7 @@ select.field {
     transform: translateY(8px);
   }
 }
+
 .choice-in {
   animation: choice-in 300ms ease-out both;
 }
@@ -407,11 +515,13 @@ select.field {
     opacity: 0.45;
   }
 }
+
 .shimmer {
   animation: shimmer 1.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .sprite-body,
   .weather,
   .place-card,
@@ -420,6 +530,7 @@ select.field {
   .shimmer {
     animation: none !important;
   }
+
   .weather {
     display: none;
   }
@@ -455,6 +566,7 @@ select.field {
     repeating-linear-gradient(0deg, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 3px),
     linear-gradient(90deg, rgb(9 24 60 / 0.9), rgb(17 42 96 / 0.86) 55%, rgb(9 24 60 / 0.9));
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) button.vn-box:not([data-frames-preview="simple"] *):is(:hover, :focus-visible) {
   border-top-color: rgb(200 222 255 / 0.95);
   box-shadow:
@@ -480,12 +592,14 @@ select.field {
     linear-gradient(90deg, transparent 70%, rgb(255 255 255 / 0.12)),
     linear-gradient(to bottom, #4379d4, #2150a3 55%, #183d82);
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *) {
   left: auto;
   right: 0.6rem;
   padding: 0.28em 1.35em 0.3em 2.4em;
   clip-path: polygon(0 0, calc(100% - 0.8em) 0, 100% 50%, calc(100% - 0.8em) 100%, 0 100%);
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *) .vn-dot {
   display: none;
 }
@@ -494,6 +608,7 @@ select.field {
 :root[data-frames="fgo"] .vn-lane {
   max-width: min(80rem, 100%);
 }
+
 :root[data-frames="fgo"] .vn-text {
   padding-inline: clamp(1.5rem, 4vw, 3.5rem);
   font-size: 1.18em;
@@ -503,6 +618,7 @@ select.field {
 .vn-log-tab {
   display: none;
 }
+
 :root[data-frames="fgo"] .vn-log-tab {
   display: flex;
 }
@@ -511,6 +627,7 @@ select.field {
 .vn-next::before {
   content: "▼";
 }
+
 :root[data-frames="fgo"] .vn-next::before {
   content: "";
   display: block;
@@ -531,9 +648,11 @@ select.field {
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.4);
   backdrop-filter: blur(2px);
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill:not([data-frames-preview="simple"] *):not(:disabled):hover {
   background: rgb(255 255 255 / 0.16);
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill[aria-pressed="true"]:not([data-frames-preview="simple"] *) {
   background: #fff;
   color: #1c2a4e;
@@ -549,6 +668,7 @@ select.field {
   text-shadow: none;
   filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.45));
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before {
   content: "";
   position: absolute;
@@ -559,9 +679,11 @@ select.field {
   border-width: 10px 12px;
   border-image: url("/assets/ui/fgo/banner.png") 20 24 fill / 10px 12px stretch;
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-rule {
   display: none;
 }
+
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-banner-sub {
   color: #3c5a8c;
 }
@@ -579,6 +701,7 @@ select.field {
   background: none;
   box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
 }
+
 :root[data-frames="fgo"] .vn-panel::before {
   content: "";
   position: absolute;

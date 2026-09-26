@@ -28,11 +28,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-5">
-      <form onSubmit={submit} className="w-full max-w-sm">
-        <h1 className="font-title text-3xl font-semibold">Bot Garden</h1>
-        <p className="mt-2 text-muted">Enter your password to continue.</p>
-        <label className="mt-8 block">
+    <main className="flex min-h-dvh items-center justify-center px-5 py-12">
+      <form onSubmit={submit} className="card w-full max-w-md p-7 sm:p-8">
+        <div className="mb-6">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Chaldea access</p>
+          <h1 className="mt-3 font-title text-4xl font-semibold tracking-[0.04em]">Bot Garden</h1>
+        </div>
+        <p className="text-sm text-muted">Enter your password to continue.</p>
+        <label className="mt-7 block">
           <span className="sr-only">Password</span>
           <input
             type="password"
@@ -51,7 +54,7 @@ export default function LoginPage() {
         )}
         <button
           disabled={pending || !password}
-          className="mt-4 min-h-11 w-full rounded-lg bg-accent font-semibold text-on-accent disabled:opacity-40"
+          className="mt-5 min-h-11 w-full rounded-xl bg-accent font-semibold text-on-accent shadow-[0_10px_20px_rgba(215,176,106,0.2)] transition-transform hover:-translate-y-0.5 disabled:opacity-40"
         >
           {pending ? "Checking…" : "Sign in"}
         </button>
