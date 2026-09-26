@@ -5,6 +5,12 @@ export interface Choice {
   text: string;
 }
 
+// The model describing the task instead of doing it ("3 lines starting with SAY: or DO:, showing different
+// aspects of Shiru's personality… Each at most 20 words, first person"). Split at its SAY:/DO:, that plan
+// would read as options like "or" and ", showing different aspects…".
+const NOT_AN_OPTION =
+  /^(?:or|and|and\/or|then|either|nor)\b[\s,.]*$|^[^\p{L}\p{N}*"“'‘(]|\b(?:first person|in character|at most \d+ words|each (?:option|line|one)|(?:three|3) (?:options|lines|choices)|options? (?:for|that)|aspects of|the player(?:'s)? character|writing assistant)\b/iu;
+
 // Reads "SAY: …" / "DO: …" lines. Tolerates numbering, bullets and quotes around the words.
 // Roleplay models often keep roleplaying around the options ("*grins* SAY: Hey", "*DO: Leave.*"),
 // so a capitalised SAY:/DO: later in a line starts an option too, and a wrapping asterisk is dropped.
@@ -28,7 +34,7 @@ export function parseChoices(text: string): Choice[] {
         .replace(/\*([^*]+)\*/g, (all, inner: string) => (inner.trim().split(/\s+/).length > 5 ? "" : all))
         .replace(/\s{2,}/g, " ");
     const words = (kind === "do" ? unquoted.replace(/\*/g, "") : spoken()).trim();
-    if (!words || out.some((c) => c.text === words)) continue;
+    if (!words || NOT_AN_OPTION.test(words) || out.some((c) => c.text === words)) continue;
     out.push({ kind, text: words });
   }
   return out.slice(0, 3);
