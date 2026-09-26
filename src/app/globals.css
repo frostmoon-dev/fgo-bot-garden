@@ -346,14 +346,16 @@
   container-type: size;
 }
 
-/* FGO art is drawn to run off its canvas (hair, wings, weapons are cut at the top edge), so the canvas top sits
-   just above the screen top and that cut is never seen. Sized by height, so the body runs past the bottom of
-   the screen as in the game, and the waist, where FGO bodies end, is never seen through the translucent
-   message window (a body that stops there looks like it floats). Wide sprites may run off the sides. */
+/* Sized by height, so the body runs past the bottom of the screen as in the game: the waist, where FGO bodies
+   end, is never seen through the translucent message window (a body that stops there looks like it floats).
+   FGO canvases leave headroom above most heads, so the canvas top sits above the screen top: that empty band
+   is cut off and the face sits in the upper third. Hair, wings and weapons that reach the canvas top are cut,
+   as in the game. Wide sprites may run off the sides. */
 .sprite-slot {
+  --sprite-h: 118cqh;
   position: absolute;
-  top: -1cqh;
-  width: min(calc(108cqh * var(--ar)), 130cqw);
+  top: -13cqh;
+  width: min(calc(var(--sprite-h) * var(--ar)), 150cqw);
   mask-image: linear-gradient(to top, transparent, #000 9%);
   aspect-ratio: var(--ar);
   transform: translateX(-50%);
@@ -396,7 +398,9 @@
 /* Portrait phones: the same, with a width cap so very wide sprites don't grow far past the screen. */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
-    width: min(calc(102cqh * var(--ar)), 240cqw);
+    --sprite-h: 114cqh;
+    top: -11cqh;
+    width: min(calc(var(--sprite-h) * var(--ar)), 270cqw);
   }
 
   /* Three don't fit on a narrow screen: only the speaker shows, in the middle (see CharacterLayer).
