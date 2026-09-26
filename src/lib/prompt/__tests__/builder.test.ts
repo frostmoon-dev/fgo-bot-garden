@@ -203,3 +203,14 @@ describe("cache-friendly prompt start", () => {
     expect(after).toContain("## BB\nBond with Ritsuka: Lv 3: close");
   });
 });
+
+describe("direction", () => {
+  it("adds the user's direction near the end, for this reply only", () => {
+    const { messages } = buildPrompt({ ...base, direction: "  Oberon gets jealous.  " });
+    const text = messages.map((m) => m.content).join("\n");
+    expect(text).toContain("# DIRECTION FOR THIS REPLY (from the user, outside the story)\nOberon gets jealous.\nFollow it in this reply.");
+    // Not in the cacheable start of the prompt.
+    expect(messages[0].content).not.toContain("Oberon gets jealous");
+    expect(buildPrompt(base).messages.map((m) => m.content).join("\n")).not.toContain("DIRECTION FOR THIS REPLY");
+  });
+});

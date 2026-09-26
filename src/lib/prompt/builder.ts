@@ -96,6 +96,8 @@ export interface PromptInput {
   absent?: string[];
   history: PromptHistoryItem[];
   continueScene: boolean;
+  // The user's direction for this reply only, from outside the story (see the chat route).
+  direction?: string;
   options?: Partial<PromptOptions>;
 }
 
@@ -260,6 +262,8 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     input.lore.length > 0 &&
       `# WORLD INFO\n${input.lore.map((l) => (l.title ? `- ${l.title}: ${l.content}` : `- ${l.content}`)).join("\n")}`,
     userReminder(input.persona),
+    input.direction?.trim() &&
+      `# DIRECTION FOR THIS REPLY (from the user, outside the story)\n${input.direction.trim()}\nFollow it in this reply. It is not something anyone in the story said or did: never quote it or mention it, and still never write {{user}}'s words or actions.`,
     (o.formatReminder || o.profile !== "balanced") && formatReminder(input.mode, o.replyLength),
   ]);
 
