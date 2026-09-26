@@ -15,15 +15,15 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    <div className="place-card pointer-events-none absolute inset-x-0 top-[20%] z-20 flex justify-center px-4 sm:top-[11%]" aria-live="polite">
-      <div className="vn-banner text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
-        <div className="vn-rule mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        {/* Long place names wrap onto two smaller lines instead of stretching the card. */}
-        <p className={`font-title font-semibold leading-tight tracking-wide text-balance ${location.length > 26 ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"}`}>
-          {location}
-        </p>
-        {time && <p className="vn-banner-sub mt-1.5 text-balance text-xs uppercase tracking-[0.16em] text-white/80 sm:text-sm">{time}</p>}
-        <div className="vn-rule mx-auto mt-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+    // A small label under the top bar, top-left, so it never covers a face. Plain type: the place in the
+    // name weight, the time muted below it.
+    <div
+      className="place-card pointer-events-none absolute left-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.75rem)] z-20 max-w-[min(20rem,calc(100%-1.5rem))] sm:left-5 sm:top-24"
+      aria-live="polite"
+    >
+      <div className="vn-banner rounded-md bg-canvas/85 px-4 py-2.5 shadow-md ring-1 ring-ink/10">
+        <p className="font-semibold leading-snug text-balance">{location}</p>
+        {time && <p className="vn-banner-sub mt-0.5 text-sm leading-snug text-muted">{time}</p>}
       </div>
     </div>
   );

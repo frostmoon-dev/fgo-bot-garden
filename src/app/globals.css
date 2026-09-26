@@ -875,42 +875,17 @@
   text-shadow: none;
 }
 
-/* The place card: a navy band like the message window, fading out at both ends, between two thin light
-   lines, as on FGO's chapter cards. Text centered and light. */
+/* The place card: the message window's navy, flat and small, with the same thin light edge. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) {
-  min-width: min(28rem, 92vw);
-  max-width: min(44rem, 94vw);
-  padding: 1rem clamp(1.5rem, 8vw, 3.5rem) 1.05rem;
   color: #f3f5f9;
-  text-align: center;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
-  background:
-    var(--fgo-scan),
-    linear-gradient(to right, transparent, rgb(12 34 84 / 0.92) 18%, rgb(12 34 84 / 0.92) 82%, transparent);
-}
-
-/* The two thin lines above and below, bright in the middle and fading at the ends. */
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before,
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgb(160 205 255 / 0.9) 30%, rgb(160 205 255 / 0.9) 70%, transparent);
-}
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before {
-  top: 0;
-}
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::after {
-  bottom: 0;
-}
-
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-rule {
-  display: none;
+  background: rgb(12 30 72 / 0.9);
+  box-shadow:
+    0 0 0 1px rgb(150 185 240 / 0.45),
+    0 6px 16px rgb(0 0 0 / 0.25);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-banner-sub {
-  color: #a9c6ee;
+  color: #b9c4da;
 }
 
 /* Panels on the story screen (Menu, Log, Save) use the game's dialog window. Light text, like the window. */
