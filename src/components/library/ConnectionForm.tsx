@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { listModels, removeConnection, saveConnection, testConnection, type TestResult } from "@/app/actions/connection";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
@@ -39,6 +39,109 @@ function StatusLine({ view }: { view: ConnectionView }) {
   );
 }
 
+// The model box with its own dropdown. Phones (iOS Safari) show a <datalist> only as a few cut-off words above
+// the keyboard, so the loaded models are listed here instead: filtered by what is typed, 40px rows, and arrow
+// keys, Enter and Esc on a keyboard.
+function ModelBox({
+  listId,
+  value,
+  models,
+  open,
+  setOpen,
+  onChange,
+}: {
+  listId: string;
+  value: string;
+  models: string[];
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  onChange: (value: string) => void;
+}) {
+  const [active, setActive] = useState(-1);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const query = value.trim().toLowerCase();
+  // A picked model shows the whole list again, so another can be chosen without clearing the box.
+  const shown = !query || models.includes(value) ? models : models.filter((m) => m.toLowerCase().includes(query));
+  const visible = open && shown.length > 0;
+
+  const pick = (m: string) => {
+    onChange(m);
+    setOpen(false);
+    setActive(-1);
+  };
+
+  return (
+    <span className="relative min-w-0 flex-1">
+      <TextInput
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+          setActive(-1);
+        }}
+        onFocus={() => {
+          if (closeTimer.current) clearTimeout(closeTimer.current);
+          if (models.length) setOpen(true);
+        }}
+        // Late enough for a tap on a row to land first.
+        onBlur={() => {
+          closeTimer.current = setTimeout(() => setOpen(false), 150);
+        }}
+        onKeyDown={(e) => {
+          if (!visible) return;
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const step = e.key === "ArrowDown" ? 1 : -1;
+            setActive((i) => (i + step + shown.length) % shown.length);
+          } else if (e.key === "Enter" && active >= 0) {
+            e.preventDefault();
+            pick(shown[active]);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setOpen(false);
+          }
+        }}
+        role="combobox"
+        aria-expanded={visible}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={visible && active >= 0 ? `${listId}-${active}` : undefined}
+        placeholder="Model id"
+        autoComplete="off"
+        spellCheck={false}
+        className="font-mono text-sm"
+      />
+      {visible && (
+        <span
+          id={listId}
+          role="listbox"
+          className="absolute inset-x-0 top-full z-20 mt-1 block max-h-72 overflow-y-auto rounded-[0.625rem] border border-line bg-surface py-1 shadow-lg"
+        >
+          {shown.map((m, i) => (
+            <span
+              key={m}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={m === value}
+              // Keeps the focus in the box, so it doesn't close before the tap lands.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.preventDefault();
+                pick(m);
+              }}
+              className={`flex min-h-10 cursor-pointer items-center break-all px-3.5 py-2 font-mono text-sm ${
+                i === active ? "bg-raised" : "hover:bg-raised"
+              } ${m === value ? "text-accent" : ""}`}
+            >
+              {m}
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function ConnectionForm({ view }: { view: ConnectionView }) {
   const router = useRouter();
   const listId = useId();
@@ -48,6 +151,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [models, setModels] = useState<string[]>([]);
+  const [listOpen, setListOpen] = useState(false);
   const [tested, setTested] = useState<TestResult | null>(null);
   const [saved, setSaved] = useState(false);
   const { pending, error, run } = useAsync();
@@ -122,7 +226,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
               placeholder={keyApplies ? `Saved (${view.keyHint})` : "Paste your API key"}
               autoComplete="off"
               spellCheck={false}
-              className="font-mono text-sm"
+              className="min-w-0 flex-1 font-mono text-sm"
             />
             <Button variant="quiet" className="shrink-0" onClick={() => setShowKey((v) => !v)} aria-pressed={showKey}>
               {showKey ? "Hide" : "Show"}
@@ -139,17 +243,16 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
       <div>
         <Label title="Model" hint="The model id, exactly as the provider writes it. Load the list to pick one.">
           <span className="flex gap-2">
-            <TextInput
+            <ModelBox
+              listId={listId}
               value={model}
-              onChange={(e) => {
+              models={models}
+              open={listOpen}
+              setOpen={setListOpen}
+              onChange={(value) => {
                 changed();
-                setModel(e.target.value);
+                setModel(value);
               }}
-              list={listId}
-              placeholder="Model id"
-              autoComplete="off"
-              spellCheck={false}
-              className="font-mono text-sm"
             />
             <Button
               className="shrink-0"
@@ -159,22 +262,16 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
                   const list = unwrap(await listModels({ provider, baseUrl, apiKey }));
                   setModels(list);
                   if (!model.trim() && list.length === 1) setModel(list[0]);
+                  setListOpen(list.length > 1);
                 })
               }
             >
               Load models
             </Button>
           </span>
-          <datalist id={listId}>
-            {models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
         </Label>
         {models.length > 0 && (
-          <p className="mt-2 text-sm text-muted">
-            {models.length} models found. Click the model box and start typing to filter them.
-          </p>
+          <p className="mt-2 text-sm text-muted">{models.length} models found. Tap the model box to pick one, or type to filter them.</p>
         )}
       </div>
 
