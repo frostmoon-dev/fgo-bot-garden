@@ -13,6 +13,19 @@ const WORD_HEAD = /^([A-Za-z][A-Za-z']{1,12})\s*:\s*/;
 const MID_HEAD = /\s[[({<]\s*([A-Za-z]{3,12})\s*[\])}>]/g;
 // Out-of-character notes: (OOC: …), [A/N …], Note: … They break the story, so they are dropped.
 const META_LINE = /^[[(]\s*(?:ooc|a\/n|author'?s? note)\b[\s\S]*[\])]\s*$/i;
+// The model's own planning, leaked into the reply: "We need to continue the scene: …", "The user wants …".
+// Only when it talks about the reply itself, so a character's "We need to go" stays.
+const PLANNING = /^[(*\s]*(?:(?:ok(?:ay)?|alright|so|now|next|first|hmm+|well)\W+)*(?:(?:we|i)\s+(?:need|should|must|have|will|want|can)|let me|let's|let us)\b/i;
+const PLAN_WORDS = /\b(?:(?:continue|write|describe|end|advance)\s+(?:the|this)\s+scene|the user|(?<!\{)user'?s?|reply|response|respond|roleplay|format|instructions?|prompt|narration|dialogue|tags?|output|persona|in character)\b/i;
+const USER_PLAN = /^[(*\s]*(?:the\s+)?user(?:'s)?\s+(?:wants?|says?|said|asks?|asked|is|has|chose|replied|writes?|wrote)\b/i;
+// Scene-box fields copied into a line: "present: Shiru, Ritsuka. Mood: quiet relief."
+const SCENE_FIELD = /\b(location|present|mood|situation|weather)\s*:/gi;
+
+function isPlanning(text: string): boolean {
+  if (USER_PLAN.test(text) || (PLANNING.test(text) && PLAN_WORDS.test(text))) return true;
+  const fields = new Set([...text.matchAll(SCENE_FIELD)].map((m) => m[1].toLowerCase()));
+  return fields.size >= 2;
+}
 // [Name|expression] text. Also accepts "," or ":" as the separator and a colon after the tag.
 const DIALOGUE_TAG = /^\[([^\]|,:]+?)\s*(?:[|,:]\s*([^\]]*?))?\s*\]\s*:?\s*([\s\S]*)$/;
 // Name|expression: text (the brackets forgotten).
@@ -328,6 +341,10 @@ export class ScriptParser {
     if (head?.kind === "dialogue") return depth < 2 && head.rest.trim() ? this.textLine(head.rest, depth + 1) : [];
     if (head?.kind === "meta") {
       this.warn(`Dropped a meta line: "${text.slice(0, 40)}"`);
+      return [];
+    }
+    if (!text.startsWith("[") && isPlanning(text)) {
+      this.warn(`Dropped the model's planning: "${text.slice(0, 40)}"`);
       return [];
     }
 

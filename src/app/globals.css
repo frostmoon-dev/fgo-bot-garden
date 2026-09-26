@@ -382,10 +382,35 @@
   z-index: 1;
 }
 
-/* Portrait phones: bigger sprites (the width cap keeps them from growing past the screen). */
+/* Portrait phones: bigger sprites, so the waist sits behind the message window instead of the body
+   ending in mid-air above it (the width cap keeps them from growing far past the screen). */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
-    width: min(calc(66cqh * var(--ar)), 190cqw);
+    width: min(calc(84cqh * var(--ar)), 210cqw);
+  }
+
+  /* Three on a narrow screen: each is seen through a soft-edged column around its own body, so a
+     neighbour's wide wings, sleeves or weapons never cover the middle face. */
+  [data-crowded="true"] > .sprite-slot {
+    --col: 26cqw;
+    mask-image:
+      linear-gradient(to top, transparent, #000 9%),
+      linear-gradient(
+        to right,
+        transparent calc(50% - var(--col)),
+        #000 calc(50% - var(--col) + 7cqw),
+        #000 calc(50% + var(--col) - 7cqw),
+        transparent calc(50% + var(--col))
+      );
+    mask-composite: intersect;
+  }
+
+  [data-crowded="true"] > .sprite-slot[data-pos="left"] {
+    left: 17%;
+  }
+
+  [data-crowded="true"] > .sprite-slot[data-pos="right"] {
+    left: 83%;
   }
 
   .sprite-slot[data-pos="left"] {
@@ -810,8 +835,9 @@
    banner announces where the story is, and the scene opens from the Menu. */
 :root[data-frames="fgo"] .stage .vn-topbar .vn-pill {
   min-height: clamp(2.5rem, min(7.2cqh, 9cqw), 3.5rem);
-  padding-inline: 1em;
-  font-size: clamp(0.875rem, calc(min(2.9cqh, 3.6cqw) * var(--ui-scale, 1)), 1.4rem);
+  /* Narrower sides on a phone, so Back, Stop, Auto, Skip and Menu fit in one row at 360px. */
+  padding-inline: clamp(0.55em, 2.4cqw, 1em);
+  font-size: clamp(0.8125rem, calc(min(2.9cqh, 3.6cqw) * var(--ui-scale, 1)), 1.4rem);
   font-weight: 700;
   text-transform: uppercase;
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { activeConnection, type LlmConnection } from "./connection";
+import { stripReasoning, stripReasoningStream } from "./reasoning";
 import { readSseDeltas } from "./sse";
 import type { ChatOptions } from "./types";
 
@@ -58,11 +59,11 @@ async function post(options: ChatOptions, stream: boolean): Promise<Response> {
 export async function* streamChat(options: ChatOptions): AsyncGenerator<string> {
   const res = await post(options, true);
   if (!res.body) throw new Error("The provider sent an empty response.");
-  yield* readSseDeltas(res.body);
+  yield* stripReasoningStream(readSseDeltas(res.body));
 }
 
 export async function completeChat(options: ChatOptions): Promise<string> {
   const res = await post(options, false);
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return json.choices?.[0]?.message?.content ?? "";
+  return stripReasoning(json.choices?.[0]?.message?.content ?? "");
 }
