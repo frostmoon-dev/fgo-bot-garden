@@ -1,4 +1,4 @@
-# Bot Garden
+# Bond Garden
 
 A personal Fate/Grand Order style visual novel chat. You type your own replies; AI characters answer with dialogue, narration and sprite expression changes.
 

@@ -33,7 +33,7 @@ export default function LoginPage() {
       <form onSubmit={submit} className="card w-full max-w-md p-6 sm:p-8">
         <div className="flex flex-col items-center text-center">
           <ChaldeaEmblem className="size-20 text-accent" />
-          <h1 className="wordmark wordmark-lg mt-3">Bot Garden</h1>
+          <h1 className="wordmark wordmark-lg mt-3">Bond Garden</h1>
           <p className="mt-3 text-sm text-muted">Enter your password to continue.</p>
         </div>
         <label className="mt-6 block">

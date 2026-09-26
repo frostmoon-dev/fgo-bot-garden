@@ -109,3 +109,25 @@ describe("departures", () => {
     expect(exits('(narration) "I\'m leaving," BB says, but she stays.')).toEqual([]);
   });
 });
+
+describe("arrivals", () => {
+  const arrivals = (line: string) =>
+    new ScriptParser(makeCtx().ctx).parseLine(line).filter((l) => l.type === "arrive").map((l) => (l as { characterId: string }).characterId);
+
+  it("turns narrated arrivals into arrive lines, before the narration", () => {
+    expect(new ScriptParser(makeCtx().ctx).parseLine("(narration) Oberon walks in.")[0]).toEqual({ type: "arrive", characterId: "oberon" });
+    expect(arrivals("(narration) The door swings open with a bang, revealing Oberon leaning against the frame.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) Oberon dusts off her sleeves, casually stepping past the threshold.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) Oberon manages to come in.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) Just then, Oberon appears at the door.")).toEqual(["oberon"]);
+    expect(arrivals("(narration) In walks Oberon, all smiles.")).toEqual(["oberon"]);
+  });
+
+  it("ignores lines where nobody comes in", () => {
+    expect(arrivals("(narration) BB wonders if Oberon would ever come in.")).toEqual([]);
+    expect(arrivals("(narration) Oberon never comes back.")).toEqual([]);
+    expect(arrivals("(narration) Oberon's smile appears.")).toEqual([]);
+    expect(arrivals("(narration) BB thinks of Oberon.")).toEqual([]);
+    expect(arrivals("(narration) BB watches as she walks in.")).toEqual([]);
+  });
+});

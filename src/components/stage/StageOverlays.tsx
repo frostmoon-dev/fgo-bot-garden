@@ -15,15 +15,15 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    // A small label under the top bar, top-left, so it never covers a face. Plain type: the place in the
-    // name weight, the time muted below it.
+    // A small label under the top bar, top-left, so it never covers a face. Capitals like the top bar's
+    // buttons, with the same light tracking: the place in bold, the time smaller and muted below it.
     <div
       className="place-card pointer-events-none absolute left-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.75rem)] z-20 max-w-[min(20rem,calc(100%-1.5rem))] sm:left-5 sm:top-24"
       aria-live="polite"
     >
-      <div className="vn-banner rounded-md bg-canvas/85 px-4 py-2.5 shadow-md ring-1 ring-ink/10">
-        <p className="font-semibold leading-snug text-balance">{location}</p>
-        {time && <p className="vn-banner-sub mt-0.5 text-sm leading-snug text-muted">{time}</p>}
+      <div className="vn-banner rounded-md border-l-[3px] border-accent bg-canvas/85 py-2.5 pl-3.5 pr-4 shadow-md ring-1 ring-ink/10">
+        <p className="text-[0.95rem] font-bold uppercase sm:text-base leading-snug tracking-[0.04em] text-balance">{location}</p>
+        {time && <p className="vn-banner-sub mt-1 text-xs font-semibold uppercase sm:text-[0.8rem] leading-snug tracking-[0.06em] text-muted">{time}</p>}
       </div>
     </div>
   );

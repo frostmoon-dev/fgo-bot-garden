@@ -879,10 +879,13 @@
   text-shadow: none;
 }
 
-/* The place card: the message window's navy, flat and small, with the same thin light edge. */
+/* The place card: the message window's navy, flat and small, with the same thin light edge, and the name
+   tab's light blue edge down its left side. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) {
   color: #f3f5f9;
   background: rgb(12 30 72 / 0.9);
+  border-left-color: #6fb2f0;
+  border-radius: 4px;
   box-shadow:
     0 0 0 1px rgb(150 185 240 / 0.45),
     0 6px 16px rgb(0 0 0 / 0.25);

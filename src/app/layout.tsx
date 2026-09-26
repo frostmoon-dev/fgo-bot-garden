@@ -26,7 +26,7 @@ const fontVariables = [figtree, atkinson].map((f) => f.variable).join(" ");
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Bot Garden",
+  title: "Bond Garden",
   description: "A personal Fate/Grand Order style visual novel chat",
 };
 

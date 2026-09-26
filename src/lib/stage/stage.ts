@@ -67,6 +67,12 @@ export function applyLine(stage: StageState, line: ScriptLine, opts: StageOption
       next.slots[line.position] = { characterId: line.characterId, expression };
       return next;
     }
+    case "arrive": {
+      if (findSlot(next, line.characterId)) return next;
+      const free = AUTO_ENTER_ORDER.find((p) => !next.slots[p]) ?? "right";
+      next.slots[free] = { characterId: line.characterId, expression: "neutral" };
+      return next;
+    }
     case "dialogue": {
       if (!line.characterId) return next;
       const at = findSlot(next, line.characterId);

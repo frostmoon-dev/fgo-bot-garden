@@ -31,9 +31,9 @@ export function Nav() {
   return (
     <header className="site-nav sticky top-0 z-30 border-b border-line bg-canvas">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:h-16 sm:gap-6 sm:px-8">
-        <Link href="/" className="wordmark flex min-h-10 items-center gap-2.5 text-ink" aria-label="Bot Garden, home">
+        <Link href="/" className="wordmark flex min-h-10 items-center gap-2.5 text-ink" aria-label="Bond Garden, home">
           <ChaldeaEmblem className="size-9 shrink-0 text-accent sm:size-10" />
-          <span>Bot Garden</span>
+          <span>Bond Garden</span>
         </Link>
         <button
           type="button"

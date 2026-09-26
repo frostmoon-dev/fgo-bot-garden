@@ -124,19 +124,27 @@ export function buildBeats(
   let stage = startStage;
   const beats: Beat[] = [];
   const latest = messages.findLastIndex((m) => m.role === "assistant");
+  // Who the user's last message brought in. The scene box may not list them yet, so they stay.
+  let arrived = new Set<string>();
   for (const [i, message] of messages.entries()) {
     if (message.role === "user") {
-      beats.push(...userBeats(message, userName, stage));
-      // Someone leaving in the user's own actions ("BB is gone") leaves the stage after them.
-      if (stageOpts.mode === "narrative") {
-        const parser = new ScriptParser(parserCtx);
-        for (const s of splitUserText(message.content, userName)) {
-          if (s.kind === "do") for (const exit of parser.exitsIn(s.text)) stage = applyLine(stage, exit, stageOpts);
+      const actions = stageOpts.mode === "narrative" ? splitUserText(message.content, userName).filter((s) => s.kind === "do") : [];
+      const parser = new ScriptParser(parserCtx);
+      // Someone arriving in the user's own actions ("Ishtar manages to come in") is on stage as the line shows.
+      arrived = new Set();
+      for (const s of actions) {
+        for (const arrive of parser.arrivalsIn(s.text)) {
+          stage = applyLine(stage, arrive, stageOpts);
+          if (arrive.type === "arrive") arrived.add(arrive.characterId);
         }
       }
+      beats.push(...userBeats(message, userName, stage));
+      // Someone leaving in the user's own actions ("BB is gone") leaves the stage after them.
+      for (const s of actions) for (const exit of parser.exitsIn(s.text)) stage = applyLine(stage, exit, stageOpts);
       continue;
     }
-    if (i === latest && present && stageOpts.mode === "narrative") stage = keepPresent(stage, present);
+    if (i === latest && present && stageOpts.mode === "narrative") stage = keepPresent(stage, new Set([...present, ...arrived]));
+    arrived = new Set();
     const builder = new BeatBuilder(message.id, parserCtx, stageOpts, stage, macros);
     beats.push(...builder.pushText(message.content));
     stage = builder.stage;
