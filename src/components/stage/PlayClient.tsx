@@ -105,14 +105,18 @@ function Stage() {
           <div className="min-h-0 shrink overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,calc(var(--fgo-text,1em)*1.7))] [scrollbar-width:none] sm:px-6 sm:pb-6">
             {s.error && (
               <div
-                className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
+                className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm text-danger"
                 onClick={(e) => e.stopPropagation()}
               >
-                <span className="flex-1">{s.error}</span>
-                {lastMessage?.role === "user" && <StageButton onClick={() => void s.regenerate()}>Retry</StageButton>}
-                <button type="button" className="min-h-10 rounded-lg px-3 text-muted hover:text-ink" onClick={() => s.setError(null)}>
-                  Dismiss
-                </button>
+                {/* Provider errors can carry long JSON with no spaces: break anywhere, and scroll past a few lines,
+                    so the buttons stay on screen. On a phone they wrap onto their own row. */}
+                <span className="max-h-24 min-w-0 flex-1 basis-full overflow-y-auto [overflow-wrap:anywhere] sm:basis-0">{s.error}</span>
+                <div className="ml-auto flex shrink-0 gap-2">
+                  {lastMessage?.role === "user" && <StageButton onClick={() => void s.regenerate()}>Retry</StageButton>}
+                  <button type="button" className="min-h-10 rounded-lg px-3 text-muted hover:text-ink" onClick={() => s.setError(null)}>
+                    Dismiss
+                  </button>
+                </div>
               </div>
             )}
             {inputOpen && <ChoiceList />}
