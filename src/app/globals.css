@@ -347,13 +347,13 @@
 }
 
 /* FGO art is drawn to run off its canvas (hair, wings, weapons are cut at the top edge), so the canvas top sits
-   just above the screen top and that cut is never seen. Sized by height, so the face and upper body stay above
-   the message window; wide sprites may run off the sides, like in the game. The waist, where FGO bodies end,
-   fades out instead of stopping hard. */
+   just above the screen top and that cut is never seen. Sized by height, so the body runs past the bottom of
+   the screen as in the game, and the waist, where FGO bodies end, is never seen through the translucent
+   message window (a body that stops there looks like it floats). Wide sprites may run off the sides. */
 .sprite-slot {
   position: absolute;
   top: -1cqh;
-  width: min(calc(89cqh * var(--ar)), 130cqw);
+  width: min(calc(108cqh * var(--ar)), 130cqw);
   mask-image: linear-gradient(to top, transparent, #000 9%);
   aspect-ratio: var(--ar);
   transform: translateX(-50%);
@@ -374,6 +374,17 @@
   left: 78%;
 }
 
+/* Wide screens: two share it half and half (CharacterLayer puts them in left and right). */
+@container (aspect-ratio > 1/1) {
+  [data-crowded="false"] > .sprite-slot[data-pos="left"] {
+    left: 25%;
+  }
+
+  [data-crowded="false"] > .sprite-slot[data-pos="right"] {
+    left: 75%;
+  }
+}
+
 .sprite-slot[data-dim="true"] {
   filter: brightness(0.6) saturate(0.85);
 }
@@ -382,35 +393,31 @@
   z-index: 1;
 }
 
-/* Portrait phones: bigger sprites, so the waist sits behind the message window instead of the body
-   ending in mid-air above it (the width cap keeps them from growing far past the screen). */
+/* Portrait phones: the same, with a width cap so very wide sprites don't grow far past the screen. */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
-    width: min(calc(84cqh * var(--ar)), 210cqw);
+    width: min(calc(102cqh * var(--ar)), 240cqw);
   }
 
-  /* Three on a narrow screen: each is seen through a soft-edged column around its own body, so a
-     neighbour's wide wings, sleeves or weapons never cover the middle face. */
-  [data-crowded="true"] > .sprite-slot {
-    --col: 26cqw;
-    mask-image:
-      linear-gradient(to top, transparent, #000 9%),
-      linear-gradient(
-        to right,
-        transparent calc(50% - var(--col)),
-        #000 calc(50% - var(--col) + 7cqw),
-        #000 calc(50% + var(--col) - 7cqw),
-        transparent calc(50% + var(--col))
-      );
-    mask-composite: intersect;
+  /* Three don't fit on a narrow screen: only the speaker shows, in the middle (see CharacterLayer).
+     The others fade out, so a new speaker cross-fades in. The body carries the fade, since the slot's
+     own opacity belongs to the enter/exit animation. */
+  [data-crowded="true"] > .sprite-slot[data-pos] {
+    left: 50%;
+    transition: filter 300ms ease;
   }
 
-  [data-crowded="true"] > .sprite-slot[data-pos="left"] {
-    left: 17%;
+  [data-crowded="true"] > .sprite-slot:not([data-solo="true"]) {
+    visibility: hidden;
+    transition: visibility 0s 300ms;
   }
 
-  [data-crowded="true"] > .sprite-slot[data-pos="right"] {
-    left: 83%;
+  [data-crowded="true"] > .sprite-slot:not([data-solo="true"]) .sprite-body {
+    opacity: 0;
+  }
+
+  [data-crowded="true"] > .sprite-slot[data-solo="true"] {
+    filter: none;
   }
 
   .sprite-slot[data-pos="left"] {
@@ -468,6 +475,7 @@
   height: 100%;
   transform-origin: 50% 100%;
   animation: breathe 5.5s ease-in-out infinite;
+  transition: opacity 300ms ease;
 }
 
 /* Time of day: a tint over the background (strong) and over everything (light). */
@@ -867,42 +875,17 @@
   text-shadow: none;
 }
 
-/* The place card: a navy band like the message window, fading out at both ends, between two thin light
-   lines, as on FGO's chapter cards. Text centered and light. */
+/* The place card: the message window's navy, flat and small, with the same thin light edge. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) {
-  min-width: min(28rem, 92vw);
-  max-width: min(44rem, 94vw);
-  padding: 1rem clamp(1.5rem, 8vw, 3.5rem) 1.05rem;
   color: #f3f5f9;
-  text-align: center;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
-  background:
-    var(--fgo-scan),
-    linear-gradient(to right, transparent, rgb(12 34 84 / 0.92) 18%, rgb(12 34 84 / 0.92) 82%, transparent);
-}
-
-/* The two thin lines above and below, bright in the middle and fading at the ends. */
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before,
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgb(160 205 255 / 0.9) 30%, rgb(160 205 255 / 0.9) 70%, transparent);
-}
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before {
-  top: 0;
-}
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::after {
-  bottom: 0;
-}
-
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-rule {
-  display: none;
+  background: rgb(12 30 72 / 0.9);
+  box-shadow:
+    0 0 0 1px rgb(150 185 240 / 0.45),
+    0 6px 16px rgb(0 0 0 / 0.25);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-banner-sub {
-  color: #a9c6ee;
+  color: #b9c4da;
 }
 
 /* Panels on the story screen (Menu, Log, Save) use the game's dialog window. Light text, like the window. */

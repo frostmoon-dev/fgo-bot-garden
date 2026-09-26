@@ -47,6 +47,12 @@ function Stage() {
   const bgUrl = s.backgrounds.find((b) => b.key === stage.backgroundKey)?.imageUrl ?? null;
   const speakerId = shownBeat?.kind === "dialogue" ? shownBeat.speakerId : null;
   const pending = !!shownBeat && shownBeat.role === "user" && atEnd && s.streaming;
+  // On a crowded phone screen only one character shows: the speaker, or during narration the last one who spoke.
+  const onStage = (id: string | null) => !!id && Object.values(stage.slots).some((slot) => slot?.characterId === id);
+  let focusId = onStage(speakerId) ? speakerId : null;
+  for (let i = Math.min(s.cursor, beats.length - 1); !focusId && i >= 0; i--) {
+    if (beats[i].kind === "dialogue" && onStage(beats[i].speakerId)) focusId = beats[i].speakerId;
+  }
 
   const world = parseScene(s.session.scene);
   const time = timeOfDay(world.Time);
@@ -78,7 +84,7 @@ function Stage() {
       <div ref={sceneRef} className="absolute inset-0">
         <BackgroundLayer url={bgUrl} />
         <TimeTint time={time} layer="bg" />
-        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} />
+        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} />
         <WeatherLayer kind={weather} />
         <TimeTint time={time} layer="all" />
       </div>
@@ -99,14 +105,18 @@ function Stage() {
           <div className="min-h-0 shrink overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,calc(var(--fgo-text,1em)*1.7))] [scrollbar-width:none] sm:px-6 sm:pb-6">
             {s.error && (
               <div
-                className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
+                className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm text-danger"
                 onClick={(e) => e.stopPropagation()}
               >
-                <span className="flex-1">{s.error}</span>
-                {lastMessage?.role === "user" && <StageButton onClick={() => void s.regenerate()}>Retry</StageButton>}
-                <button type="button" className="min-h-10 rounded-lg px-3 text-muted hover:text-ink" onClick={() => s.setError(null)}>
-                  Dismiss
-                </button>
+                {/* Provider errors can carry long JSON with no spaces: break anywhere, and scroll past a few lines,
+                    so the buttons stay on screen. On a phone they wrap onto their own row. */}
+                <span className="max-h-24 min-w-0 flex-1 basis-full overflow-y-auto [overflow-wrap:anywhere] sm:basis-0">{s.error}</span>
+                <div className="ml-auto flex shrink-0 gap-2">
+                  {lastMessage?.role === "user" && <StageButton onClick={() => void s.regenerate()}>Retry</StageButton>}
+                  <button type="button" className="min-h-10 rounded-lg px-3 text-muted hover:text-ink" onClick={() => s.setError(null)}>
+                    Dismiss
+                  </button>
+                </div>
               </div>
             )}
             {inputOpen && <ChoiceList />}

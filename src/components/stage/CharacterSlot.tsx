@@ -21,12 +21,14 @@ function Sprite({
   position,
   dim,
   front,
+  solo,
   leaving,
   moveKey,
 }: {
   content: SlotContent;
   position: Position;
   dim: boolean;
+  solo: boolean;
   front: boolean;
   leaving: boolean;
   moveKey: string | null;
@@ -50,6 +52,7 @@ function Sprite({
       data-pos={position}
       data-dim={dim}
       data-front={front}
+      data-solo={solo}
       style={{ ["--ar" as string]: spriteAspect(set) }}
     >
       <div ref={body} className="sprite-body">
@@ -65,11 +68,13 @@ export function CharacterSlot({
   content,
   dim,
   front,
+  solo,
   moveKey,
 }: {
   position: Position;
   content: SlotContent | null;
   dim: boolean;
+  solo: boolean;
   // The speaker stands in front, so a neighbour's wide sprite never covers them.
   front: boolean;
   moveKey: string | null;
@@ -79,7 +84,7 @@ export function CharacterSlot({
   return (
     <>
       {layers.map((l) => (
-        <Sprite key={l.key} content={l.value} position={position} dim={dim && !l.leaving} front={front && !l.leaving} leaving={l.leaving} moveKey={l.leaving ? null : moveKey} />
+        <Sprite key={l.key} content={l.value} position={position} dim={dim && !l.leaving} front={front && !l.leaving} solo={solo && !l.leaving} leaving={l.leaving} moveKey={l.leaving ? null : moveKey} />
       ))}
     </>
   );
