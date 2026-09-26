@@ -20,8 +20,9 @@ export const CharacterLayer = memo(function CharacterLayer({
   speakerId: string | null;
 }) {
   const someoneSpeaks = !!speakerId && POSITIONS.some((p) => stage.slots[p]?.characterId === speakerId);
+  const count = POSITIONS.filter((p) => stage.slots[p]).length;
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden" data-crowded={count >= 3}>
       {POSITIONS.map((position) => {
         const slot = stage.slots[position];
         const character = slot ? characters[slot.characterId] : undefined;
