@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("../connection", () => ({ activeConnection: vi.fn() }));
 
-const { streamChat } = await import("../client");
+const { completeChat, streamChat } = await import("../client");
 
 const connection = { baseUrl: "https://example.test/v1", apiKey: "k", model: "m" };
 const ok = () =>
@@ -36,5 +36,31 @@ describe("stream_options", () => {
     bodies.length = 0;
     for await (const x of streamChat({ messages: [], temperature: 1, maxTokens: 10, connection, onUsage })) text += x;
     expect(bodies.map((b) => !!b.stream_options)).toEqual([false]);
+  });
+});
+
+describe("completeChat with reasoning models", () => {
+  const answer = (content: string, finish = "stop") =>
+    new Response(JSON.stringify({ choices: [{ message: { content }, finish_reason: finish }] }), { status: 200 });
+
+  it("asks again with more room when the thinking used up every token", async () => {
+    const limits: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body)) as { max_tokens: number };
+        limits.push(body.max_tokens);
+        return body.max_tokens < 500 ? answer("<think>The user wants three options, so", "length") : answer("<think>ok</think>SAY: Hi.");
+      }),
+    );
+    expect(await completeChat({ messages: [], temperature: 1, maxTokens: 220, connection })).toBe("SAY: Hi.");
+    expect(limits).toEqual([220, 880]);
+  });
+
+  it("doesn't retry a normal answer", async () => {
+    const fetchMock = vi.fn(async () => answer("SAY: Hi."));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await completeChat({ messages: [], temperature: 1, maxTokens: 220, connection })).toBe("SAY: Hi.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -42,6 +42,12 @@ export const PROVIDERS = {
     keyUrl: "https://console.anthropic.com/settings/keys",
     hint: "Claude models through Anthropic's OpenAI-compatible endpoint. Penalty settings are ignored.",
   },
+  nvidia: {
+    label: "Nvidia",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    keyUrl: "https://build.nvidia.com/",
+    hint: "Many open models (Llama, Nemotron, DeepSeek, Qwen…). Reasoning models think before answering, so replies take longer.",
+  },
   groq: {
     label: "Groq",
     baseUrl: "https://api.groq.com/openai/v1",
