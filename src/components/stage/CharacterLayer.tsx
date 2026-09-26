@@ -19,16 +19,17 @@ export const CharacterLayer = memo(function CharacterLayer({
   characters: Record<string, CharacterView>;
   session: SessionView;
   speakerId: string | null;
-  // Who stays visible when a phone screen is too narrow for three (see .sprite-slot[data-solo]).
+  // Who stays visible when a phone screen is too narrow for more than one (see .sprite-slot[data-solo]).
   focusId: string | null;
 }) {
   const someoneSpeaks = !!speakerId && POSITIONS.some((p) => stage.slots[p]?.characterId === speakerId);
   const occupied = POSITIONS.filter((p) => stage.slots[p]);
-  const crowded = occupied.length >= 3;
-  // Nobody has spoken yet: the one in the middle.
-  const solo = focusId ?? stage.slots.center?.characterId ?? null;
+  // On a phone (portrait), two or more don't fit at the stage's sprite size: only one shows (CSS, data-count).
+  const shared = occupied.length >= 2;
+  // Nobody has spoken yet: the one in the middle, else the first on stage.
+  const solo = focusId ?? stage.slots.center?.characterId ?? (occupied[0] ? stage.slots[occupied[0]]!.characterId : null);
   return (
-    <div className="absolute inset-0 overflow-hidden" data-crowded={crowded}>
+    <div className="absolute inset-0 overflow-hidden" data-count={occupied.length}>
       {POSITIONS.map((position) => {
         const slot = stage.slots[position];
         const character = slot ? characters[slot.characterId] : undefined;
@@ -43,7 +44,7 @@ export const CharacterLayer = memo(function CharacterLayer({
             // Two share the screen half and half, whichever slots the story put them in.
             position={occupied.length === 2 && slot ? (occupied[0] === position ? "left" : "right") : position}
             content={content}
-            solo={crowded && !!slot && slot.characterId === solo}
+            solo={shared && !!slot && slot.characterId === solo}
             dim={someoneSpeaks && !speaking}
             front={speaking}
             // Moves when they start talking or change expression, not on every line.
