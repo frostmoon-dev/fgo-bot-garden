@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
 import { unwrap } from "@/lib/actionResult";
+import { readCharacterFile } from "@/lib/tavernCard";
 
 export function CharacterListActions() {
   const router = useRouter();
@@ -34,30 +35,32 @@ export function CharacterListActions() {
             Create
           </Button>
         </form>
-        <label className="btn btn-quiet cursor-pointer self-start">
-          Import JSON…
+        <label
+          className="btn btn-quiet cursor-pointer self-start"
+          title="A bot exported from this app, or a character card (PNG or JSON) from SillyTavern, JanitorAI exporters, Chub and similar sites"
+        >
+          Import…
           <input
             type="file"
-            accept="application/json,.json"
+            accept="application/json,.json,image/png,.png"
             className="sr-only"
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
               if (!file) return;
               run(async () => {
-                let json: unknown;
-                try {
-                  json = JSON.parse(await file.text());
-                } catch {
-                  throw new Error("That file is not valid JSON.");
-                }
-                const id = unwrap(await importCharacter(json));
+                // Character cards are turned into this app's format here, then saved like any import.
+                const id = unwrap(await importCharacter(await readCharacterFile(file)));
                 router.push(`/characters/${id}`);
               });
             }}
           />
         </label>
       </div>
+      <p className="mt-2 text-sm text-muted">
+        Import takes a bot exported from this app, or a character card (PNG or JSON) from SillyTavern, Chub or a JanitorAI
+        exporter. Cards bring their text and lorebook; add sprites afterwards.
+      </p>
       <ErrorText error={error} />
     </div>
   );
