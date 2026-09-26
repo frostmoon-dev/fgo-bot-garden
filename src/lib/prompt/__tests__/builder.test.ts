@@ -65,6 +65,26 @@ describe("buildPrompt", () => {
     expect(sys).not.toContain("What Oberon remembers");
   });
 
+  it("repeats the user's pronouns and role right before the latest message", () => {
+    const { messages } = buildPrompt({
+      ...base,
+      persona: { ...base.persona, description: "{{user}} is a 29-year-old woman (she/her).", role: "A Chaldea Staff Member" },
+    });
+    expect(messages[0].content).toContain("Pronouns: she/her");
+    const note = messages.at(-2)!.content;
+    expect(note).toContain("Ritsuka is she/her.");
+    expect(note).toContain(`never "he", "him", "his", "boy" or "man"`);
+    expect(note).toContain(`Ritsuka's role: A Chaldea Staff Member. Ritsuka is not anyone's Master, so no character calls Ritsuka "Master".`);
+  });
+
+  it("leaves Master alone when the role says so, and adds nothing without pronouns or a role", () => {
+    const master = buildPrompt({ ...base, persona: { ...base.persona, description: "He/him.", role: "Master of Chaldea" } }).messages.at(-2)!.content;
+    expect(master).toContain("Ritsuka is he/him.");
+    expect(master).toContain("Ritsuka's role: Master of Chaldea.");
+    expect(master).not.toContain("not anyone's Master");
+    expect(buildPrompt(base).messages.map((m) => m.content).join("\n")).not.toContain("ABOUT Ritsuka");
+  });
+
   it("puts world info and the format reminder right before the latest message", () => {
     const { messages } = buildPrompt(base);
     expect(messages[0].content).not.toContain("# WORLD INFO");

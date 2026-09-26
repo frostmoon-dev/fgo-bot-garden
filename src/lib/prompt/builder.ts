@@ -2,7 +2,17 @@ import type { ChatMessage } from "@/lib/llm/types";
 import { mentions, presentIds } from "@/lib/story/formerCast";
 import type { Mode } from "@/lib/parser/types";
 import { applyMacros, type Macros } from "@/lib/stage/beats";
-import { formatExample, formatReminder, lengthRule, MODE_RULES, STRICT_RULES, SYSTEM_RULES, type ReplyLength } from "./rules";
+import {
+  formatExample,
+  formatReminder,
+  lengthRule,
+  MODE_RULES,
+  pronounsOf,
+  STRICT_RULES,
+  SYSTEM_RULES,
+  userReminder,
+  type ReplyLength,
+} from "./rules";
 
 export type { ReplyLength } from "./rules";
 import { estimateTokens } from "./tokens";
@@ -195,6 +205,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   const persona = [
     `# {{user}} — the user's character. You never write for them. Keep every detail below consistent, including their pronouns.`,
     `Name: ${input.persona.name}`,
+    field("Pronouns", pronounsOf(input.persona.description) ?? ""),
     input.persona.role?.trim() &&
       `Role in the story: ${input.persona.role.trim()}\nThis is who {{user}} is here, even where a character's canon or definition assumes someone else (for example their Master). Every character knows {{user}} in this role and treats them accordingly.`,
     field("Characters address them as", input.persona.addressAs),
@@ -234,6 +245,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
       `# NO LONGER IN THIS STORY\n${input.absent.join(", ")}: out of the story from now on. They do not appear, speak or act, and nobody treats them as present; their earlier lines are only history. If it matters, they have gone elsewhere.`,
     input.lore.length > 0 &&
       `# WORLD INFO\n${input.lore.map((l) => (l.title ? `- ${l.title}: ${l.content}` : `- ${l.content}`)).join("\n")}`,
+    userReminder(input.persona),
     (o.formatReminder || o.profile !== "balanced") && formatReminder(input.mode, o.replyLength),
   ]);
 

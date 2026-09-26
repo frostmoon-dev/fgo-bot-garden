@@ -93,10 +93,40 @@ export interface PersonaInfo {
   role?: string;
 }
 
+// The pronouns written in the persona description, like "(she/her)", "he/him" or "she/they".
+export function pronounsOf(description: string): string | null {
+  const m = description.match(/\b(she|he|they|xe|ze|fae|it)\s*\/\s*(her|hers|him|his|them|theirs|they|she|he|xem|zir|faer|it)\b(\s*\/\s*[a-z]+\b)?/i);
+  return m ? m[0].replace(/\s+/g, "").toLowerCase() : null;
+}
+
+const WRONG_WORDS: Record<string, string> = {
+  she: `never "he", "him", "his", "boy" or "man"`,
+  he: `never "she", "her", "girl" or "woman"`,
+  they: `never "he" or "she"`,
+};
+
+// Who {{user}} is, repeated right before the latest message. The persona sits far up in the system prompt, and
+// the characters' canon (a Master, a boy Senpai) otherwise wins over it.
+export function userReminder(persona: PersonaInfo): string | null {
+  const pronouns = pronounsOf(persona.description);
+  const role = persona.role?.trim();
+  const wrong = pronouns ? WRONG_WORDS[pronouns.split("/")[0]] : undefined;
+  if (!pronouns && !role) return null;
+  return [
+    "ABOUT {{user}} (always true, whatever the characters' canon says):",
+    pronouns && `- {{user}} is ${pronouns}. Every character and the narration use these pronouns for {{user}}${wrong ? `, ${wrong}` : ""}.`,
+    role && `- {{user}}'s role: ${role}.${/\bmaster\b/i.test(role) ? "" : ` {{user}} is not anyone's Master, so no character calls {{user}} "Master".`}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function aboutUser(persona: PersonaInfo, max = 1200): string {
   const description = persona.description.trim();
+  const pronouns = pronounsOf(description);
   return [
     `${persona.name} is the player's character.`,
+    pronouns && `Pronouns: ${pronouns}.`,
     persona.role?.trim() && `Their role in the story: ${persona.role.trim()}.`,
     persona.addressAs.trim() && `Others address them as: ${persona.addressAs.trim()}.`,
     description && `About ${persona.name}:\n${description.length > max ? `${description.slice(0, max)}…` : description}`,
