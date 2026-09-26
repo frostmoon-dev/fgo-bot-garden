@@ -19,7 +19,7 @@ export function CharacterEditor({ character, backgrounds }: { character: Charact
       <Link href="/characters" className="text-sm text-muted hover:text-ink">
         ← Characters
       </Link>
-      <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight">
+      <h1 className="page-title mt-3 flex items-center gap-3 italic">
         <ColorDot color={character.color} className="size-3.5" />
         {character.name}
       </h1>

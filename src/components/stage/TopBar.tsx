@@ -29,16 +29,16 @@ export function TopBar() {
         <StageButton active={auto} onClick={() => setAuto(!auto)} title="Auto (A)">
           Auto
         </StageButton>
-        <StageButton active={skip} onClick={() => setSkip(!skip)} title="Skip (S)" className="hidden sm:inline-flex">
+        <StageButton active={skip} onClick={() => setSkip(!skip)} title="Skip (S)" phoneHidden>
           Skip
         </StageButton>
         <StageButton onClick={() => setPanel("log")} title="Log (L)">
           Log
         </StageButton>
-        <StageButton onClick={() => setPanel("saves")} title="Save and load" className="hidden sm:inline-flex">
+        <StageButton onClick={() => setPanel("saves")} title="Save and load" phoneHidden>
           Save
         </StageButton>
-        <StageButton onClick={() => setHideUi(true)} title="Hide the interface (H)" aria-label="Hide the interface" className="hidden sm:inline-flex">
+        <StageButton onClick={() => setHideUi(true)} title="Hide the interface (H)" aria-label="Hide the interface" phoneHidden>
           Hide
         </StageButton>
         <StageButton onClick={() => setPanel("menu")} title="Menu (M)">

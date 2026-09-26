@@ -25,10 +25,8 @@ export function previewAppearance(theme: string, customBg: string, font: string)
 }
 
 const FONT_VARS: Record<FontId, string> = {
-  fgo: "var(--font-mplus)",
+  fgo: "var(--font-figtree)",
   clear: "var(--font-atkinson)",
-  plain: "var(--font-inter)",
-  rounded: "var(--font-nunito)",
   dyslexic: '"OpenDyslexic"',
 };
 
@@ -104,7 +102,7 @@ export function AppearancePicker({ theme, customBg, font, frameStyle, onChange }
 
       <fieldset>
         <legend className="text-sm font-medium">Font</legend>
-        <p className="mt-0.5 text-sm text-muted">Used everywhere, including the story text. Character names are always in a flowing script (except with Dyslexic).</p>
+        <p className="mt-0.5 text-sm text-muted">The font for everything you read, including the story. Titles and character names stay in Cormorant Garamond.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {(Object.entries(FONTS) as [FontId, (typeof FONTS)[FontId]][]).map(([id, f]) => (
             <label
@@ -113,7 +111,7 @@ export function AppearancePicker({ theme, customBg, font, frameStyle, onChange }
             >
               <input type="radio" name="font" value={id} checked={font === id} onChange={() => onChange({ font: id })} className="sr-only" />
               <span className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold" style={id === "fgo" ? { fontFamily: "var(--font-zen-old)" } : undefined}>
+                <span className="font-semibold">
                   {f.label}
                 </span>
                 <span className="text-xs text-muted">{f.family}</span>

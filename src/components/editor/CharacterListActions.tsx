@@ -15,9 +15,9 @@ export function CharacterListActions() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <form
-          className="flex min-w-0 flex-1 gap-3 sm:max-w-md"
+          className="flex min-w-0 gap-2 sm:max-w-md sm:flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             run(async () => {
@@ -34,7 +34,7 @@ export function CharacterListActions() {
             Create
           </Button>
         </form>
-        <label className="inline-flex min-h-10 cursor-pointer items-center rounded-lg px-4 text-sm text-muted hover:bg-raised hover:text-ink">
+        <label className="btn btn-quiet cursor-pointer self-start">
           Import JSON…
           <input
             type="file"

@@ -15,7 +15,7 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    <div className="place-card pointer-events-none absolute inset-x-0 top-[11%] z-20 flex justify-center px-6" aria-live="polite">
+    <div className="place-card pointer-events-none absolute inset-x-0 top-[20%] z-20 flex justify-center px-4 sm:top-[11%]" aria-live="polite">
       <div className="vn-banner text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
         <div className="vn-rule mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         <p className="font-title text-2xl font-semibold tracking-wide sm:text-3xl">{location}</p>
@@ -101,7 +101,7 @@ export function RecapCard() {
           </div>
         )}
         {scene.Situation && <p className="mt-4 text-sm italic text-muted">{scene.Situation}</p>}
-        <button type="button" className="mt-6 min-h-11 w-full rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent" onClick={() => setOpen(false)}>
+        <button type="button" className="btn btn-primary mt-6 w-full" onClick={() => setOpen(false)}>
           Continue the story ▸
         </button>
         <p className="mt-2 text-center text-xs text-muted">{messages.filter((m) => activeContent(m).trim()).length} messages so far</p>

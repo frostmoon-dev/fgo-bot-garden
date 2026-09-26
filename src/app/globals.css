@@ -1,52 +1,42 @@
 @import "tailwindcss";
 
 /*
-  Colors come from four variables set on <html> (see src/lib/appearance.ts).
-  Everything else is mixed from them, so any background the user picks stays consistent.
+  Design system. Colors come from four variables set on <html> (src/lib/appearance.ts); everything else
+  is mixed from them. Two families: Figtree for reading, Cormorant Garamond for titles and (italic) for
+  character names. One spacing scale (Tailwind's), 16px page gutters on phones. The FGO textures in
+  public/assets/ui/fgo give surfaces their character: the chat window's navy diamonds for the nav bar
+  and cards, the blue name tab for section headings, the same pieces the story screen uses.
 */
 :root {
-  --bg: #16181d;
-  --fg: #e3e0d9;
-  --accent: #d2b273;
-  --danger: #ec8b7c;
+  --bg: #0f1724;
+  --fg: #edf1f4;
+  --accent: #d7b06a;
+  --danger: #e17c67;
 
   --surface: color-mix(in oklab, var(--bg) 93%, var(--fg));
   --raised: color-mix(in oklab, var(--bg) 88%, var(--fg));
-  --line: color-mix(in oklab, var(--fg) 12%, transparent);
-  --muted: color-mix(in oklab, var(--fg) 74%, var(--bg));
+  --line: color-mix(in oklab, var(--fg) 13%, transparent);
+  --muted: color-mix(in oklab, var(--fg) 72%, var(--bg));
   --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--bg));
   --on-accent: color-mix(in oklab, var(--bg) 92%, black);
-  --shadow-soft: 0 18px 40px rgb(0 0 0 / 0.22);
-  --shadow-card: 0 8px 18px rgb(0 0 0 / 0.18);
 
-  --font-ui: var(--font-atkinson);
-  /* Character names are in a flowing script. Titles use the text font, except in FGO, which pairs a serif. */
-  --face-name: var(--font-script);
-  --face-title: var(--font-ui);
+  --font-ui: var(--font-figtree);
+  --face-title: var(--font-cormorant);
+  --face-name: var(--font-cormorant);
   --tracking: 0;
   --word-spacing: normal;
 }
 
-/* FGO: gothic story text (Skip in the game) and old-style mincho titles (Tsukushi). */
-:root[data-font="fgo"] {
-  --font-ui: var(--font-mplus);
-  --face-title: var(--font-zen-old);
-}
-
-:root[data-font="plain"] {
-  --font-ui: var(--font-inter);
-}
-
-:root[data-font="rounded"] {
-  --font-ui: var(--font-nunito);
+:root[data-font="clear"] {
+  --font-ui: var(--font-atkinson);
 }
 
 :root[data-font="dyslexic"] {
   --font-ui: "OpenDyslexic";
-  /* A script is hard to read with dyslexia, so names use the text font here. */
+  /* Serif titles and italic names are harder to read with dyslexia, so they use the text font. */
+  --face-title: var(--font-ui);
   --face-name: var(--font-ui);
   /* Extra spacing is the part of "dyslexia fonts" that research supports best. */
-  --tracking: 0;
   --word-spacing: 0.1em;
 }
 
@@ -77,21 +67,18 @@
     letter-spacing: var(--tracking);
     word-spacing: var(--word-spacing);
     line-height: 1.6;
-    background:
-      radial-gradient(circle at top, color-mix(in oklab, var(--accent) 12%, transparent), transparent 30%),
-      linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, black), var(--bg));
-    color: var(--fg);
-    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
 
   p,
-  li,
-  button,
-  input,
-  select,
-  textarea {
+  li {
     text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 
   ::selection {
@@ -102,50 +89,34 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-
-  main,
-  section,
-  header,
-  footer {
-    position: relative;
-  }
 }
 
 @layer components {
-
-  /* A card: calm, slightly elevated surfaces with restrained shadows and subtle gradients. */
+  /* A card: a calm surface one step lighter than the page. */
   .card {
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--raised) 95%, transparent), var(--surface));
+    background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 1rem;
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, var(--fg) 5%, transparent),
-      var(--shadow-card);
+    border-radius: 0.875rem;
   }
 
   .field {
     width: 100%;
-    min-height: 2.85rem;
-    border-radius: 0.8rem;
+    min-height: 2.75rem;
+    border-radius: 0.625rem;
     border: 1px solid var(--line);
-    background: color-mix(in oklab, var(--bg) 87%, black);
-    padding: 0.7rem 0.85rem;
+    background: color-mix(in oklab, var(--bg) 85%, black);
+    padding: 0.625rem 0.875rem;
     color: var(--fg);
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2);
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    transition: border-color 150ms ease;
   }
 
   .field::placeholder {
-    color: color-mix(in oklab, var(--muted) 82%, var(--bg));
+    color: color-mix(in oklab, var(--muted) 80%, var(--bg));
   }
 
   .field:focus {
     outline: none;
-    border-color: color-mix(in oklab, var(--accent) 72%, transparent);
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent),
-      inset 0 1px 2px rgb(0 0 0 / 0.15);
+    border-color: var(--accent);
   }
 
   /* Dropdowns draw their own chevron, a comfortable distance from the edge and in the theme's color. */
@@ -162,6 +133,123 @@
     background-repeat: no-repeat;
     cursor: pointer;
   }
+
+  /* Buttons. Gold is kept for the one main action; the rest are outlined, like the story screen's buttons. */
+  .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:not(:disabled):hover {
+    background: color-mix(in oklab, var(--accent) 88%, white);
+  }
+  .btn-outline {
+    border: 1.5px solid color-mix(in oklab, var(--fg) 45%, transparent);
+    color: var(--fg);
+  }
+  .btn-outline:not(:disabled):hover {
+    border-color: var(--fg);
+    background: color-mix(in oklab, var(--fg) 7%, transparent);
+  }
+  .btn-quiet {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .btn-quiet:not(:disabled):hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+  .btn-danger {
+    color: var(--danger);
+    font-weight: 500;
+  }
+  .btn-danger:not(:disabled):hover {
+    background: color-mix(in oklab, var(--danger) 12%, transparent);
+  }
+
+  /* Page titles: Cormorant, large and quiet. */
+  .page-title {
+    font-family: var(--face-title), serif;
+    font-size: 2.25rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  @media (min-width: 640px) {
+    .page-title {
+      font-size: 2.75rem;
+    }
+  }
+
+  /* Section headings sit on FGO's blue name tab, the same tab that carries names on the story screen. */
+  .tab-heading {
+    position: relative;
+    isolation: isolate;
+    display: inline-block;
+    padding: 0.3em 2.75em 0.35em 1.15em;
+    font-family: var(--face-title), serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  }
+  .tab-heading::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url("/assets/ui/fgo/nametab.png") center / 100% 100% no-repeat;
+  }
+}
+
+/* Dark themes with FGO frames: the nav bar and cards take the chat window's navy diamond surface.
+   Cropped to fit (never stretched), so the diamonds keep their shape; the cluster sits bottom right. */
+:root[data-frames="fgo"][data-scheme="dark"] :is(.site-nav, .card:not(.vn-panel *)) {
+  background:
+    linear-gradient(rgb(6 14 34 / 0.3), rgb(6 14 34 / 0.3)),
+    url("/assets/ui/fgo/surface.png") right bottom / cover no-repeat,
+    #0c1a3a;
+}
+:root[data-frames="fgo"][data-scheme="dark"] .card:not(.vn-panel *) {
+  --muted: #b3bfd4;
+  --line: rgb(150 185 255 / 0.22);
+  --raised: rgb(255 255 255 / 0.07);
+  border-color: rgb(150 185 255 / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 8px 20px rgb(0 0 0 / 0.25);
+}
+:root[data-frames="fgo"][data-scheme="dark"] :is(a, button).card:not(.vn-panel *):hover {
+  border-color: rgb(170 200 255 / 0.45);
+}
+:root[data-frames="fgo"][data-scheme="dark"] .site-nav {
+  border-bottom-color: rgb(150 185 255 / 0.25);
+}
+
+/* Character names: Cormorant italic, a touch larger because its lowercase letters are small. */
+:root:not([data-font="dyslexic"]) .font-name {
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.15em;
+  line-height: 1.2;
 }
 
 @keyframes fade-in {
@@ -285,41 +373,10 @@
   }
 }
 
-/* FGO's text box: slightly heavy text with a soft shadow, and a gold rule under the name. */
-:root[data-font="fgo"] .vn-text {
+/* The story text: slightly heavy, with a soft shadow over busy art. */
+.vn-text {
   font-weight: 500;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-}
-
-:root[data-font="fgo"] .vn-name {
-  border: 1px solid color-mix(in oklab, var(--accent) 48%, transparent);
-  background: linear-gradient(180deg, rgba(18, 22, 29, 0.94), rgba(10, 13, 19, 0.9));
-  box-shadow:
-    inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent),
-    0 10px 24px rgb(0 0 0 / 0.28),
-    0 0 0 1px rgba(255, 255, 255, 0.02);
-  letter-spacing: 0.06em;
-}
-
-.vn-name {
-  font-family: var(--font-script), cursive;
-  line-height: 1;
-  padding-top: 0.6rem;
-  padding-bottom: 0.55rem;
-  transform: translateY(-2px);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(180deg, rgba(28, 30, 38, 0.96), rgba(18, 20, 26, 0.88));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom-color: color-mix(in oklab, var(--accent) 65%, transparent);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
-}
-
-.vn-name .vn-dot {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
-}
-
-.vn-name-mine {
-  transform: translateY(-3px) skewX(-4deg);
 }
 
 /* ---------- A living stage: light, weather, effects ---------- */
@@ -555,20 +612,16 @@
   --line: rgb(255 255 255 / 0.2);
   --raised: rgb(255 255 255 / 0.08);
   color: var(--fg);
-  border: 0;
-  border-top: 1px solid rgb(150 185 255 / 0.6);
-  border-bottom: 1px solid rgb(150 185 255 / 0.28);
-  border-radius: 3px;
+  border: 14px solid transparent;
+  border-radius: 0;
+  /* FGO's chat window (public/assets/ui/fgo/chatbox.png), stretched as a 9-slice so its corners keep their shape. */
+  border-image: url("/assets/ui/fgo/chatbox.png") 16 fill / 14px stretch;
+  background: none;
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
-  backdrop-filter: blur(2px);
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'%3E%3Cg fill='%2390b8ff' fill-opacity='0.06'%3E%3Cpath d='M70 40 110 80 70 120 30 80Z'/%3E%3Cpath d='M140 10 195 65 140 120 85 65Z'/%3E%3Cpath d='M210 55 240 85 210 115 180 85Z'/%3E%3C/g%3E%3C/svg%3E") right 2.5rem bottom -1px / auto 80% no-repeat,
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 3px),
-    linear-gradient(90deg, rgb(9 24 60 / 0.9), rgb(17 42 96 / 0.86) 55%, rgb(9 24 60 / 0.9));
+  backdrop-filter: none;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) button.vn-box:not([data-frames-preview="simple"] *):is(:hover, :focus-visible) {
-  border-top-color: rgb(200 222 255 / 0.95);
   box-shadow:
     0 0 0 1px rgb(150 190 255 / 0.55),
     0 0 18px rgb(70 130 255 / 0.35);
@@ -586,18 +639,26 @@
   backdrop-filter: none;
   color: #fff;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
-  clip-path: polygon(0.8em 0, 100% 0, 100% 100%, 0.8em 100%, 0 50%);
-  background:
-    linear-gradient(to bottom, rgb(255 255 255 / 0.45), transparent 1.5px),
-    linear-gradient(90deg, transparent 70%, rgb(255 255 255 / 0.12)),
-    linear-gradient(to bottom, #4379d4, #2150a3 55%, #183d82);
+  background: none;
+  isolation: isolate;
+}
+/* FGO's name tab (public/assets/ui/fgo/nametab.png): pointed on the left, fading out on the right. */
+:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("/assets/ui/fgo/nametab.png") center / 100% 100% no-repeat;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *) {
   left: auto;
   right: 0.6rem;
   padding: 0.28em 1.35em 0.3em 2.4em;
-  clip-path: polygon(0 0, calc(100% - 0.8em) 0, 100% 50%, calc(100% - 0.8em) 100%, 0 100%);
+}
+/* Your own lines: the tab faces the other way. */
+:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *)::before {
+  transform: scaleX(-1);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *) .vn-dot {
@@ -612,6 +673,10 @@
 :root[data-frames="fgo"] .vn-text {
   padding-inline: clamp(1.5rem, 4vw, 3.5rem);
   font-size: 1.18em;
+}
+/* The window is wide, but a line reads best at 45-80 characters. */
+.vn-text > p {
+  max-width: 72ch;
 }
 
 /* LOG, at the window's top right, as in the game. */
@@ -714,13 +779,10 @@
   border-image: url("/assets/ui/fgo/window.png") 28 fill / 14px stretch;
 }
 
-/* Character names: the script runs small and thin, so it is set larger, with a hair of extra stroke
-   instead of a synthetic bold. */
-:root:not([data-font="dyslexic"]) .font-name {
-  font-size: 1.45em;
-  font-weight: 400;
-  font-synthesis-weight: none;
-  line-height: 1.15;
-  letter-spacing: 0.01em;
-  -webkit-text-stroke: 0.35px currentColor;
+/* Phones: the story text at reading size, with room for more of it in the window. */
+@media (max-width: 639px) {
+  :root[data-frames="fgo"] .vn-text {
+    font-size: 1.02em;
+    padding-inline: 1.1rem;
+  }
 }

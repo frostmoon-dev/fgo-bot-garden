@@ -82,11 +82,11 @@ export default async function HomePage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="font-title text-3xl font-semibold">
+      <header className="mb-10 sm:mb-12">
+        <h1 className="page-title">
           <TimeGreeting name={persona.name} />
         </h1>
-        <p className="mt-2 text-muted">
+        <p className="mt-3 text-muted">
           {rows.length ? "Pick up where you left off, or call on someone new." : "Choose someone to begin your first story."}
         </p>
       </header>
@@ -96,14 +96,14 @@ export default async function HomePage() {
           <p className="text-sm">
             <strong>Connect an AI model first.</strong> The characters need one to answer: pick a provider and paste an API key.
           </p>
-          <Link href="/connection" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent">
+          <Link href="/connection" className="btn btn-primary">
             Connect a model
           </Link>
         </div>
       )}
 
       {rows.length > 0 && (
-        <section className="mb-16">
+        <section className="mb-12 sm:mb-16">
           <SectionTitle>Continue a story</SectionTitle>
           <SessionList sessions={rows.slice(0, 6)} highlightFirst />
           {rows.length > 6 && (

@@ -26,7 +26,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
   return (
     <div className="max-w-2xl divide-y divide-line">
       <section className="space-y-3 pb-8">
-        <h2 className="text-lg font-semibold">Export</h2>
+        <h2 className="tab-heading">Export</h2>
         <p className="text-sm text-muted">
           Saves the profile, expressions and ascensions (definitions and sheet settings) as JSON. Sprite images are linked by URL, not copied into the file.
         </p>
@@ -35,7 +35,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
         </Button>
       </section>
       <section className="space-y-3 py-8">
-        <h2 className="text-lg font-semibold">Duplicate</h2>
+        <h2 className="tab-heading">Duplicate</h2>
         <p className="text-sm text-muted">Copies the profile, expressions and ascensions into a new bot.</p>
         <Button
           disabled={pending}
@@ -50,7 +50,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
         </Button>
       </section>
       <section className="space-y-3 pt-8">
-        <h2 className="text-lg font-semibold">Delete</h2>
+        <h2 className="tab-heading">Delete</h2>
         <p className="text-sm text-muted">Also deletes every story where this bot is the main character.</p>
         <Button
           variant="danger"

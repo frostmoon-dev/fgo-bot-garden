@@ -111,7 +111,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
       </details>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Face position</h2>
+        <h2 className="font-title text-2xl font-semibold">Face position</h2>
         <p className="text-sm text-muted">Drag the dashed face until it covers the face on the body. One offset works for every expression.</p>
         <OffsetTool
           grid={grid}
@@ -124,7 +124,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Faces for each expression</h2>
+        <h2 className="font-title text-2xl font-semibold">Faces for each expression</h2>
         <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
           <FaceAssigner
             grid={grid}
@@ -152,7 +152,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         </div>
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending || !dirty}>
           {pending ? "Saving…" : dirty ? "Save sheet" : "Saved"}
         </Button>

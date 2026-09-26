@@ -23,7 +23,7 @@ function MessageBlock({ message }: { message: MessageView }) {
         <div className="flex gap-2">
           <button
             type="button"
-            className="min-h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent"
+            className="btn btn-primary"
             onClick={() => {
               editMessage(message.id, draft);
               setEditing(false);

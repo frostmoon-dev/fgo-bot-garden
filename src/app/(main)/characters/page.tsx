@@ -11,18 +11,18 @@ export default async function CharactersPage() {
     <>
       <PageHeader title="Characters" description="Create bots, edit their definitions and set up their sprite sheets." />
       <CharacterListActions />
-      <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {characters.map((c) => (
           <li key={c.id}>
-            <Link href={`/characters/${c.id}`} className="card flex items-center gap-4 p-4 transition-colors hover:border-muted">
+            <Link href={`/characters/${c.id}`} className="card flex items-center gap-4 p-4 transition-colors">
               <Portrait character={c} className="size-16 shrink-0 rounded-lg" />
               <div className="min-w-0">
-                <p className="flex items-center gap-2 font-semibold">
+                <p className="flex min-w-0 items-center gap-2 font-name text-lg">
                   <ColorDot color={c.color} />
                   <span className="truncate">{c.name}</span>
                 </p>
                 <p className="mt-1 text-sm text-muted">
-                  {c.expressions.length} expressions · {c.spriteSets.length} sprite {c.spriteSets.length === 1 ? "sheet" : "sheets"}
+                  {c.expressions.length} {c.expressions.length === 1 ? "expression" : "expressions"} · {c.spriteSets.length} sprite {c.spriteSets.length === 1 ? "sheet" : "sheets"}
                 </p>
               </div>
             </Link>

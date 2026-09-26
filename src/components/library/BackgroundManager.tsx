@@ -99,7 +99,7 @@ export function BackgroundManager({ backgrounds }: { backgrounds: BackgroundView
               {/* eslint-disable-next-line @next/next/no-img-element -- user-supplied URLs */}
               <img src={b.imageUrl} alt="" className="aspect-video w-full object-cover" />
               <div className="p-4">
-                <p className="font-medium">{b.label || b.key}</p>
+                <p className="font-title text-xl font-semibold leading-tight">{b.label || b.key}</p>
                 <p className="mt-0.5 font-mono text-sm text-muted">{b.key}</p>
                 <p className="mt-2 line-clamp-2 text-sm text-muted">{b.description}</p>
                 <div className="mt-4 flex gap-2">

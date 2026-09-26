@@ -21,7 +21,7 @@ export function PanelShell({ title, children }: { title: string; children: React
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 pb-2 pt-5">
-          <h2 className="font-title text-lg font-semibold">{title}</h2>
+          <h2 className="font-title text-2xl font-semibold">{title}</h2>
           <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink" onClick={() => setPanel(null)}>
             Close
           </button>

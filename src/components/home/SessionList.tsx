@@ -38,12 +38,12 @@ export function SessionList({ sessions, highlightFirst = false }: { sessions: Se
   return (
     <div>
       <ErrorText error={error} />
-      <ul className="grid gap-4 lg:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         {sessions.map((s, i) => {
           const title = cardTitle(s.title);
           const primary = highlightFirst && i === 0;
           return (
-            <li key={s.id} className="card flex flex-col p-5">
+            <li key={s.id} className="card flex min-w-0 flex-col p-4 sm:p-5">
               <div className="flex items-center gap-4">
                 <Link href={`/play/${s.id}`} className="shrink-0" tabIndex={-1} aria-hidden>
                   {s.thumb ? (
@@ -55,7 +55,7 @@ export function SessionList({ sessions, highlightFirst = false }: { sessions: Se
                   )}
                 </Link>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/play/${s.id}`} className="block truncate font-title text-lg font-semibold leading-snug hover:underline" title={s.title}>
+                  <Link href={`/play/${s.id}`} className="block truncate font-title text-xl font-semibold leading-tight hover:underline" title={s.title}>
                     {title}
                   </Link>
                   <p className="mt-1 flex min-w-0 items-center gap-2 text-xs text-muted">
@@ -75,7 +75,7 @@ export function SessionList({ sessions, highlightFirst = false }: { sessions: Se
               <div className="mt-auto flex items-center gap-3 pt-5">
                 <Link
                   href={`/play/${s.id}`}
-                  className={`inline-flex min-h-10 items-center rounded-lg px-4 text-sm ${primary ? "bg-accent font-semibold text-on-accent" : "border border-line bg-raised hover:border-muted"}`}
+                  className={`btn ${primary ? "btn-primary" : "btn-outline"}`}
                 >
                   Continue
                 </Link>
@@ -84,7 +84,7 @@ export function SessionList({ sessions, highlightFirst = false }: { sessions: Se
                 </span>
                 <button
                   type="button"
-                  className="ml-auto min-h-10 shrink-0 rounded-lg px-3 text-sm text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+                  className="btn btn-quiet ml-auto shrink-0 px-3 hover:!text-danger"
                   disabled={pending}
                   aria-label={`Delete ${s.title}`}
                   onClick={() => {

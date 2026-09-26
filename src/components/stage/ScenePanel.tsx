@@ -33,7 +33,7 @@ export function ScenePanel() {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="min-h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
+          className="btn btn-primary"
           disabled={draft === scene}
           onClick={() => {
             patchSession({ scene: normalizeScene(draft) });

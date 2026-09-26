@@ -17,16 +17,12 @@ export const THEMES = {
 
 export type ThemeId = keyof typeof THEMES | "custom";
 
+// Titles and character names are always Cormorant Garamond (names in its italic); the setting picks the
+// font for everything you read. "fgo" is the default id, kept so saved settings still match.
 export const FONTS = {
-  fgo: {
-    label: "FGO",
-    family: "M PLUS 1 · Zen Old Mincho",
-    hint: "Like the game: a clear gothic for the story text (as FGO's Skip) and a mincho serif for titles.",
-  },
+  fgo: { label: "Figtree", family: "Figtree", hint: "Clear and warm. The default, paired with the Cormorant titles." },
   clear: { label: "Clear", family: "Atkinson Hyperlegible Next", hint: "Made by the Braille Institute. Every letter is easy to tell apart." },
-  plain: { label: "Plain", family: "Inter", hint: "A neutral, compact interface font." },
-  rounded: { label: "Rounded", family: "Nunito", hint: "Soft, rounded letter ends." },
-  dyslexic: { label: "Dyslexic", family: "OpenDyslexic", hint: "Heavy letter bottoms and wider spacing." },
+  dyslexic: { label: "Dyslexic", family: "OpenDyslexic", hint: "Heavy letter bottoms and wider spacing. Names and titles use it too." },
 } as const;
 
 export type FontId = keyof typeof FONTS;

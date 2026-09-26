@@ -44,7 +44,7 @@ export function NewSpriteSetForm({ characterId, onCreated }: { characterId: stri
   return (
     <div className="card max-w-2xl space-y-8 p-6">
       <div>
-      <h2 className="text-lg font-semibold">Add a sprite sheet</h2>
+      <h2 className="font-title text-2xl font-semibold">Add a sprite sheet</h2>
       <p className="mt-1 text-sm text-muted">
         FGO format: body on top (1024×768), 256×256 face cells below in 4 columns. The face count and face position are detected for you.
       </p>

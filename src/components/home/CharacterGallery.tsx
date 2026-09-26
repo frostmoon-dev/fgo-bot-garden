@@ -57,7 +57,7 @@ function AscensionDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-title text-xl font-semibold">Start a story with {character.name}</h2>
+            <h2 className="font-title text-2xl font-semibold">Start a story with {character.name}</h2>
             <p className="mt-1 text-sm text-muted">Choose an ascension. You can switch later in the story&apos;s Menu.</p>
           </div>
           <button type="button" onClick={onClose} className="min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink">
@@ -111,7 +111,7 @@ export function CharacterGallery({ characters, bonds }: { characters: CharacterV
       <div className="card px-6 py-12 text-center">
         <p className="font-medium">No characters yet</p>
         <p className="mt-1 text-sm text-muted">Create one and give it an FGO sprite sheet. It starts with a full list of expressions.</p>
-        <Link href="/characters" className="mt-6 inline-flex min-h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent">
+        <Link href="/characters" className="btn btn-primary mt-6">
           Create a character
         </Link>
       </div>
@@ -121,7 +121,7 @@ export function CharacterGallery({ characters, bonds }: { characters: CharacterV
   return (
     <div>
       <ErrorText error={error} />
-      <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {characters.map((c) => (
           <li key={c.id} className="card group overflow-hidden">
             <button
@@ -133,25 +133,20 @@ export function CharacterGallery({ characters, bonds }: { characters: CharacterV
             >
               <Portrait character={c} className="aspect-square w-full transition-transform duration-300 group-hover:scale-[1.03]" />
             </button>
-            <div className="p-4">
-              <p className="flex items-center gap-2 font-name text-lg font-bold">
+            <div className="p-3 sm:p-4">
+              <p className="flex min-w-0 items-center gap-2 font-name text-lg">
                 <ColorDot color={c.color} />
                 <span className="truncate">{c.name}</span>
               </p>
               <div className="mt-1.5">
                 <BondBadge points={bonds[c.id] ?? 0} />
               </div>
-              <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted">{c.description || "No description yet."}</p>
-              <div className="mt-4 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => begin(c)}
-                  className="min-h-10 flex-1 rounded-lg bg-accent px-3 text-sm font-semibold text-on-accent disabled:opacity-40"
-                >
-                  {c.spriteSets.length > 1 ? `Start · ${c.spriteSets.length} forms` : "Start"}
+              <p className="mt-2 line-clamp-2 h-[2.75em] text-sm leading-snug text-muted">{c.description || "No description yet."}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-1 sm:mt-4">
+                <button type="button" disabled={pending} onClick={() => begin(c)} className="btn btn-outline flex-1 px-3">
+                  Start
                 </button>
-                <Link href={`/characters/${c.id}`} className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink">
+                <Link href={`/characters/${c.id}`} className="btn btn-quiet px-3">
                   Edit
                 </Link>
               </div>
