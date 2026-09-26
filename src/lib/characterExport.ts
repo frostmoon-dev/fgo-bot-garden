@@ -54,6 +54,10 @@ export const characterExportSchema = z.object({
     .default([]),
   defaultSpriteSet: z.string().nullable().default(null),
   defaultBackgroundKey: z.string().nullable().default(null),
+  // Lorebook entries that came with the character (from a character card's own lorebook). Added to the lorebook.
+  lorebook: z
+    .array(z.object({ title: z.string().default(""), keywords: z.array(z.string()).default([]), content: z.string().min(1) }))
+    .default([]),
 });
 
 export type CharacterExport = z.input<typeof characterExportSchema>;

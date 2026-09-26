@@ -284,8 +284,10 @@ async function importCharacterData(json: unknown, nameOverride?: string): Promis
         if (set.name === data.defaultSpriteSet || (!defaultSetId && i === 0)) defaultSetId = created.id;
       }
       await tx.character.update({ where: { id: character.id }, data: { defaultSpriteSetId: defaultSetId } });
+      if (data.lorebook.length) await tx.lorebookEntry.createMany({ data: data.lorebook });
       return character.id;
     });
+    if (data.lorebook.length) revalidatePath("/lorebook");
     touch();
     return id;
   }
