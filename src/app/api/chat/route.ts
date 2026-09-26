@@ -4,7 +4,8 @@ import { isAuthed } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { getPersona, getSettings, listBackgrounds } from "@/lib/data/queries";
 import { streamChat } from "@/lib/llm/client";
-import { STREAM_ERROR_MARKER } from "@/lib/llm/protocol";
+import { STREAM_ERROR_MARKER, STREAM_USAGE_MARKER } from "@/lib/llm/protocol";
+import type { ChatUsage } from "@/lib/llm/types";
 import { getTriggeredLore } from "@/lib/lorebook";
 import { localLoreProvider } from "@/lib/lorebook/localProvider";
 import { availableExpressions, pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
@@ -186,6 +187,7 @@ export async function POST(request: Request) {
   request.signal.addEventListener("abort", () => abort.abort());
 
   const user = persona.name;
+  let usage: ChatUsage | null = null;
   const iterator = streamChat({
     messages: prompt.messages,
     temperature: settings.temperature,
@@ -196,6 +198,9 @@ export async function POST(request: Request) {
     // Stop the model before it starts a line for the user's character.
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,
+    onUsage: (u) => {
+      usage = u;
+    },
   })[Symbol.asyncIterator]();
 
   // Wait for the first chunk so a failed request can still return a proper error status.
@@ -279,6 +284,7 @@ export async function POST(request: Request) {
         console.error("Could not save reply", error);
         send(STREAM_ERROR_MARKER + "Reply could not be saved");
       }
+      if (usage) send(STREAM_USAGE_MARKER + JSON.stringify(usage));
       try {
         controller.close();
       } catch {

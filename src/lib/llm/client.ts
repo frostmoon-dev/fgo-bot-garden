@@ -30,25 +30,41 @@ export function describeFailure(status: number, body: string): string {
   return `${reason} (${status}${detail ? `: ${detail}` : ""})`;
 }
 
+// Servers that refused stream_options, so it isn't sent to them again (until the server restarts).
+const noUsageOption = new Set<string>();
+
 async function post(options: ChatOptions, stream: boolean): Promise<Response> {
   const connection = options.connection ?? (await activeConnection());
-  const res = await fetch(endpoint(connection, "/chat/completions"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(connection) },
-    // Optional parameters are only sent when set, since some providers reject ones they don't know.
-    body: JSON.stringify({
-      model: connection.model,
-      messages: options.messages,
-      temperature: options.temperature,
-      max_tokens: options.maxTokens,
-      ...(options.topP !== undefined && options.topP < 1 && { top_p: options.topP }),
-      ...(options.frequencyPenalty && { frequency_penalty: options.frequencyPenalty }),
-      ...(options.presencePenalty && { presence_penalty: options.presencePenalty }),
-      ...(options.stop?.length && { stop: options.stop.slice(0, 4) }),
-      stream,
-    }),
-    signal: options.signal,
-  });
+  const url = endpoint(connection, "/chat/completions");
+  const send = (askUsage: boolean) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(connection) },
+      // Optional parameters are only sent when set, since some providers reject ones they don't know.
+      body: JSON.stringify({
+        model: connection.model,
+        messages: options.messages,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        ...(options.topP !== undefined && options.topP < 1 && { top_p: options.topP }),
+        ...(options.frequencyPenalty && { frequency_penalty: options.frequencyPenalty }),
+        ...(options.presencePenalty && { presence_penalty: options.presencePenalty }),
+        ...(options.stop?.length && { stop: options.stop.slice(0, 4) }),
+        // Token counts at the end of the stream, including how much of the prompt came from the provider's cache.
+        ...(askUsage && { stream_options: { include_usage: true } }),
+        stream,
+      }),
+      signal: options.signal,
+    });
+  const askUsage = stream && !!options.onUsage && !noUsageOption.has(url);
+  let res = await send(askUsage);
+  // A server that doesn't know stream_options may reject the request: try once more without it.
+  if (askUsage && (res.status === 400 || res.status === 422)) {
+    await res.body?.cancel().catch(() => {});
+    const retry = await send(false);
+    if (retry.ok) noUsageOption.add(url);
+    res = retry;
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(describeFailure(res.status, text));
@@ -59,7 +75,7 @@ async function post(options: ChatOptions, stream: boolean): Promise<Response> {
 export async function* streamChat(options: ChatOptions): AsyncGenerator<string> {
   const res = await post(options, true);
   if (!res.body) throw new Error("The provider sent an empty response.");
-  yield* stripReasoningStream(readSseDeltas(res.body));
+  yield* stripReasoningStream(readSseDeltas(res.body, options.onUsage));
 }
 
 export async function completeChat(options: ChatOptions): Promise<string> {

@@ -19,6 +19,7 @@ import { namedOutsideCast } from "@/lib/story/formerCast";
 import type { Choice } from "@/lib/story/choices";
 import { activeContent, type MessageView, type SessionView, type SettingsView } from "@/lib/types";
 import { buildScene, type Scene, type SceneData } from "./buildScene";
+import type { ChatUsage } from "@/lib/llm/types";
 import { runChat, type PromptBreakdown } from "./chatStream";
 
 export type Panel = null | "log" | "saves" | "menu" | "help" | "scene";
@@ -58,6 +59,8 @@ interface PlayState extends PlayData {
   declinedCast: string[];
   promptTokens: number | null;
   promptBreakdown: PromptBreakdown | null;
+  // What the provider reported for the last reply, including tokens served from its prompt cache.
+  lastUsage: ChatUsage | null;
   sceneBusy: boolean;
   choices: Choice[] | null;
   choicesBusy: boolean;
@@ -192,7 +195,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         { sessionId: get().session.id, ...body },
         {
           onStart: (info) => {
-            set({ promptTokens: info.promptTokens, promptBreakdown: info.breakdown });
+            set({ promptTokens: info.promptTokens, promptBreakdown: info.breakdown, lastUsage: null });
             messageId = info.messageId;
             messageIndex = target(info).messageIndex;
           },
@@ -204,6 +207,7 @@ export function createPlayStore(data: PlayData): PlayStore {
             });
             logWarnings(commit({ messages }), get().settings.devMode);
           },
+          onUsage: (lastUsage) => set({ lastUsage }),
         },
         abort.signal,
       );
@@ -235,6 +239,7 @@ export function createPlayStore(data: PlayData): PlayStore {
     declinedCast: [],
     promptTokens: null,
     promptBreakdown: null,
+    lastUsage: null,
     sceneBusy: false,
     choices: null,
     choicesBusy: false,
