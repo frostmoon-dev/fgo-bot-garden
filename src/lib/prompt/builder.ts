@@ -145,8 +145,6 @@ function characterBlock(
     field("Speech style", c.speechStyle),
     opts.brief ? null : field("Background", c.lore),
     opts.brief ? null : field("Relationship with {{user}}", c.relationship),
-    c.bond ? `Bond with {{user}}: ${c.bond}` : null,
-    c.memories?.trim() ? `What ${c.name} remembers about {{user}} from all their time together (true; bring it up naturally when it fits):\n${c.memories.trim()}` : null,
     `Expressions: ${expressions}`,
     opts.examples && c.exampleDialogues.trim() ? `Example dialogue:\n${c.exampleDialogues.trim()}` : null,
   ]
@@ -228,9 +226,25 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     o.customPrompt.trim() && `# EXTRA INSTRUCTIONS\n${o.customPrompt.trim()}`,
   ]);
 
-  // Changes only when the user edits it or old messages are folded into the summary.
+  // Bond and what each character remembers of the user. They change every few replies, so they sit here,
+  // after the character cards: the rules and cards before them stay the same from turn to turn, which is the
+  // part providers can reuse from their prompt cache (OpenAI, DeepSeek, Gemini, local servers alike).
+  const bonds = cast
+    .map((c) => {
+      const lines = [
+        c.bond && `Bond with {{user}}: ${c.bond}`,
+        c.memories?.trim() &&
+          `What ${c.name} remembers about {{user}} from all their time together (true; bring it up naturally when it fits):\n${c.memories.trim()}`,
+      ].filter(Boolean);
+      return lines.length ? `## ${c.name}\n${lines.join("\n")}` : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  // Changes only when the user edits it, old messages are folded into the summary, or a bond or memory grows.
   const memoryText = (pinned: string[]) =>
     join([
+      bonds && `# BONDS AND MEMORIES OF {{user}}\n${bonds}`,
       input.memory?.trim() && `# STORY MEMORY (the user's notes, always true)\n${input.memory.trim()}`,
       input.summary.trim() && `# STORY SO FAR\n${input.summary.trim()}`,
       pinned.length > 0 && `# PINNED MOMENTS (keep these in mind)\n${pinned.join("\n---\n")}`,
