@@ -1,4 +1,4 @@
-import type { ParserContext } from "@/lib/parser";
+import { userAliases, type ParserContext } from "@/lib/parser";
 import { buildBeats, initialStage, type Beat, type StageState } from "@/lib/stage";
 import { activeContent, type BackgroundView, type CharacterView, type MessageView, type PersonaView, type SessionView } from "@/lib/types";
 
@@ -38,6 +38,7 @@ export function buildScene(data: SceneData, messages: MessageView[]): Scene {
     mode: data.session.mode,
     mainCharacterId: data.session.mainCharacterId,
     userName: data.persona.name,
+    userAliases: userAliases(data.persona.addressAs),
     warn: (m) => warnings.push(m),
   };
   const start = startStage(data);
@@ -49,5 +50,6 @@ export function buildScene(data: SceneData, messages: MessageView[]): Scene {
     { user: data.persona.name, char: main?.name ?? "" },
     data.persona.name,
   );
-  return { beats, stageBeats: beats.filter((b) => b.role === "assistant"), startStage: start, warnings };
+  // Your own lines are part of the stage too: they show in the textbox with your name plate.
+  return { beats, stageBeats: beats, startStage: start, warnings };
 }

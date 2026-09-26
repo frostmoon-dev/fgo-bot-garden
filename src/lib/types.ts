@@ -1,5 +1,8 @@
 // Plain data shapes shared by server and client.
 import type { Mode } from "@/lib/parser/types";
+import type { ExampleMode, MemoryPlacement, PromptProfile, ReplyLength } from "@/lib/prompt/builder";
+import type { AscensionProfile } from "@/lib/ascension";
+import type { NarrationStyle } from "@/lib/appearance";
 
 export interface ExpressionView {
   id: string;
@@ -8,7 +11,8 @@ export interface ExpressionView {
   description: string;
 }
 
-export interface SpriteSetView {
+// One ascension: a sprite sheet plus definition fields that override the character's profile.
+export interface SpriteSetView extends AscensionProfile {
   id: string;
   name: string;
   sheetUrl: string;
@@ -22,21 +26,16 @@ export interface SpriteSetView {
   faceY: number;
   // expression key -> cell index (-1 = face drawn on the body)
   faces: Record<string, number>;
+  // Motion style for this ascension; empty uses the character's (see lib/motion.ts).
+  motion: string;
 }
 
-export interface CharacterView {
+export interface CharacterView extends AscensionProfile {
   id: string;
   name: string;
   aliases: string[];
   color: string;
-  description: string;
-  personality: string;
-  speechStyle: string;
-  lore: string;
-  relationship: string;
-  scenario: string;
-  greeting: string;
-  exampleDialogues: string;
+  motion: string;
   defaultSpriteSetId: string | null;
   defaultBackgroundId: string | null;
   expressions: ExpressionView[];
@@ -70,6 +69,20 @@ export interface SettingsView {
   theme: string;
   customBg: string;
   font: string;
+  narrationStyle: NarrationStyle;
+  promptProfile: PromptProfile;
+  contextSize: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+  memoryPlacement: MemoryPlacement;
+  exampleMode: ExampleMode;
+  formatReminder: boolean;
+  stopAtUser: boolean;
+  customPrompt: string;
+  sceneTracker: boolean;
+  autoChoices: boolean;
+  replyLength: ReplyLength;
 }
 
 export interface MessageView {
@@ -77,6 +90,7 @@ export interface MessageView {
   order: number;
   role: "user" | "assistant";
   activeVariant: number;
+  pinned: boolean;
   variants: { id: string; content: string }[];
 }
 
@@ -94,6 +108,8 @@ export interface SessionView {
   backgroundId: string | null;
   summary: string;
   summarizedUntil: number;
+  memory: string;
+  scene: string;
   cast: { characterId: string; spriteSetId: string | null }[];
   messages: MessageView[];
   saves: SaveSlotView[];

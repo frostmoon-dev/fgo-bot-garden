@@ -81,7 +81,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
   return (
     <div className="space-y-12">
       <div className="grid gap-6 sm:grid-cols-2">
-        <Label title="Set name">
+        <Label title="Ascension name">
           <TextInput value={name} onChange={(e) => { setDirty(true); setName(e.target.value); }} />
         </Label>
         <Label title="Sheet URL or path">
@@ -154,16 +154,16 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
 
       <div className="sticky bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending || !dirty}>
-          {pending ? "Saving…" : dirty ? "Save sprite set" : "Saved"}
+          {pending ? "Saving…" : dirty ? "Save sheet" : "Saved"}
         </Button>
         <Button
           variant="danger"
           disabled={pending}
           onClick={() => {
-            if (confirm(`Delete sprite set "${set.name}"?`)) run(async () => unwrap(await deleteSpriteSet(set.id)));
+            if (confirm(`Delete the ascension "${set.name}" and its definition?`)) run(async () => unwrap(await deleteSpriteSet(set.id)));
           }}
         >
-          Delete set
+          Delete ascension
         </Button>
         <ErrorText error={error} />
       </div>

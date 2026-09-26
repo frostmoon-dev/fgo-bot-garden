@@ -46,8 +46,14 @@ export function applyLine(stage: StageState, line: ScriptLine, opts: StageOption
   }
 
   switch (line.type) {
+    // A new place or a time skip starts the scene over, as in FGO: the stage is cleared and
+    // whoever speaks next walks back in, so nobody from the last scene stands in the way.
     case "scene":
+      if (stage.backgroundKey && line.backgroundKey !== stage.backgroundKey) next.slots = emptyStage(null).slots;
       next.backgroundKey = line.backgroundKey;
+      return next;
+    case "effect":
+      if (line.effect === "fade") next.slots = emptyStage(null).slots;
       return next;
     case "exit": {
       const at = findSlot(next, line.characterId);

@@ -6,40 +6,203 @@ import type { ActionResult } from "@/lib/actionResult";
 import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
+import { pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
+import { normalizeScene } from "@/lib/scene";
+import { applyMacros } from "@/lib/stage/beats";
+import { getPersona } from "@/lib/data/queries";
+import { formChangeLine, readFormChange } from "@/lib/story/formChange";
+import type { MessageView } from "@/lib/types";
 
 const snapshotSchema = z.object({
   mode: z.enum(["narrative", "dialogue"]),
   backgroundId: z.string().nullable(),
   summary: z.string(),
   summarizedUntil: z.number().int(),
+  // Older saves have no memory, scene or pins.
+  memory: z.string().default(""),
+  scene: z.string().default(""),
   cast: z.array(z.object({ characterId: z.string(), spriteSetId: z.string().nullable() })),
   messages: z.array(
     z.object({
       order: z.number().int(),
       role: z.enum(["user", "assistant"]),
       activeVariant: z.number().int(),
+      pinned: z.boolean().default(false),
       variants: z.array(z.string()),
     }),
   ),
 });
 
-export async function createSession(characterId: string): Promise<ActionResult<string>> {
+async function ascensionProfile(characterId: string, spriteSetId: string | null) {
+  const [character, persona] = await Promise.all([
+    db.character.findUniqueOrThrow({ where: { id: characterId }, include: { spriteSets: true } }),
+    getPersona(),
+  ]);
+  const set = pickAscension(character, spriteSetId);
+  const profile = resolveProfile(pickProfile(character), set);
+  // The scene box shows text as is, so its {{user}} and {{char}} are filled in now.
+  const openingScene = normalizeScene(applyMacros(profile.openingScene, { user: persona.name, char: character.name }));
+  return { character, set, profile, openingScene };
+}
+
+// A fresh story: the ascension's greeting and opening scene. `setup` carries over another story's
+// cast, mode and starting background, for "New story" from inside a story.
+async function startStory(
+  characterId: string,
+  spriteSetId: string | null,
+  setup?: { cast: { characterId: string; spriteSetId: string | null }[]; mode: string; backgroundId: string | null },
+): Promise<string> {
+  const { character, set, profile, openingScene } = await ascensionProfile(characterId, spriteSetId);
+  const titleName = set && character.spriteSets.length > 1 ? `${character.name} (${set.name})` : character.name;
+  const others = (setup?.cast ?? []).filter((c) => c.characterId !== character.id);
+  const session = await db.session.create({
+    data: {
+      title: `${titleName} — ${new Date().toLocaleDateString("en-GB")}`,
+      mainCharacterId: character.id,
+      mode: setup?.mode ?? "narrative",
+      backgroundId: setup ? setup.backgroundId : character.defaultBackgroundId,
+      scene: openingScene,
+      cast: { create: [{ characterId: character.id, spriteSetId: set?.id ?? null }, ...others] },
+      messages: profile.greeting.trim()
+        ? { create: [{ order: 0, role: "assistant", variants: { create: [{ position: 0, content: profile.greeting }] } }] }
+        : undefined,
+    },
+  });
+  revalidatePath("/");
+  return session.id;
+}
+
+// Starts a story with one ascension of a character: its greeting, opening scene and sprites.
+export async function createSession(characterId: string, spriteSetId: string | null = null): Promise<ActionResult<string>> {
   return safe(async () => {
     await requireAuth();
-    const character = await db.character.findUniqueOrThrow({ where: { id: characterId } });
-    const session = await db.session.create({
-      data: {
-        title: `${character.name} — ${new Date().toLocaleDateString("en-GB")}`,
-        mainCharacterId: character.id,
-        backgroundId: character.defaultBackgroundId,
-        cast: { create: [{ characterId: character.id, spriteSetId: character.defaultSpriteSetId }] },
-        messages: character.greeting.trim()
-          ? { create: [{ order: 0, role: "assistant", variants: { create: [{ position: 0, content: character.greeting }] } }] }
-          : undefined,
+    return startStory(characterId, spriteSetId);
+  });
+}
+
+// "New story" inside a story: same character, form, cast and mode, from the greeting again.
+// The current story is left as it is.
+export async function restartStory(sessionId: string): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      select: { mainCharacterId: true, mode: true, backgroundId: true, cast: { select: { characterId: true, spriteSetId: true } } },
+    });
+    const main = session.cast.find((c) => c.characterId === session.mainCharacterId);
+    return startStory(session.mainCharacterId, main?.spriteSetId ?? null, session);
+  });
+}
+
+export interface AscensionSwitch {
+  // The story's first message, now showing the new ascension's greeting. Null if it did not change.
+  firstMessage: MessageView | null;
+  // The new opening scene, only while the story has not started yet.
+  scene: string | null;
+  // In a running story: the "changes form" line added at the end (or rewritten, when switched again).
+  formChange: MessageView | null;
+}
+
+// Changes a cast member's ascension. For the main character the greeting follows: the first message
+// gets the new ascension's greeting as a version (earlier versions stay, so switching back restores them).
+export async function switchAscension(
+  sessionId: string,
+  characterId: string,
+  spriteSetId: string | null,
+): Promise<ActionResult<AscensionSwitch>> {
+  return safe(async () => {
+    await requireAuth();
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        messages: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          select: { id: true, order: true, role: true, activeVariant: true, pinned: true, variants: { orderBy: { position: "asc" } } },
+        },
       },
     });
-    revalidatePath("/");
-    return session.id;
+    await db.sessionCast.update({
+      where: { sessionId_characterId: { sessionId, characterId } },
+      data: { spriteSetId: z.string().nullable().parse(spriteSetId) },
+    });
+    revalidatePath(`/play/${sessionId}`);
+    const { character, set, profile, openingScene } = await ascensionProfile(characterId, spriteSetId);
+    const started = session.messages.some((m) => m.role === "user");
+
+    // Mid-story, the change becomes part of the story, so the characters know it happened.
+    if (started) {
+      if (!set) return { firstMessage: null, scene: null, formChange: null };
+      const line = formChangeLine(character.name, set.name);
+      const last = session.messages.at(-1)!;
+      const lastVariant = last.variants[last.activeVariant] ?? last.variants.at(-1);
+      // Switched again before anyone spoke: rewrite that line instead of adding another.
+      if (last.role === "assistant" && lastVariant && readFormChange(lastVariant.content)?.name === character.name) {
+        await db.messageVariant.update({ where: { id: lastVariant.id }, data: { content: line } });
+        const variants = last.variants.map((v) => ({ id: v.id, content: v.id === lastVariant.id ? line : v.content }));
+        return { firstMessage: null, scene: null, formChange: { id: last.id, order: last.order, role: "assistant", activeVariant: last.activeVariant, pinned: last.pinned, variants } };
+      }
+      const order = last.order + 1;
+      const created = await db.message.create({
+        data: { sessionId, order, role: "assistant", variants: { create: [{ position: 0, content: line }] } },
+        include: { variants: true },
+      });
+      await db.session.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
+      return {
+        firstMessage: null,
+        scene: null,
+        formChange: { id: created.id, order, role: "assistant", activeVariant: 0, pinned: false, variants: created.variants.map(({ id, content }) => ({ id, content })) },
+      };
+    }
+
+    if (characterId !== session.mainCharacterId) return { firstMessage: null, scene: null, formChange: null };
+    let scene: string | null = null;
+    if (!started && openingScene) {
+      scene = openingScene;
+      await db.session.update({ where: { id: sessionId }, data: { scene } });
+    }
+
+    const greeting = profile.greeting.trim() ? profile.greeting : "";
+    const first = session.messages[0];
+    if (!greeting) return { firstMessage: null, scene, formChange: null };
+
+    if (!first || first.role !== "assistant") {
+      // No greeting yet: add one before everything else.
+      const order = (first?.order ?? 1) - 1;
+      const created = await db.message.create({
+        data: { sessionId, order, role: "assistant", variants: { create: [{ position: 0, content: greeting }] } },
+        include: { variants: true },
+      });
+      return {
+        firstMessage: { id: created.id, order, role: "assistant", activeVariant: 0, pinned: false, variants: created.variants.map(({ id, content }) => ({ id, content })) },
+        scene,
+        formChange: null,
+      };
+    }
+
+    let variants = first.variants;
+    let activeVariant = variants.findIndex((v) => v.content === greeting);
+    if (activeVariant < 0) {
+      const created = await db.messageVariant.create({
+        data: { messageId: first.id, position: (variants.at(-1)?.position ?? -1) + 1, content: greeting },
+      });
+      variants = [...variants, created];
+      activeVariant = variants.length - 1;
+    }
+    if (activeVariant !== first.activeVariant) {
+      await db.message.update({ where: { id: first.id }, data: { activeVariant } });
+    }
+    return {
+      firstMessage: {
+        id: first.id,
+        order: first.order,
+        role: "assistant",
+        activeVariant,
+        pinned: first.pinned,
+        variants: variants.map(({ id, content }) => ({ id, content })),
+      },
+      scene,
+      formChange: null,
+    };
   });
 }
 
@@ -47,9 +210,13 @@ const sessionPatch = z.object({
   title: z.string().trim().min(1).max(120).optional(),
   mode: z.enum(["narrative", "dialogue"]).optional(),
   backgroundId: z.string().nullable().optional(),
+  memory: z.string().max(4000).optional(),
+  summary: z.string().max(8000).optional(),
+  scene: z.string().max(2000).optional(),
 });
+export type SessionPatch = z.infer<typeof sessionPatch>;
 
-export async function updateSession(id: string, patch: z.infer<typeof sessionPatch>): Promise<ActionResult<void>> {
+export async function updateSession(id: string, patch: SessionPatch): Promise<ActionResult<void>> {
   return safe(async () => {
     await requireAuth();
     await db.session.update({ where: { id }, data: sessionPatch.parse(patch) });
@@ -105,6 +272,13 @@ export async function deleteMessage(messageId: string): Promise<ActionResult<voi
   });
 }
 
+export async function setPinned(messageId: string, pinned: boolean): Promise<ActionResult<void>> {
+  return safe(async () => {
+    await requireAuth();
+    await db.message.update({ where: { id: messageId }, data: { pinned: z.boolean().parse(pinned) } });
+  });
+}
+
 export async function setActiveVariant(messageId: string, index: number): Promise<ActionResult<void>> {
   return safe(async () => {
     await requireAuth();
@@ -130,11 +304,14 @@ export async function saveToSlot(sessionId: string, slot: number, label: string)
       backgroundId: session.backgroundId,
       summary: session.summary,
       summarizedUntil: session.summarizedUntil,
+      memory: session.memory,
+      scene: session.scene,
       cast: session.cast.map((c) => ({ characterId: c.characterId, spriteSetId: c.spriteSetId })),
       messages: session.messages.map((m) => ({
         order: m.order,
         role: m.role as "user" | "assistant",
         activeVariant: m.activeVariant,
+        pinned: m.pinned,
         variants: m.variants.map((v) => v.content),
       })),
     };
@@ -168,6 +345,8 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
           backgroundId: snap.backgroundId,
           summary: snap.summary,
           summarizedUntil: snap.summarizedUntil,
+          memory: snap.memory,
+          scene: snap.scene,
         },
       });
       await tx.sessionCast.createMany({
@@ -180,6 +359,7 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
             order: m.order,
             role: m.role,
             activeVariant: m.activeVariant,
+            pinned: m.pinned,
             variants: { create: m.variants.map((content, position) => ({ position, content })) },
           },
         });

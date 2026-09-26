@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -20,6 +21,12 @@ model Character {
   scenario            String   @default("")
   greeting            String   @default("")
   exampleDialogues    String   @default("")
+  // Where and how a new story starts, shown in the scene box (Location: …, Time: …).
+  openingScene        String   @default("")
+  // FGO-style bond points with the user. Grows with every exchange.
+  bond                Int      @default(0)
+  // How the sprite moves as it talks: expressive, bouncy, calm or still (see src/lib/motion.ts).
+  motion              String   @default("expressive")
   defaultSpriteSetId  String?
   defaultBackgroundId String?
   createdAt           DateTime @default(now())
@@ -45,7 +52,8 @@ model Expression {
   @@unique([characterId, key])
 }
 
-// One FGO-style sprite sheet: body on top, face cells in a grid below it.
+// One ascension: an FGO-style sprite sheet (body on top, face cells below) and its own definition.
+// Empty definition fields fall back to the character's profile.
 model SpriteSet {
   id          String @id @default(cuid())
   characterId String
@@ -60,6 +68,18 @@ model SpriteSet {
   faceX       Int    @default(384)
   faceY       Int    @default(160)
   sortOrder   Int    @default(0)
+
+  description      String @default("")
+  personality      String @default("")
+  speechStyle      String @default("")
+  lore             String @default("")
+  relationship     String @default("")
+  scenario         String @default("")
+  greeting         String @default("")
+  exampleDialogues String @default("")
+  openingScene     String @default("")
+  // Empty: moves like the character's profile says.
+  motion           String @default("")
 
   character Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
   faces     SpriteFace[]
@@ -110,6 +130,10 @@ model Session {
   backgroundId    String?
   summary         String   @default("")
   summarizedUntil Int      @default(-1)
+  // Notes the user pins for this story (like Character.AI story memory). Always sent.
+  memory          String   @default("")
+  // The scene box: Location, Time, Weather, Present, Mood, Situation. Kept up to date after replies.
+  scene           String   @default("")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -136,6 +160,8 @@ model Message {
   order         Int
   role          String
   activeVariant Int      @default(0)
+  // Pinned messages stay in the prompt after they are summarized away.
+  pinned        Boolean  @default(false)
   createdAt     DateTime @default(now())
 
   session  Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -182,5 +208,34 @@ model Settings {
   devMode       Boolean @default(false)
   theme         String  @default("night")
   customBg      String  @default("")
-  font          String  @default("clear")
+  font          String  @default("fgo")
+  // How narration and actions look: italic, or plain (as in FGO).
+  narrationStyle String @default("italic")
+  // Prompt tuning for the model in use.
+  promptProfile    String  @default("balanced")
+  contextSize      Int     @default(16384)
+  topP             Float   @default(1)
+  frequencyPenalty Float   @default(0)
+  presencePenalty  Float   @default(0)
+  memoryPlacement  String  @default("end")
+  exampleMode      String  @default("auto")
+  formatReminder   Boolean @default(true)
+  stopAtUser       Boolean @default(true)
+  customPrompt     String  @default("")
+  sceneTracker     Boolean @default(true)
+  autoChoices      Boolean @default(false)
+  // How many lines a reply should have: short, scene (an FGO-style scene) or long.
+  replyLength      String  @default("scene")
+}
+
+// The AI provider, set in Settings > Connection. While baseUrl is empty the LLM_* environment variables are used.
+model Connection {
+  id        Int      @id @default(1)
+  // Preset id from src/lib/llm/providers.ts, or "custom".
+  provider  String   @default("custom")
+  baseUrl   String   @default("")
+  model     String   @default("")
+  // Encrypted with a key derived from AUTH_SECRET. Never sent to the browser.
+  apiKey    String   @default("")
+  updatedAt DateTime @updatedAt
 }

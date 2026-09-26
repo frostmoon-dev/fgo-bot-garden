@@ -30,7 +30,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center px-5">
       <form onSubmit={submit} className="w-full max-w-sm">
-        <h1 className="text-3xl font-semibold tracking-tight">Bot Garden</h1>
+        <h1 className="font-title text-3xl font-semibold">Bot Garden</h1>
         <p className="mt-2 text-muted">Enter your password to continue.</p>
         <label className="mt-8 block">
           <span className="sr-only">Password</span>

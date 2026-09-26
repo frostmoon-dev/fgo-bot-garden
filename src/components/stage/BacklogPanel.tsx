@@ -10,7 +10,7 @@ function MessageBlock({ message }: { message: MessageView }) {
   const beats = usePlay((s) => s.scene.beats);
   const characters = usePlay((s) => s.characters);
   const streaming = usePlay((s) => s.streaming);
-  const { editMessage, deleteMessage } = usePlayApi().getState();
+  const { editMessage, deleteMessage, togglePin } = usePlayApi().getState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const lines = beats.filter((b) => b.messageId === message.id);
@@ -40,12 +40,13 @@ function MessageBlock({ message }: { message: MessageView }) {
   }
 
   return (
-    <div className="group border-b border-line py-4 last:border-b-0">
+    <div className={`group border-b border-line py-4 last:border-b-0 ${message.pinned ? "border-l-2 border-l-accent pl-3" : ""}`}>
+      {message.pinned && <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">Pinned</p>}
       {lines.length === 0 && <p className="text-sm italic text-muted">(no visible lines)</p>}
       {lines.map((b) => (
-        <p key={b.key} className={`leading-relaxed [&+p]:mt-2 ${b.kind === "narration" ? "italic text-muted" : ""}`}>
+        <p key={b.key} className={`leading-relaxed [&+p]:mt-2 ${b.kind === "narration" ? "vn-narration" : ""}`}>
           {b.speakerName && (
-            <span className="mr-2 inline-flex items-center gap-1.5 font-semibold">
+            <span className="mr-2 inline-flex items-center gap-1.5 font-name font-bold">
               {b.kind !== "user" && b.speakerId && characters[b.speakerId] && <ColorDot color={characters[b.speakerId].color} />}
               {b.speakerName}
             </span>
@@ -59,6 +60,15 @@ function MessageBlock({ message }: { message: MessageView }) {
             version {message.activeVariant + 1}/{message.variants.length}
           </span>
         )}
+        <button
+          type="button"
+          disabled={streaming || message.id.startsWith("temp")}
+          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          title="Pinned messages stay in the AI's memory, even after the story is summarized."
+          onClick={() => togglePin(message.id)}
+        >
+          {message.pinned ? "Unpin" : "Pin"}
+        </button>
         <button
           type="button"
           disabled={streaming}
@@ -88,7 +98,10 @@ function MessageBlock({ message }: { message: MessageView }) {
 export function BacklogPanel() {
   const messages = usePlay((s) => s.messages);
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => endRef.current?.scrollIntoView(), []);
+  // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect may only return a cleanup.
+  useEffect(() => {
+    endRef.current?.scrollIntoView();
+  }, []);
   return (
     <PanelShell title="Backlog">
       <div>

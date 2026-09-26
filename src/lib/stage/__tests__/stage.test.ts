@@ -70,3 +70,35 @@ describe("buildBeats", () => {
     expect(finalStage.slots.center).toBeNull();
   });
 });
+
+describe("leaving the stage", () => {
+  const two = () => {
+    let s = initialStage("chaldea_hall", "bb");
+    s = applyLine(s, { type: "enter", characterId: "oberon", position: "left" }, narrative);
+    return s;
+  };
+
+  it("clears the stage on a time skip", () => {
+    const s = applyLine(two(), { type: "effect", effect: "fade" }, narrative);
+    expect(s.slots).toEqual({ left: null, center: null, right: null });
+  });
+
+  it("clears the stage when the place changes, not when it stays", () => {
+    expect(applyLine(two(), { type: "scene", backgroundKey: "moon_cell" }, narrative).slots.left).toBeNull();
+    expect(applyLine(two(), { type: "scene", backgroundKey: "chaldea_hall" }, narrative).slots.left).not.toBeNull();
+  });
+
+  it("takes a character off when the narration has them leave", () => {
+    const { ctx } = makeCtx();
+    const { finalStage } = buildBeats(
+      [{ id: "m1", role: "assistant", content: "{enter:Oberon:left}\n[BB|smirk] Bye~\n(narration) BB waves and heads out.\n[Oberon|neutral] Finally." }],
+      ctx,
+      narrative,
+      initialStage(null, "bb"),
+      { user: "Ritsuka", char: "BB" },
+      "Ritsuka",
+    );
+    expect(finalStage.slots.center).toBeNull();
+    expect(finalStage.slots.left?.characterId).toBe("oberon");
+  });
+});

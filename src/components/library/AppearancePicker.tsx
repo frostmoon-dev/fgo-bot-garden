@@ -22,6 +22,7 @@ export function previewAppearance(theme: string, customBg: string, font: string)
 }
 
 const FONT_VARS: Record<FontId, string> = {
+  fgo: "var(--font-mplus)",
   clear: "var(--font-atkinson)",
   plain: "var(--font-inter)",
   rounded: "var(--font-nunito)",
@@ -72,7 +73,7 @@ export function AppearancePicker({ theme, customBg, font, onChange }: Props) {
 
       <fieldset>
         <legend className="text-sm font-medium">Font</legend>
-        <p className="mt-0.5 text-sm text-muted">Used everywhere, including the story text.</p>
+        <p className="mt-0.5 text-sm text-muted">Used everywhere, including the story text. FGO also gives names and titles a serif, like the game.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {(Object.entries(FONTS) as [FontId, (typeof FONTS)[FontId]][]).map(([id, f]) => (
             <label
@@ -81,7 +82,9 @@ export function AppearancePicker({ theme, customBg, font, onChange }: Props) {
             >
               <input type="radio" name="font" value={id} checked={font === id} onChange={() => onChange({ font: id })} className="sr-only" />
               <span className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold">{f.label}</span>
+                <span className="font-semibold" style={id === "fgo" ? { fontFamily: "var(--font-shippori)" } : undefined}>
+                  {f.label}
+                </span>
                 <span className="text-xs text-muted">{f.family}</span>
               </span>
               <span className="mt-2 text-lg" style={{ fontFamily: FONT_VARS[id] }}>

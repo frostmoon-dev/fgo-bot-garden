@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { CommandPalette } from "./CommandPalette";
 
 const links = [
   { href: "/", label: "Home" },
@@ -10,6 +11,7 @@ const links = [
   { href: "/backgrounds", label: "Backgrounds" },
   { href: "/lorebook", label: "Lorebook" },
   { href: "/persona", label: "Persona" },
+  { href: "/connection", label: "Connection" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -28,11 +30,20 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5 sm:px-8">
-        <Link href="/" className="font-semibold tracking-tight">
+        <Link href="/" className="font-title font-semibold">
           Bot Garden
         </Link>
         <button
-          className="ml-auto min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised md:hidden"
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("open-palette"))}
+          className="ml-auto hidden min-h-10 items-center gap-3 rounded-lg border border-line px-3 text-sm text-muted hover:text-ink sm:inline-flex md:ml-0"
+          title="Search (Ctrl+K)"
+        >
+          Search
+          <kbd className="rounded border border-line px-1.5 font-mono text-xs">Ctrl K</kbd>
+        </button>
+        <button
+          className="ml-auto min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised sm:ml-0 md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
@@ -57,6 +68,7 @@ export function Nav() {
           </button>
         </nav>
       </div>
+      <CommandPalette />
     </header>
   );
 }

@@ -2,7 +2,12 @@ export type Mode = "narrative" | "dialogue";
 export type Position = "left" | "center" | "right";
 export const POSITIONS: Position[] = ["left", "center", "right"];
 
+// Screen effects the model may trigger: {effect:shake}.
+export const EFFECTS = ["shake", "flash", "fade"] as const;
+export type Effect = (typeof EFFECTS)[number];
+
 export type ScriptLine =
+  | { type: "effect"; effect: Effect }
   | { type: "dialogue"; characterId: string | null; name: string; expression: string; text: string }
   | { type: "narration"; text: string }
   | { type: "scene"; backgroundKey: string }
@@ -22,5 +27,7 @@ export interface ParserContext {
   mode: Mode;
   mainCharacterId: string;
   userName: string;
+  // What the characters call the user ("Senpai", "Master"). Tags with these names are the user too.
+  userAliases?: string[];
   warn?: (message: string) => void;
 }

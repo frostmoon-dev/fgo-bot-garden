@@ -3,6 +3,19 @@
 import { useEffect } from "react";
 import { usePlay, usePlayApi } from "./usePlay";
 
+// Keyboard shortcuts, listed in the Controls panel (press ?).
+export const SHORTCUTS: [string, string][] = [
+  ["Click, Space, Enter", "Next line"],
+  ["A", "Auto on/off"],
+  ["S", "Skip on/off"],
+  ["H", "Hide the interface to see the scene"],
+  ["L", "Log (backlog)"],
+  ["M", "Menu"],
+  ["?", "This list"],
+  ["Ctrl+I", "In the reply box: mark text as an action"],
+  ["Esc", "Close a panel"],
+];
+
 // Typewriter, auto-advance, skip and keyboard control.
 export function usePlaybackEffects() {
   const api = usePlayApi();
@@ -17,9 +30,12 @@ export function usePlaybackEffects() {
   const textSpeed = usePlay((s) => s.settings.textSpeed);
   const autoSpeed = usePlay((s) => s.settings.autoSpeed);
   const atEnd = usePlay((s) => s.cursor >= s.scene.stageBeats.length - 1);
+  const isUserBeat = beat?.role === "user";
 
   useEffect(() => {
     if (!beat || typedDone) return;
+    // You typed your own line already, so it appears at once.
+    if (isUserBeat) return void api.getState().setTyped(length);
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -31,7 +47,14 @@ export function usePlaybackEffects() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [api, beat, cursor, length, typedDone, textSpeed]);
+  }, [api, beat, cursor, length, typedDone, textSpeed, isUserBeat]);
+
+  // Your line stays up until the reply's first line arrives, then the story moves on by itself.
+  useEffect(() => {
+    if (!isUserBeat || atEnd || panel) return;
+    const t = setTimeout(() => api.getState().advance(), 700);
+    return () => clearTimeout(t);
+  }, [api, isUserBeat, atEnd, panel, cursor]);
 
   useEffect(() => {
     if (!auto || !typedDone || !beat || panel) return;
@@ -54,12 +77,34 @@ export function usePlaybackEffects() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = api.getState();
-      if (e.key === "Escape" && s.panel) return s.setPanel(null);
+      if (e.key === "Escape") {
+        if (s.panel) return s.setPanel(null);
+        if (s.hideUi) return s.setHideUi(false);
+        return;
+      }
       const el = e.target as HTMLElement | null;
-      if (s.panel || el?.closest("input, textarea, select, button")) return;
-      if (e.key === " " || e.key === "Enter") {
+      if (s.panel || e.ctrlKey || e.metaKey || e.altKey || el?.closest("input, textarea, select, [contenteditable]")) return;
+      if (s.hideUi) {
         e.preventDefault();
-        s.advance();
+        return s.setHideUi(false);
+      }
+      if (e.key === " " || e.key === "Enter") {
+        if (el?.closest("button, a")) return;
+        e.preventDefault();
+        return s.advance();
+      }
+      const actions: Record<string, () => void> = {
+        a: () => s.setAuto(!s.auto),
+        s: () => s.setSkip(!s.skip),
+        h: () => s.setHideUi(true),
+        l: () => s.setPanel("log"),
+        m: () => s.setPanel("menu"),
+        "?": () => s.setPanel("help"),
+      };
+      const action = actions[e.key.toLowerCase()];
+      if (action) {
+        e.preventDefault();
+        action();
       }
     };
     window.addEventListener("keydown", onKey);

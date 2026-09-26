@@ -9,7 +9,7 @@ import { ManageTab } from "./ManageTab";
 import { ProfileForm } from "./ProfileForm";
 import { SpritesTab } from "./SpritesTab";
 
-const TABS = ["Profile", "Expressions", "Sprites", "Manage"] as const;
+const TABS = ["Profile", "Ascensions", "Expressions", "Manage"] as const;
 type Tab = (typeof TABS)[number];
 
 export function CharacterEditor({ character, backgrounds }: { character: CharacterView; backgrounds: BackgroundView[] }) {
@@ -40,7 +40,7 @@ export function CharacterEditor({ character, backgrounds }: { character: Charact
       {tab === "Expressions" && (
         <ExpressionEditor character={character} />
       )}
-      {tab === "Sprites" && <SpritesTab character={character} />}
+      {tab === "Ascensions" && <SpritesTab character={character} />}
       {tab === "Manage" && <ManageTab character={character} />}
     </div>
   );

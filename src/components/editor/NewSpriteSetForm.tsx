@@ -49,7 +49,7 @@ export function NewSpriteSetForm({ characterId, onCreated }: { characterId: stri
         FGO format: body on top (1024×768), 256×256 face cells below in 4 columns. The face count and face position are detected for you.
       </p>
       </div>
-      <Label title="Set name">
+      <Label title="Ascension name" hint="For example Ascension 1, Swimsuit, Vortigern.">
         <TextInput value={name} onChange={(e) => setName(e.target.value)} />
       </Label>
       <Label title="Upload a sheet" hint="PNG or WebP with transparency.">

@@ -4,6 +4,7 @@ import { unwrap } from "@/lib/actionResult";
 import { useState } from "react";
 import { deleteSlot, loadSlot, saveToSlot } from "@/app/actions/sessions";
 import type { SaveSlotView } from "@/lib/types";
+import { LocalTime } from "@/components/ui/LocalTime";
 import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
 
@@ -65,7 +66,11 @@ export function SavePanel() {
               <span className="w-6 text-center text-lg font-semibold tabular-nums text-muted">{slot}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{s ? s.label || "Saved" : <span className="font-normal text-muted">Empty</span>}</p>
-                {s && <p className="mt-0.5 text-sm text-muted">{new Date(s.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>}
+                {s && (
+                  <p className="mt-0.5 text-sm text-muted">
+                    <LocalTime iso={s.createdAt} />
+                  </p>
+                )}
               </div>
               <div className="flex gap-1 text-sm">
                 <button type="button" disabled={busy !== null || streaming} className="min-h-10 rounded-lg px-3 hover:bg-raised disabled:opacity-40" onClick={() => save(slot)}>

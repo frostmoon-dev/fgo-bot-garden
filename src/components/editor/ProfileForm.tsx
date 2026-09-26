@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextArea, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
+import { isMotionStyle, MOTION_STYLES, type MotionStyle } from "@/lib/motion";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 
 type TextField = { key: keyof CharacterProfileInput; title: string; hint?: string; rows?: number };
@@ -18,6 +19,12 @@ const TEXT_FIELDS: TextField[] = [
   { key: "lore", title: "Background / lore", rows: 6 },
   { key: "relationship", title: "Relationship with {{user}}" },
   { key: "scenario", title: "Scenario", hint: "Where and when the story starts." },
+  {
+    key: "openingScene",
+    title: "Opening scene",
+    hint: "Fills the scene box when a story starts. One line each: Location, Time, Weather, Present, Mood, Situation.",
+    rows: 6,
+  },
   {
     key: "greeting",
     title: "Greeting",
@@ -47,6 +54,7 @@ function toInput(c: CharacterView): CharacterProfileInput {
     name: c.name,
     aliases: c.aliases,
     color: c.color,
+    motion: isMotionStyle(c.motion) ? c.motion : "expressive",
     description: c.description,
     personality: c.personality,
     speechStyle: c.speechStyle,
@@ -55,6 +63,7 @@ function toInput(c: CharacterView): CharacterProfileInput {
     scenario: c.scenario,
     greeting: c.greeting,
     exampleDialogues: c.exampleDialogues,
+    openingScene: c.openingScene,
     defaultSpriteSetId: c.defaultSpriteSetId,
     defaultBackgroundId: c.defaultBackgroundId,
   };
@@ -108,13 +117,13 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
       </Section>
       <Section title="Stage defaults">
       <div className="grid gap-6 sm:grid-cols-2">
-        <Label title="Default sprite set">
+        <Label title="Default ascension" hint="Used when a story does not pick one.">
           <select
             className="field"
             value={form.defaultSpriteSetId ?? ""}
             onChange={(e) => set("defaultSpriteSetId", e.target.value || null)}
           >
-            <option value="">(first set)</option>
+            <option value="">(first ascension)</option>
             {character.spriteSets.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -137,9 +146,20 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
           </select>
         </Label>
       </div>
+      <Label title="Motion" hint={`${MOTION_STYLES[form.motion].hint} An ascension can use its own.`}>
+        <select className="field" value={form.motion} onChange={(e) => set("motion", e.target.value as MotionStyle)}>
+          {Object.entries(MOTION_STYLES).map(([id, m]) => (
+            <option key={id} value={id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </Label>
       </Section>
-      <Section title="Character">{byKey("description", "personality", "speechStyle", "lore")}</Section>
-      <Section title="Story">{byKey("relationship", "scenario")}</Section>
+      <Section title="Character" hint="Shared by every ascension. An ascension can replace any of these fields in the Ascensions tab.">
+        {byKey("description", "personality", "speechStyle", "lore")}
+      </Section>
+      <Section title="Story">{byKey("relationship", "scenario", "openingScene")}</Section>
       <Section title="Writing samples" hint="Written in the tag format. They teach the model the voice.">
         {byKey("greeting", "exampleDialogues")}
       </Section>

@@ -7,6 +7,7 @@ import { isFontId, isThemeId } from "@/lib/appearance";
 import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
+import { invalidate, TAGS } from "@/lib/data/cache";
 
 // Backgrounds, persona, lorebook and settings.
 
@@ -29,6 +30,7 @@ export async function saveBackground(id: string | null, input: BackgroundInput):
     const data = backgroundSchema.parse(input);
     if (id) await db.background.update({ where: { id }, data });
     else await db.background.create({ data });
+    invalidate(TAGS.backgrounds);
     revalidatePath("/backgrounds");
   });
 }
@@ -39,6 +41,7 @@ export async function deleteBackground(id: string): Promise<ActionResult<void>> 
     await db.character.updateMany({ where: { defaultBackgroundId: id }, data: { defaultBackgroundId: null } });
     await db.session.updateMany({ where: { backgroundId: id }, data: { backgroundId: null } });
     await db.background.delete({ where: { id } });
+    invalidate(TAGS.backgrounds, TAGS.characters);
     revalidatePath("/backgrounds");
   });
 }
@@ -54,6 +57,7 @@ export async function savePersona(input: z.infer<typeof personaSchema>): Promise
     await requireAuth();
     const data = personaSchema.parse(input);
     await db.persona.upsert({ where: { id: 1 }, update: data, create: { id: 1, ...data } });
+    invalidate(TAGS.persona);
     revalidatePath("/persona");
   });
 }
@@ -72,6 +76,7 @@ export async function saveLore(id: string | null, input: LoreInput): Promise<Act
     const data = loreSchema.parse(input);
     if (id) await db.lorebookEntry.update({ where: { id }, data });
     else await db.lorebookEntry.create({ data });
+    invalidate(TAGS.lore);
     revalidatePath("/lorebook");
   });
 }
@@ -80,7 +85,17 @@ export async function deleteLore(id: string): Promise<ActionResult<void>> {
   return safe(async () => {
     await requireAuth();
     await db.lorebookEntry.delete({ where: { id } });
+    invalidate(TAGS.lore);
     revalidatePath("/lorebook");
+  });
+}
+
+// Drops every cached list, so changes made outside the app (the Supabase dashboard, scripts) show at once.
+export async function reloadData(): Promise<ActionResult<void>> {
+  return safe(async () => {
+    await requireAuth();
+    invalidate(...Object.values(TAGS));
+    revalidatePath("/", "layout");
   });
 }
 
@@ -97,6 +112,20 @@ const settingsSchema = z.object({
   theme: z.string().refine(isThemeId, "Unknown theme"),
   customBg: z.string().regex(/^(#[0-9a-fA-F]{6})?$/),
   font: z.string().refine(isFontId, "Unknown font"),
+  narrationStyle: z.enum(["italic", "plain"]),
+  promptProfile: z.enum(["balanced", "compact", "strict"]),
+  contextSize: z.number().int().min(2048).max(2_000_000),
+  topP: z.number().min(0.01).max(1),
+  frequencyPenalty: z.number().min(-2).max(2),
+  presencePenalty: z.number().min(-2).max(2),
+  memoryPlacement: z.enum(["end", "top"]),
+  exampleMode: z.enum(["auto", "always", "never"]),
+  formatReminder: z.boolean(),
+  stopAtUser: z.boolean(),
+  customPrompt: z.string().max(8000),
+  sceneTracker: z.boolean(),
+  autoChoices: z.boolean(),
+  replyLength: z.enum(["short", "scene", "long"]),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;
 
@@ -105,6 +134,7 @@ export async function saveSettings(input: SettingsInput): Promise<ActionResult<v
     await requireAuth();
     const data = settingsSchema.parse(input);
     await db.settings.upsert({ where: { id: 1 }, update: data, create: { id: 1, ...data } });
+    invalidate(TAGS.settings);
     revalidatePath("/", "layout");
   });
 }

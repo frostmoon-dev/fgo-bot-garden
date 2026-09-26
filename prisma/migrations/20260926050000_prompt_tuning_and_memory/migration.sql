@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE "Message" ADD COLUMN     "pinned" BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "Session" ADD COLUMN     "memory" TEXT NOT NULL DEFAULT '';
+
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN     "contextSize" INTEGER NOT NULL DEFAULT 16384,
+ADD COLUMN     "customPrompt" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "exampleMode" TEXT NOT NULL DEFAULT 'auto',
+ADD COLUMN     "formatReminder" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "frequencyPenalty" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "memoryPlacement" TEXT NOT NULL DEFAULT 'end',
+ADD COLUMN     "presencePenalty" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "promptProfile" TEXT NOT NULL DEFAULT 'balanced',
+ADD COLUMN     "stopAtUser" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "topP" DOUBLE PRECISION NOT NULL DEFAULT 1;
+

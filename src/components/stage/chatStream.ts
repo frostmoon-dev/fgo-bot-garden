@@ -1,9 +1,30 @@
 import { STREAM_ERROR_MARKER } from "@/lib/llm/protocol";
 import { LineBuffer } from "@/lib/parser/lineBuffer";
 
+export interface PromptBreakdown {
+  system: number;
+  memory: number;
+  history: number;
+  notes: number;
+  dropped: number;
+}
+
 export interface StreamHandlers {
-  onStart: (info: { messageId: string; userMessageId: string | null; promptTokens: number }) => void;
+  onStart: (info: {
+    messageId: string;
+    userMessageId: string | null;
+    promptTokens: number;
+    breakdown: PromptBreakdown | null;
+  }) => void;
   onLine: (line: string) => void;
+}
+
+function parseBreakdown(header: string | null): PromptBreakdown | null {
+  try {
+    return header ? (JSON.parse(header) as PromptBreakdown) : null;
+  } catch {
+    return null;
+  }
 }
 
 // Calls /api/chat and hands back complete lines as they arrive.
@@ -26,6 +47,7 @@ export async function runChat(
     messageId: res.headers.get("X-Message-Id") ?? "",
     userMessageId: res.headers.get("X-User-Message-Id") || null,
     promptTokens: Number(res.headers.get("X-Prompt-Tokens") ?? 0),
+    breakdown: parseBreakdown(res.headers.get("X-Prompt-Breakdown")),
   });
 
   const reader = res.body.getReader();

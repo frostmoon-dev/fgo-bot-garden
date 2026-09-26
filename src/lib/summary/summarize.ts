@@ -16,7 +16,7 @@ export async function summarize(
       { role: "system", content: SUMMARY_PROMPT },
       {
         role: "user",
-        content: `Previous summary:\n${previous.trim() || "(none)"}\n\nNew events:\n${transcript}`,
+        content: `The user's character is ${names.user}.\n\nPrevious memory:\n${previous.trim() || "(none)"}\n\nNew events:\n${transcript}`,
       },
     ],
     temperature: 0.3,

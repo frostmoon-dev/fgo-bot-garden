@@ -18,8 +18,18 @@
   --on-accent: color-mix(in oklab, var(--bg) 92%, black);
 
   --font-ui: var(--font-atkinson);
+  /* Names on the stage and titles. Most fonts use one face for everything; FGO pairs a serif. */
+  --face-name: var(--font-ui);
+  --face-title: var(--font-ui);
   --tracking: 0;
   --word-spacing: normal;
+}
+
+/* FGO: gothic story text (Skip in the game), heavy mincho names (Matisse), old-style mincho titles (Tsukushi). */
+:root[data-font="fgo"] {
+  --font-ui: var(--font-mplus);
+  --face-name: var(--font-shippori);
+  --face-title: var(--font-zen-old);
 }
 
 :root[data-font="plain"] {
@@ -47,6 +57,8 @@
   --color-on-accent: var(--on-accent);
   --color-danger: var(--danger);
   --font-sans: var(--font-ui), system-ui, sans-serif;
+  --font-name: var(--face-name), serif;
+  --font-title: var(--face-title), serif;
 }
 
 @layer base {
@@ -99,6 +111,20 @@ body {
 .field:focus {
   outline: none;
   border-color: var(--accent);
+}
+/* Dropdowns draw their own chevron, a comfortable distance from the edge and in the theme's color. */
+select.field {
+  appearance: none;
+  padding-right: 2.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.3rem) 55%,
+    calc(100% - 0.95rem) 55%;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  cursor: pointer;
 }
 }
 
@@ -191,4 +217,210 @@ body {
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
   backdrop-filter: blur(6px);
 }
+
+/* Narration and actions, set apart from speech. Settings > Reading picks the style (data-narration). */
+.vn-narration,
+.vn-action {
+  color: var(--muted);
+}
+:root[data-narration="italic"] :is(.vn-narration, .vn-action) {
+  font-style: italic;
+}
+:root[data-narration="plain"] :is(.vn-narration, .vn-action) {
+  color: color-mix(in oklab, var(--fg) 80%, var(--bg));
+}
+}
+
+/* FGO's text box: slightly heavy text with a soft shadow, and a gold rule under the name. */
+:root[data-font="fgo"] .vn-text {
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+:root[data-font="fgo"] .vn-name {
+  letter-spacing: 0.04em;
+  box-shadow:
+    inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent),
+    0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+/* ---------- A living stage: light, weather, effects ---------- */
+
+/* Characters breathe a little while on stage. */
+@keyframes breathe {
+  50% {
+    transform: scaleY(1.006) translateY(-0.15%);
+  }
+}
+.sprite-body {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: breathe 5.5s ease-in-out infinite;
+}
+
+/* Time of day: a tint over the background (strong) and over everything (light). */
+.tint-bg,
+.tint-all {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: background 1.5s ease;
+}
+.tint-bg[data-time="dawn"] {
+  background: linear-gradient(to top, rgb(255 170 140 / 0.22), rgb(150 170 255 / 0.12));
+}
+.tint-bg[data-time="dusk"] {
+  background: linear-gradient(to top, rgb(255 130 50 / 0.3), rgb(120 50 130 / 0.22));
+}
+.tint-bg[data-time="night"] {
+  background: radial-gradient(ellipse at 50% 30%, rgb(30 45 110 / 0.3), rgb(5 10 35 / 0.55));
+}
+.tint-all[data-time="dusk"] {
+  background: rgb(255 140 60 / 0.07);
+}
+.tint-all[data-time="night"] {
+  background: rgb(20 35 100 / 0.12);
+}
+
+/* Weather particles, drawn only outdoors. */
+.weather {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.weather i {
+  position: absolute;
+  top: -12%;
+  display: block;
+  will-change: transform;
+}
+@keyframes fall {
+  to {
+    transform: translate3d(var(--drift, 0), 120cqh, 0) rotate(var(--spin, 0deg));
+  }
+}
+.weather[data-kind="rain"] i,
+.weather[data-kind="storm"] i {
+  width: 1px;
+  height: 9cqh;
+  background: linear-gradient(to bottom, transparent, rgb(200 220 255 / 0.55));
+  animation: fall var(--dur) linear var(--delay) infinite;
+  --drift: -6cqw;
+  rotate: 8deg;
+}
+.weather[data-kind="snow"] i {
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.85);
+  filter: blur(0.5px);
+  animation: fall calc(var(--dur) * 5) linear var(--delay) infinite;
+  --drift: 5cqw;
+}
+.weather[data-kind="petals"] i {
+  width: calc(var(--size) * 1.6);
+  height: var(--size);
+  border-radius: 60% 0;
+  background: rgb(255 190 210 / 0.85);
+  animation: fall calc(var(--dur) * 6) linear var(--delay) infinite;
+  --drift: 18cqw;
+  --spin: 540deg;
+}
+@keyframes fog-drift {
+  from {
+    transform: translateX(-10%);
+  }
+  to {
+    transform: translateX(10%);
+  }
+}
+.weather[data-kind="fog"]::before,
+.weather[data-kind="fog"]::after {
+  content: "";
+  position: absolute;
+  inset: 20% -20% 0;
+  background: radial-gradient(ellipse at 30% 70%, rgb(220 225 235 / 0.35), transparent 60%),
+    radial-gradient(ellipse at 75% 80%, rgb(220 225 235 / 0.3), transparent 55%);
+  animation: fog-drift 18s ease-in-out infinite alternate;
+}
+.weather[data-kind="fog"]::after {
+  animation-duration: 26s;
+  animation-direction: alternate-reverse;
+}
+@keyframes lightning {
+  0%, 93%, 96%, 100% {
+    opacity: 0;
+  }
+  94%, 97% {
+    opacity: 0.55;
+  }
+}
+.weather[data-kind="storm"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(230 235 255);
+  animation: lightning 9s linear infinite;
+}
+
+/* FGO-style place card when the location changes. */
+@keyframes place-card {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12%, 80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.place-card {
+  animation: place-card 3.4s ease both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.toast-in {
+  animation: toast-in 250ms ease-out both;
+}
+
+@keyframes choice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.choice-in {
+  animation: choice-in 300ms ease-out both;
+}
+
+@keyframes shimmer {
+  50% {
+    opacity: 0.45;
+  }
+}
+.shimmer {
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-body,
+  .weather,
+  .place-card,
+  .toast-in,
+  .choice-in,
+  .shimmer {
+    animation: none !important;
+  }
+  .weather {
+    display: none;
+  }
 }

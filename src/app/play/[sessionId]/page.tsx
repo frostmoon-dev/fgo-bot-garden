@@ -1,17 +1,18 @@
 import { notFound } from "next/navigation";
 import { PlayClient } from "@/components/stage/PlayClient";
-import { getPersona, getSession, getSettings, listBackgrounds, listCharacters } from "@/lib/data/queries";
+import { getPersona, getSession, getSettings, listBackgrounds, listBonds, listCharacters } from "@/lib/data/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlayPage({ params }: PageProps<"/play/[sessionId]">) {
   const { sessionId } = await params;
-  const [session, characters, backgrounds, persona, settings] = await Promise.all([
+  const [session, characters, backgrounds, persona, settings, bonds] = await Promise.all([
     getSession(sessionId),
     listCharacters(),
     listBackgrounds(),
     getPersona(),
     getSettings(),
+    listBonds(),
   ]);
   if (!session) notFound();
   return (
@@ -23,6 +24,7 @@ export default async function PlayPage({ params }: PageProps<"/play/[sessionId]"
         backgrounds,
         persona,
         settings,
+        bonds,
       }}
     />
   );

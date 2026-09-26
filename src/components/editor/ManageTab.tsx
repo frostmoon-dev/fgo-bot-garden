@@ -28,7 +28,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
       <section className="space-y-3 pb-8">
         <h2 className="text-lg font-semibold">Export</h2>
         <p className="text-sm text-muted">
-          Saves the profile, expressions and sprite set settings as JSON. Sprite images are linked by URL, not copied into the file.
+          Saves the profile, expressions and ascensions (definitions and sheet settings) as JSON. Sprite images are linked by URL, not copied into the file.
         </p>
         <Button onClick={download} disabled={pending}>
           Download JSON
@@ -36,7 +36,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
       </section>
       <section className="space-y-3 py-8">
         <h2 className="text-lg font-semibold">Duplicate</h2>
-        <p className="text-sm text-muted">Copies the profile, expressions and sprite settings into a new bot.</p>
+        <p className="text-sm text-muted">Copies the profile, expressions and ascensions into a new bot.</p>
         <Button
           disabled={pending}
           onClick={() =>

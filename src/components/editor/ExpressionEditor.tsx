@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
 import type { CharacterView } from "@/lib/types";
+import { DEFAULT_EXPRESSIONS } from "@/lib/expressions";
 
 interface Row {
   id?: string;
@@ -20,6 +21,9 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
   const [saved, setSaved] = useState(false);
   const { pending, error, run } = useAsync();
 
+  // The standard list (smile, laugh, pout, crying…) minus what this character already has.
+  const missing = DEFAULT_EXPRESSIONS.filter((d) => !rows.some((r) => r.key === d.key));
+
   const update = (i: number, patch: Partial<Row>) => {
     setSaved(false);
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -29,7 +33,7 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
     <div className="max-w-4xl space-y-8">
       <p className="max-w-2xl text-muted">
         The AI picks an expression id for every line. The description tells it when to use it, for example
-        <span className="text-ink"> smirk — teasing, pleased with herself</span>. Assign face cells in the Sprites tab.
+        <span className="text-ink"> smirk — teasing, pleased with herself</span>. Pick a face for each one in Ascensions → Sprite sheet. Only expressions with a face are offered to the AI.
       </p>
       <ul className="space-y-3">
         {rows.map((r, i) => (
@@ -65,6 +69,17 @@ export function ExpressionEditor({ character }: { character: CharacterView }) {
       </ul>
       <div className="flex flex-wrap items-center gap-4 border-t border-line pt-6">
         <Button onClick={() => setRows((rs) => [...rs, { key: "", label: "", description: "" }])}>Add expression</Button>
+        {missing.length > 0 && (
+          <Button
+            title={missing.map((e) => e.key).join(", ")}
+            onClick={() => {
+              setSaved(false);
+              setRows((rs) => [...rs, ...missing.map((e) => ({ ...e }))]);
+            }}
+          >
+            Add {missing.length} standard expressions
+          </Button>
+        )}
         <Button
           variant="primary"
           disabled={pending}

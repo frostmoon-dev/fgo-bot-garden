@@ -1,6 +1,6 @@
 "use client";
 
-import { cellOrigin, type SheetGrid } from "./sheet";
+import { cellOrigin, displaySheetUrl, type SheetGrid } from "./sheet";
 import { useFadeLayers } from "./useFadeLayers";
 
 interface Props {
@@ -24,7 +24,7 @@ function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; s
       opacity={opacity}
       className={className}
     >
-      <image href={sheetUrl} width={grid.sheetWidth} height={grid.sheetHeight} />
+      <image href={displaySheetUrl(sheetUrl, grid)} width={grid.sheetWidth} height={grid.sheetHeight} />
     </svg>
   );
 }
@@ -39,7 +39,7 @@ export function SpriteView({ grid, sheetUrl, cell, className = "", faceOpacity, 
       className={className}
       role="img"
     >
-      <image href={sheetUrl} width={grid.sheetWidth} height={grid.sheetHeight} />
+      <image href={displaySheetUrl(sheetUrl, grid)} width={grid.sheetWidth} height={grid.sheetHeight} />
       {fade
         ? faces.map((f) => (
             <Face
@@ -62,14 +62,14 @@ export function FaceThumb({ grid, sheetUrl, cell, className = "" }: { grid: Shee
     // Show the body's own face region.
     return (
       <svg viewBox={`${grid.faceX} ${grid.faceY} ${grid.cellSize} ${grid.cellSize}`} className={className}>
-        <image href={sheetUrl} width={grid.sheetWidth} height={grid.sheetHeight} />
+        <image href={displaySheetUrl(sheetUrl, grid)} width={grid.sheetWidth} height={grid.sheetHeight} />
       </svg>
     );
   }
   const o = cellOrigin(grid, cell);
   return (
     <svg viewBox={`${o.x} ${o.y} ${grid.cellSize} ${grid.cellSize}`} className={className}>
-      <image href={sheetUrl} width={grid.sheetWidth} height={grid.sheetHeight} />
+      <image href={displaySheetUrl(sheetUrl, grid)} width={grid.sheetWidth} height={grid.sheetHeight} />
     </svg>
   );
 }

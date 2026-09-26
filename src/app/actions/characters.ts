@@ -6,16 +6,17 @@ import type { ActionResult } from "@/lib/actionResult";
 import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
+import { invalidate, TAGS } from "@/lib/data/cache";
 import { getCharacter } from "@/lib/data/queries";
 import { characterExportSchema, type CharacterExport } from "@/lib/characterExport";
 import type { ExpressionView } from "@/lib/types";
+import { DEFAULT_EXPRESSIONS } from "@/lib/expressions";
+import { MOTION_STYLES, type MotionStyle } from "@/lib/motion";
 
-const NEUTRAL = { key: "neutral", label: "Neutral", description: "calm, default face" };
+const NEUTRAL = DEFAULT_EXPRESSIONS[0];
 
-const profileSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  aliases: z.array(z.string().trim().min(1).max(80)).max(20),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+// Definition fields, shared by the character profile and each ascension.
+const definitionSchema = z.object({
   description: z.string().max(20000),
   personality: z.string().max(20000),
   speechStyle: z.string().max(20000),
@@ -24,6 +25,21 @@ const profileSchema = z.object({
   scenario: z.string().max(20000),
   greeting: z.string().max(20000),
   exampleDialogues: z.string().max(40000),
+  openingScene: z.string().max(2000),
+});
+export type DefinitionInput = z.infer<typeof definitionSchema>;
+
+const motionStyle = z.enum(Object.keys(MOTION_STYLES) as [MotionStyle, ...MotionStyle[]]);
+
+// An ascension's definition, plus its motion style ("" = the character's).
+const ascensionSchema = definitionSchema.extend({ motion: z.union([motionStyle, z.literal("")]) });
+export type AscensionInput = z.infer<typeof ascensionSchema>;
+
+const profileSchema = definitionSchema.extend({
+  name: z.string().trim().min(1).max(80),
+  motion: motionStyle,
+  aliases: z.array(z.string().trim().min(1).max(80)).max(20),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   defaultSpriteSetId: z.string().nullable(),
   defaultBackgroundId: z.string().nullable(),
 });
@@ -64,6 +80,7 @@ const spriteSetSchema = z.object({
 export type SpriteSetInput = z.infer<typeof spriteSetSchema>;
 
 function touch(characterId?: string) {
+  invalidate(TAGS.characters);
   revalidatePath("/");
   revalidatePath("/characters");
   if (characterId) revalidatePath(`/characters/${characterId}`);
@@ -75,11 +92,22 @@ export async function createCharacter(name: string): Promise<ActionResult<string
     const created = await db.character.create({
       data: {
         name: z.string().trim().min(1).max(80).parse(name),
-        expressions: { create: [{ ...NEUTRAL, sortOrder: 0 }] },
+        // Start with the standard list, so the user only has to pick faces for them.
+        expressions: { create: DEFAULT_EXPRESSIONS.map((e, i) => ({ ...e, sortOrder: i })) },
       },
     });
     touch();
     return created.id;
+  });
+}
+
+// Saves one ascension's own definition. Empty fields use the character's profile.
+export async function updateAscension(spriteSetId: string, input: AscensionInput): Promise<ActionResult<void>> {
+  return safe(async () => {
+    await requireAuth();
+    const data = ascensionSchema.parse(input);
+    const set = await db.spriteSet.update({ where: { id: spriteSetId }, data });
+    touch(set.characterId);
   });
 }
 
@@ -199,6 +227,7 @@ async function exportCharacterData(id: string): Promise<CharacterExport> {
         name: c.name,
         aliases: c.aliases,
         color: c.color,
+        motion: c.motion,
         description: c.description,
         personality: c.personality,
         speechStyle: c.speechStyle,
@@ -207,6 +236,7 @@ async function exportCharacterData(id: string): Promise<CharacterExport> {
         scenario: c.scenario,
         greeting: c.greeting,
         exampleDialogues: c.exampleDialogues,
+        openingScene: c.openingScene,
       },
       expressions: c.expressions.map(({ key, label, description }) => ({ key, label, description })),
       spriteSets: c.spriteSets.map(({ id: _id, ...s }) => s),

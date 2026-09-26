@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// Definition fields shared by the character and each ascension. Older files lack some; they default to "".
+const profile = {
+  description: z.string().default(""),
+  personality: z.string().default(""),
+  speechStyle: z.string().default(""),
+  lore: z.string().default(""),
+  relationship: z.string().default(""),
+  scenario: z.string().default(""),
+  greeting: z.string().default(""),
+  exampleDialogues: z.string().default(""),
+  openingScene: z.string().default(""),
+};
+
 export const characterExportSchema = z.object({
   format: z.literal("fgo-bot-garden/character"),
   version: z.literal(1),
@@ -7,14 +20,8 @@ export const characterExportSchema = z.object({
     name: z.string().trim().min(1).max(80),
     aliases: z.array(z.string()).default([]),
     color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#c9a86a"),
-    description: z.string().default(""),
-    personality: z.string().default(""),
-    speechStyle: z.string().default(""),
-    lore: z.string().default(""),
-    relationship: z.string().default(""),
-    scenario: z.string().default(""),
-    greeting: z.string().default(""),
-    exampleDialogues: z.string().default(""),
+    motion: z.string().default("expressive"),
+    ...profile,
   }),
   expressions: z
     .array(
@@ -25,6 +32,7 @@ export const characterExportSchema = z.object({
       }),
     )
     .default([]),
+  // Each entry is one ascension: its sheet, its faces, and the definition fields it overrides.
   spriteSets: z
     .array(
       z.object({
@@ -39,6 +47,8 @@ export const characterExportSchema = z.object({
         faceX: z.number().int(),
         faceY: z.number().int(),
         faces: z.record(z.string(), z.number().int()).default({}),
+        motion: z.string().default(""),
+        ...profile,
       }),
     )
     .default([]),

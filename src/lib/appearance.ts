@@ -18,6 +18,11 @@ export const THEMES = {
 export type ThemeId = keyof typeof THEMES | "custom";
 
 export const FONTS = {
+  fgo: {
+    label: "FGO",
+    family: "M PLUS 1 · Shippori Mincho",
+    hint: "Like the game: a clear gothic for the story text (as FGO's Skip) and a serif for names and titles (as Matisse).",
+  },
   clear: { label: "Clear", family: "Atkinson Hyperlegible Next", hint: "Made by the Braille Institute. Every letter is easy to tell apart." },
   plain: { label: "Plain", family: "Inter", hint: "A neutral, compact interface font." },
   rounded: { label: "Rounded", family: "Nunito", hint: "Soft, rounded letter ends." },
@@ -25,6 +30,14 @@ export const FONTS = {
 } as const;
 
 export type FontId = keyof typeof FONTS;
+
+// How narration and actions (yours and the characters') are set apart from spoken lines.
+export const NARRATION_STYLES = {
+  italic: { label: "Italic", hint: "Slanted, like *actions* in a roleplay chat." },
+  plain: { label: "Plain", hint: "Upright and slightly dimmer, as in FGO." },
+} as const;
+
+export type NarrationStyle = keyof typeof NARRATION_STYLES;
 
 export function isThemeId(value: string): value is ThemeId {
   return value === "custom" || value in THEMES;
