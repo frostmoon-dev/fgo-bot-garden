@@ -7,14 +7,15 @@ import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
 import { askConfirm } from "@/components/ui/dialogs";
 
-function MessageBlock({ message }: { message: MessageView }) {
+function MessageBlock({ message, seen }: { message: MessageView; seen: Set<string> | null }) {
   const beats = usePlay((s) => s.scene.beats);
   const characters = usePlay((s) => s.characters);
   const streaming = usePlay((s) => s.streaming);
-  const { editMessage, deleteMessage, togglePin } = usePlayApi().getState();
+  const { editMessage, deleteMessage, togglePin, replay } = usePlayApi().getState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const lines = beats.filter((b) => b.messageId === message.id);
+  // Only lines already read: a reply that is still playing isn't spoiled.
+  const lines = beats.filter((b) => b.messageId === message.id && (!seen || seen.has(b.key)));
 
   if (editing) {
     return (
@@ -63,6 +64,15 @@ function MessageBlock({ message }: { message: MessageView }) {
         )}
         <button
           type="button"
+          disabled={streaming}
+          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          title="Close the log and play the story again from this message"
+          onClick={() => replay(message.id)}
+        >
+          Replay
+        </button>
+        <button
+          type="button"
           disabled={streaming || message.id.startsWith("temp")}
           className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
           title="Pinned messages stay in the AI's memory, even after the story is summarized."
@@ -103,7 +113,14 @@ function MessageBlock({ message }: { message: MessageView }) {
 }
 
 export function BacklogPanel() {
-  const messages = usePlay((s) => s.messages);
+  const allMessages = usePlay((s) => s.messages);
+  const stageBeats = usePlay((s) => s.scene.stageBeats);
+  const readUpTo = usePlay((s) => s.readUpTo);
+  // Lines up to the furthest one read, and the messages they belong to. Messages after that aren't shown yet.
+  const read = stageBeats.slice(0, readUpTo + 1);
+  const seen = readUpTo >= stageBeats.length - 1 ? null : new Set(read.map((b) => b.key));
+  const lastRead = allMessages.findIndex((m) => m.id === read.at(-1)?.messageId);
+  const messages = seen && lastRead >= 0 ? allMessages.slice(0, lastRead + 1) : allMessages;
   const endRef = useRef<HTMLDivElement>(null);
   // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect may only return a cleanup.
   useEffect(() => {
@@ -114,7 +131,7 @@ export function BacklogPanel() {
       <div>
         {messages.length === 0 && <p className="text-sm text-muted">Nothing yet.</p>}
         {messages.map((m) => (
-          <MessageBlock key={m.id} message={m} />
+          <MessageBlock key={m.id} message={m} seen={seen} />
         ))}
         <div ref={endRef} />
       </div>

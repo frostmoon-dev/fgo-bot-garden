@@ -4,12 +4,12 @@ import { useState } from "react";
 import { StageButton } from "./StageButton";
 import { usePlay, usePlayApi } from "./usePlay";
 
-// Shown while the current line belongs to the latest reply: swipe between versions or regenerate, optionally
-// with a hint on what should change. The new version joins the others; nothing is overwritten.
+// Shown while the current line belongs to the latest reply: replay it, swipe between versions, or regenerate,
+// optionally with a hint on what should change. The new version joins the others; nothing is overwritten.
 export function VariantControls({ messageId }: { messageId: string }) {
   const message = usePlay((s) => s.messages.find((m) => m.id === messageId));
   const streaming = usePlay((s) => s.streaming);
-  const { swipe, regenerate } = usePlayApi().getState();
+  const { swipe, regenerate, replay } = usePlayApi().getState();
   const [steering, setSteering] = useState(false);
   const [hint, setHint] = useState("");
   if (!message) return null;
@@ -56,7 +56,8 @@ export function VariantControls({ messageId }: { messageId: string }) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    // Wraps on a narrow phone rather than pushing past the screen edge.
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
       {count > 1 && (
         <>
           <StageButton aria-label="Previous version" disabled={streaming || message.activeVariant === 0} onClick={() => swipe(messageId, -1)}>
@@ -70,6 +71,9 @@ export function VariantControls({ messageId }: { messageId: string }) {
           </StageButton>
         </>
       )}
+      <StageButton disabled={streaming} onClick={() => replay(messageId)} title="Play this reply again from its first line (R)">
+        Replay
+      </StageButton>
       <StageButton disabled={streaming} onClick={() => setSteering(true)} title="Regenerate with a hint on what should change">
         Steer
       </StageButton>
