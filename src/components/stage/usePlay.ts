@@ -45,6 +45,9 @@ interface PlayState extends PlayData {
   messages: MessageView[];
   scene: Scene;
   cursor: number;
+  // The furthest line read in the newest content. The Log shows lines up to here, so it never spoils a reply
+  // that is still being read. Replaying older lines leaves it where it is; new content resets it.
+  readUpTo: number;
   typed: number;
   streaming: boolean;
   abort: AbortController | null;
@@ -114,7 +117,7 @@ export type PlayStore = StoreApi<PlayState>;
 
 // One store per play page, created with its data. Never shared between requests on the server.
 export function createPlayStore(data: PlayData): PlayStore {
-  return createStore<PlayState>()((set, get) => {
+  const store = createStore<PlayState>()((set, get) => {
   // Rebuild beats after any change to messages or session.
   const commit = (patch: Partial<PlayState>) => {
     const s = { ...get(), ...patch };
@@ -125,7 +128,8 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   const showEnd = (scene: Scene) => {
     const last = scene.stageBeats.at(-1);
-    set({ cursor: Math.max(0, scene.stageBeats.length - 1), typed: last?.text.length ?? 0 });
+    const end = Math.max(0, scene.stageBeats.length - 1);
+    set({ cursor: end, typed: last?.text.length ?? 0, readUpTo: end });
   };
 
   const firstBeatOf = (scene: Scene, messages: MessageView[], messageId: string) => {
@@ -229,6 +233,7 @@ export function createPlayStore(data: PlayData): PlayStore {
     messages: data.session.messages,
     scene,
     cursor: Math.max(0, scene.stageBeats.length - 1),
+    readUpTo: Math.max(0, scene.stageBeats.length - 1),
     typed: lastBeat?.text.length ?? 0,
     streaming: false,
     abort: null,
@@ -271,7 +276,8 @@ export function createPlayStore(data: PlayData): PlayStore {
       const scene = commit({ messages: withUser, choices: null });
       if (trimmed) suggestCast(trimmed);
       // Your own line shows on stage while the reply is written.
-      set({ cursor: tempUser ? startCursor : scene.stageBeats.length, typed: 0 });
+      const at = tempUser ? startCursor : scene.stageBeats.length;
+      set({ cursor: at, typed: 0, readUpTo: at });
       let started = false;
       try {
         const messageId = await stream({ action: "reply", text: trimmed, direction }, ({ messageId, userMessageId }) => {
@@ -317,7 +323,7 @@ export function createPlayStore(data: PlayData): PlayStore {
       if (!last) return;
       if (last.role === "user") {
         // No reply yet: generate one.
-        set({ cursor: s.scene.stageBeats.length, typed: 0 });
+        set({ cursor: s.scene.stageBeats.length, typed: 0, readUpTo: s.scene.stageBeats.length });
         try {
           const messageId = await stream({ action: "regenerate", direction }, ({ messageId }) => {
             const msgs = get().messages;
@@ -346,7 +352,8 @@ export function createPlayStore(data: PlayData): PlayStore {
       };
       const messages = [...s.messages.slice(0, index), withVariant];
       const scene = commit({ messages });
-      set({ cursor: firstBeatOf(scene, messages, last.id), typed: 0 });
+      const at = firstBeatOf(scene, messages, last.id);
+      set({ cursor: at, typed: 0, readUpTo: at });
       try {
         const messageId = await stream({ action: "regenerate", direction }, () => ({ messageIndex: index }));
         if (!get().messages[index].variants.at(-1)?.content.trim()) throw new Error("The AI returned an empty reply.");
@@ -373,7 +380,8 @@ export function createPlayStore(data: PlayData): PlayStore {
       if (next < 0 || next >= message.variants.length) return;
       const messages = s.messages.map((m) => (m.id === messageId ? { ...m, activeVariant: next } : m));
       const scene = commit({ messages });
-      set({ cursor: firstBeatOf(scene, messages, messageId), typed: 0 });
+      const at = firstBeatOf(scene, messages, messageId);
+      set({ cursor: at, typed: 0, readUpTo: at });
       setActiveVariant(messageId, next).then(unwrap).catch(reportError);
     },
 
@@ -448,7 +456,7 @@ export function createPlayStore(data: PlayData): PlayStore {
           const messages = exists ? now.messages.map((m) => (m.id === change.id ? change : m)) : [...now.messages, change];
           const scene = commit({ messages, session });
           const at = scene.stageBeats.findIndex((b) => b.messageId === change.id);
-          if (at >= 0) set({ cursor: at, typed: 0 });
+          if (at >= 0) set({ cursor: at, typed: 0, readUpTo: at });
           showToast(`${now.characters[characterId]?.name ?? "They"} will notice the change in the next reply.`);
           return;
         }
@@ -458,7 +466,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         const messages = exists ? now.messages.map((m) => (m.id === first.id ? first : m)) : [first, ...now.messages];
         const scene = commit({ messages, session });
         // A story that has not started replays the new greeting from the top.
-        if (!messages.some((m) => m.role === "user")) set({ cursor: 0, typed: 0 });
+        if (!messages.some((m) => m.role === "user")) set({ cursor: 0, typed: 0, readUpTo: 0 });
         else if (get().cursor >= scene.stageBeats.length) showEnd(scene);
         showToast(`Greeting switched to ${formName}.`);
       } catch (e) {
@@ -503,6 +511,11 @@ export function createPlayStore(data: PlayData): PlayStore {
     showToast,
   };
 });
+  // Reading forward moves the mark along, whatever moved the cursor (a click, Auto, Skip, a key).
+  store.subscribe((s) => {
+    if (s.cursor > s.readUpTo) store.setState({ readUpTo: s.cursor });
+  });
+  return store;
 }
 
 const PlayStoreContext = createContext<PlayStore | null>(null);
