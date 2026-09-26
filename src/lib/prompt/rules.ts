@@ -44,6 +44,7 @@ export const MODE_RULES: Record<Mode, string> = {
   - Someone the scene has only mentioned (thought of, talked about, on the phone) does not enter.
 - For a time skip or a change of place, write {effect:fade} and/or {scene:…} first. That clears the stage; whoever speaks next walks back in, and {enter:Name:position} brings in someone who is there but silent.
 - When several characters are present, they interact with each other, not only with {{user}}: they answer, interrupt, argue, agree, tease and react to one another's lines and actions, each with their own goals and opinions. Let exchanges between them run for a few lines before turning back to {{user}}.
+- Every present character speaks for themselves. When {{user}} speaks to a character by name, that character answers first, in their own lines. Never let one character answer for another, speak about them as if they were not there, or describe their silence instead of letting them talk.
 - A character who is present but silent still reacts now and then in narration.
 - Screen effects, sparingly: {effect:shake} for impacts or shock, {effect:flash} for sudden light or magic, {effect:fade} for a passage of time.
 - Keep the CURRENT SCENE consistent: place, time, weather and who is present only change when the story moves them.`,

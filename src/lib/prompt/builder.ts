@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/lib/llm/types";
+import { mentions, presentIds } from "@/lib/story/formerCast";
 import type { Mode } from "@/lib/parser/types";
 import { applyMacros, type Macros } from "@/lib/stage/beats";
 import { formatExample, formatReminder, lengthRule, MODE_RULES, STRICT_RULES, SYSTEM_RULES, type ReplyLength } from "./rules";
@@ -151,6 +152,28 @@ function join(parts: (string | null | false | undefined)[]): string {
   return parts.filter(Boolean).join("\n\n");
 }
 
+// Who is here and who the user just spoke to. Weaker models otherwise let the main character do all the
+// talking, even answer for the others ("She doesn't seem to have an answer"), while the rest stand silent.
+function stageNote(input: PromptInput, cast: PromptCharacter[]): string | null {
+  if (cast.length < 2) return null;
+  const lastUser = input.history.findLast((m) => m.role === "user")?.content ?? "";
+  const named = (c: PromptCharacter) => mentions(lastUser, [c.name, ...c.aliases]);
+  const listed = input.scene ? presentIds(input.scene, cast) : null;
+  const present = listed ? cast.filter((c) => listed.has(c.id) || named(c)) : [];
+  const addressed = cast.filter(named);
+  if (present.length < 2 && !addressed.length) return null;
+  const names = (list: PromptCharacter[]) => list.map((c) => c.name).join(", ");
+  return [
+    "# WHO SPEAKS",
+    present.length >= 2 &&
+      `Here now: ${names(present)}. Each of them speaks and acts for themselves, in their own [Name|expression] lines, and reacts to the others. Nobody answers, explains or narrates silence for someone who is here: let that character talk.`,
+    addressed.length > 0 &&
+      `{{user}} just spoke to ${names(addressed)}. ${addressed.length > 1 ? "They answer" : `${addressed[0].name} answers`} first, in their own words, before anyone else reacts. If they are not on stage yet, write {enter:Name:position} first.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function buildPrompt(input: PromptInput): BuiltPrompt {
   const o = { ...DEFAULT_PROMPT_OPTIONS, ...input.options };
   const compact = o.profile === "compact";
@@ -205,6 +228,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   // Changes often, so it goes last.
   const notes = join([
     input.scene?.trim() && `# CURRENT SCENE\n${input.scene.trim()}`,
+    input.mode === "narrative" && stageNote(input, cast),
     !!input.events?.length && `# JUST HAPPENED\n${input.events.map((e) => `- ${e}`).join("\n")}`,
     !!input.absent?.length &&
       `# NO LONGER IN THIS STORY\n${input.absent.join(", ")}: out of the story from now on. They do not appear, speak or act, and nobody treats them as present; their earlier lines are only history. If it matters, they have gone elsewhere.`,

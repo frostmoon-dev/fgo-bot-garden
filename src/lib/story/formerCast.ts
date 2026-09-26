@@ -7,7 +7,7 @@ export interface NamedCharacter {
   aliases: string[];
 }
 
-function mentions(text: string, names: string[]): boolean {
+export function mentions(text: string, names: string[]): boolean {
   return names.some((n) => n.trim() && new RegExp(`(?<![\\p{L}\\p{N}])${n.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "iu").test(text));
 }
 

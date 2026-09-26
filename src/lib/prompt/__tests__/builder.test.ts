@@ -149,3 +149,24 @@ describe("buildPrompt", () => {
     expect(large.breakdown.dropped).toBe(0);
   });
 });
+
+describe("who speaks", () => {
+  const all = (input: PromptInput) => buildPrompt(input).messages.map((m) => m.content).join("\n");
+
+  it("names who is here and who the user just spoke to", () => {
+    const text = all({ ...base, scene: "Location: Moon\nPresent: BB, Oberon, Ritsuka", history: [{ role: "user", content: "Oberon?" }] });
+    expect(text).toContain("# WHO SPEAKS");
+    expect(text).toContain("Here now: BB, Oberon.");
+    expect(text).toContain("Ritsuka just spoke to Oberon. Oberon answers first");
+  });
+
+  it("counts characters the user brings in as here, even before the scene box lists them", () => {
+    const text = all({ ...base, scene: "Present: BB", history: [{ role: "user", content: "Oberon is here." }] });
+    expect(text).toContain("Here now: BB, Oberon.");
+  });
+
+  it("says nothing with one character, or in dialogue mode", () => {
+    expect(all({ ...base, cast: [character("bb", "BB")], history: [{ role: "user", content: "BB?" }] })).not.toContain("# WHO SPEAKS");
+    expect(all({ ...base, mode: "dialogue", history: [{ role: "user", content: "Oberon?" }] })).not.toContain("# WHO SPEAKS");
+  });
+});
