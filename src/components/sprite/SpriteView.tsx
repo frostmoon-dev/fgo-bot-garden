@@ -16,7 +16,7 @@ interface Props {
 // sheet, the cells around this one bleed into its edge and would draw a faint box around the face.
 const INSET = 4;
 
-function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; sheetUrl: string; cell: number; opacity?: number; className?: string }) {
+export function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; sheetUrl: string; cell: number; opacity?: number; className?: string }) {
   const o = cellOrigin(grid, cell);
   const size = grid.cellSize - 2 * INSET;
   return (
