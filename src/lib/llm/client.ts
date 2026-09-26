@@ -12,6 +12,24 @@ export function authHeaders(connection: LlmConnection): Record<string, string> {
   return connection.apiKey ? { Authorization: `Bearer ${connection.apiKey}` } : {};
 }
 
+function isAnthropic(connection: LlmConnection): boolean {
+  try {
+    return new URL(connection.baseUrl).hostname === "api.anthropic.com";
+  } catch {
+    return false;
+  }
+}
+
+// The model list request. Anthropic only makes chat OpenAI-compatible: its model list is the native API, which
+// takes the key as x-api-key, needs an anthropic-version header, and sends 20 models a page unless asked for more.
+export function modelsRequest(connection: LlmConnection): { url: string; headers: Record<string, string> } {
+  if (!isAnthropic(connection)) return { url: endpoint(connection, "/models"), headers: authHeaders(connection) };
+  return {
+    url: endpoint(connection, "/models?limit=1000"),
+    headers: { ...(connection.apiKey && { "x-api-key": connection.apiKey }), "anthropic-version": "2023-06-01" },
+  };
+}
+
 // Plain words for the errors people actually hit, with the provider's own message after them.
 export function describeFailure(status: number, body: string): string {
   const reason =

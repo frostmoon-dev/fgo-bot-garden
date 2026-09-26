@@ -6,7 +6,7 @@ import type { ActionResult } from "@/lib/actionResult";
 import { requireAuth } from "@/lib/auth/server";
 import { invalidate, TAGS } from "@/lib/data/cache";
 import { db } from "@/lib/db";
-import { authHeaders, completeChat, describeFailure, endpoint } from "@/lib/llm/client";
+import { completeChat, describeFailure, modelsRequest } from "@/lib/llm/client";
 import { keyFor, sameOrigin, type LlmConnection } from "@/lib/llm/connection";
 import { checkBaseUrl, PROVIDERS, type ProviderId } from "@/lib/llm/providers";
 import { encryptSecret } from "@/lib/llm/secret";
@@ -92,9 +92,10 @@ export async function listModels(input: Omit<ConnectionInput, "model">): Promise
   return safe(async () => {
     await requireAuth();
     const connection = await resolve({ ...input, model: "-" });
+    const { url, headers } = modelsRequest(connection);
     let res: Response;
     try {
-      res = await fetch(endpoint(connection, "/models"), { headers: authHeaders(connection), signal: AbortSignal.timeout(15_000) });
+      res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
     } catch {
       throw new Error(`Couldn't reach ${new URL(connection.baseUrl).host}. Check the address.`);
     }

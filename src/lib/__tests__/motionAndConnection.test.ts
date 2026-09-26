@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// client.ts reads the saved connection from the database; these tests pass one in instead.
+vi.mock("../llm/connection", () => ({ activeConnection: vi.fn() }));
 
 import { motionFor, resolveMotion } from "../motion";
+import { modelsRequest } from "../llm/client";
 import { checkBaseUrl, providerFor } from "../llm/providers";
 import { decryptSecret, encryptSecret, keyHint } from "../llm/secret";
 
@@ -55,5 +58,19 @@ describe("connection", () => {
     expect(keyHint("sk-test-1234567890")).toBe("…7890");
     vi.stubEnv("AUTH_SECRET", "b".repeat(40));
     expect(decryptSecret(stored)).toBeNull();
+  });
+});
+
+describe("model list request", () => {
+  it("uses Anthropic's native headers, and a full page", () => {
+    const r = modelsRequest({ baseUrl: "https://api.anthropic.com/v1", model: "-", apiKey: "sk-ant-x" });
+    expect(r.url).toBe("https://api.anthropic.com/v1/models?limit=1000");
+    expect(r.headers).toEqual({ "x-api-key": "sk-ant-x", "anthropic-version": "2023-06-01" });
+  });
+
+  it("sends a bearer key everywhere else", () => {
+    const r = modelsRequest({ baseUrl: "https://api.deepseek.com/v1/", model: "-", apiKey: "sk-1" });
+    expect(r.url).toBe("https://api.deepseek.com/v1/models");
+    expect(r.headers).toEqual({ Authorization: "Bearer sk-1" });
   });
 });
