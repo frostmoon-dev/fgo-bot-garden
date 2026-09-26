@@ -65,9 +65,21 @@ export async function suggestChoices(sessionId: string): Promise<ActionResult<Ch
         maxTokens: 220,
       });
     // Roleplay models sometimes answer in character instead; one quiet retry usually fixes it.
-    let choices = parseChoices(await ask());
-    if (!choices.length) choices = parseChoices(await ask());
-    if (!choices.length) throw new Error("The model answered in character instead of giving choices. Try again.");
+    let reply = await ask();
+    let choices = parseChoices(reply);
+    if (!choices.length) {
+      reply = await ask();
+      choices = parseChoices(reply);
+    }
+    if (!choices.length) {
+      // Say what came back, so it's clear whether the model roleplayed, explained itself or sent nothing.
+      const said = reply.replace(/\s+/g, " ").trim();
+      throw new Error(
+        said
+          ? `The model didn't give choices in the SAY:/DO: format. It wrote: “${said.length > 120 ? `${said.slice(0, 120)}…` : said}”`
+          : "The model sent back nothing (reasoning models sometimes spend the whole reply thinking). Try again, or try another model.",
+      );
+    }
     return choices;
   });
 }

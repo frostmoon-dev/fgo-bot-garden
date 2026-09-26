@@ -22,3 +22,16 @@ describe("parseChoices", () => {
     expect(parseChoices("SAY: I love your personality, honestly.")).toHaveLength(1);
   });
 });
+
+describe("parseChoices — plain lists", () => {
+  it("reads numbered or bulleted options without SAY:/DO:", () => {
+    expect(parseChoices('1. "Oberon, move over yourself."\n2. *Sit down between them.*\n3. Think about it.')).toEqual([
+      { kind: "say", text: "Oberon, move over yourself." },
+      { kind: "do", text: "Sit down between them." },
+    ]);
+  });
+
+  it("doesn't read plain roleplay as options", () => {
+    expect(parseChoices('[Oberon|smile] ...Move over.\n"Fine," she says.')).toEqual([]);
+  });
+});

@@ -96,8 +96,24 @@ export async function* streamChat(options: ChatOptions): AsyncGenerator<string> 
   yield* stripReasoningStream(readSseDeltas(res.body, options.onUsage));
 }
 
+// Reasoning models (DeepSeek R1, Nemotron, Qwen and others on Nvidia, OpenRouter, local servers) think before
+// they answer. With the small limits the helper requests use, the thinking can use up every token, leaving
+// no answer. Then the request is sent once more with room to finish.
+const THINKING_ROOM = 4;
+const MAX_HELPER_TOKENS = 4000;
+
 export async function completeChat(options: ChatOptions): Promise<string> {
-  const res = await post(options, false);
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return stripReasoning(json.choices?.[0]?.message?.content ?? "");
+  const once = async (maxTokens: number) => {
+    const res = await post({ ...options, maxTokens }, false);
+    const json = (await res.json()) as {
+      choices?: { message?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string }[];
+    };
+    const choice = json.choices?.[0];
+    const raw = choice?.message?.content ?? "";
+    const cutOff = choice?.finish_reason === "length" || /<think/i.test(raw) || !!choice?.message?.reasoning_content;
+    return { text: stripReasoning(raw), cutOff };
+  };
+  const first = await once(options.maxTokens);
+  if (first.text.trim() || !first.cutOff || options.maxTokens >= MAX_HELPER_TOKENS) return first.text;
+  return (await once(Math.min(MAX_HELPER_TOKENS, options.maxTokens * THINKING_ROOM))).text;
 }

@@ -37,5 +37,21 @@ export function parseChoices(text: string): Choice[] {
     if (!words || NOT_AN_OPTION.test(words) || out.some((c) => c.text === words)) continue;
     out.push({ kind, text: words });
   }
+  return out.length ? out.slice(0, 3) : listedChoices(text);
+}
+
+// Some models ignore SAY:/DO: and write a plain list: '1. "Hello there."' or '- *Lean in closer.*'. Quoted
+// words are spoken, a line wrapped in asterisks is an action; anything else in the list is left out.
+function listedChoices(text: string): Choice[] {
+  const out: Choice[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const item = raw.match(/^\s*(?:[-•]|\d+[.)])\s+(.+)$/)?.[1]?.trim();
+    if (!item) continue;
+    const said = item.match(/^[“"](.+)[”"]$/)?.[1]?.trim();
+    const done = item.match(/^\*([^*]+)\*$/)?.[1]?.trim();
+    const choice: Choice | null = said ? { kind: "say", text: said } : done ? { kind: "do", text: done } : null;
+    if (!choice || NOT_AN_OPTION.test(choice.text) || out.some((c) => c.text === choice.text)) continue;
+    out.push(choice);
+  }
   return out.slice(0, 3);
 }
