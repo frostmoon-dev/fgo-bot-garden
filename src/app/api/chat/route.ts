@@ -15,6 +15,8 @@ import { userTextForPrompt } from "@/lib/userInput";
 import type { Mode, ParserContext } from "@/lib/parser/types";
 import { buildPrompt } from "@/lib/prompt/builder";
 import { formChangeNote, pendingFormChanges } from "@/lib/story/formChange";
+import { formerCast } from "@/lib/story/formerCast";
+import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
 
 export const maxDuration = 60;
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
   const { sessionId, action } = parsed.data;
 
   // All reads at once. Persona, settings and backgrounds usually come from the cache.
-  const [session, persona, settings, backgrounds] = await Promise.all([
+  const [session, persona, settings, backgrounds, everyone] = await Promise.all([
     db.session.findUnique({
       where: { id: sessionId },
       include: {
@@ -59,6 +61,7 @@ export async function POST(request: Request) {
     getPersona(),
     getSettings(),
     listBackgrounds(),
+    db.character.findMany({ select: { id: true, name: true, aliases: true } }),
   ]);
   if (!session) return jsonError(404, "Session not found");
 
@@ -127,6 +130,8 @@ export async function POST(request: Request) {
 
   // A form switched since the characters last spoke gets a one-time note, so they react to it.
   const past = target.kind === "variant" ? session.messages.slice(0, -1) : session.messages;
+  // Characters taken out of the cast who still have lines in the history: the model is told they are gone.
+  const absent = formerCast(session.messages.map(content), everyone, new Set(cast.map(({ character: c }) => c.id))).map((c) => c.name);
   const events = pendingFormChanges(past.map((m) => ({ role: m.role, content: content(m) }))).map(formChangeNote);
 
   const scanTexts = history.slice(-settings.loreScanDepth).map((m) => m.content);
@@ -148,6 +153,7 @@ export async function POST(request: Request) {
       exampleDialogues: profile.exampleDialogues,
       expressions: expressions.map(({ key, label, description }) => ({ key, label, description })),
       bond: bondPrompt(c.bond),
+      memories: settings.characterMemory ? c.memories : "",
       ...forms,
     })),
     backgrounds,
@@ -157,6 +163,7 @@ export async function POST(request: Request) {
     memory: session.memory,
     scene: session.scene,
     events,
+    absent,
     // Pins that were folded into the summary still go in word for word.
     pinned: history.filter((m) => m.pinned && m.order <= session.summarizedUntil).map((m) => m.content),
     history: history
@@ -292,9 +299,18 @@ export async function POST(request: Request) {
         budget: Math.max(500, Math.min(settings.contextBudget, historyRoom)),
         keepRecent: settings.keepRecent,
         ctx: parserCtx,
+        persona,
       });
     } catch (error) {
       console.error("Summary failed; the next reply sends the full history instead", error);
+    }
+    // Every few exchanges, the characters who spoke remember what they learned about the user.
+    if (settings.characterMemory) {
+      try {
+        await updateCharacterMemories(sessionId, { ctx: parserCtx, persona });
+      } catch (error) {
+        console.error("Character memory update failed", error);
+      }
     }
   });
 

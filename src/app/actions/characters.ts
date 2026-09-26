@@ -305,6 +305,14 @@ export async function importCharacter(json: unknown): Promise<ActionResult<strin
   });
 }
 
+// What the character remembers about the user across stories. Kept out of the character cache, so no touch().
+export async function saveCharacterMemories(id: string, memories: string): Promise<ActionResult<void>> {
+  return safe(async () => {
+    await requireAuth();
+    await db.character.update({ where: { id }, data: { memories: z.string().max(6000).parse(memories).trim() } });
+  });
+}
+
 export async function duplicateCharacter(id: string): Promise<ActionResult<string>> {
   return safe(async () => {
     await requireAuth();

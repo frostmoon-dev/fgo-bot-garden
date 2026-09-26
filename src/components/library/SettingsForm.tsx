@@ -21,6 +21,7 @@ type NumKey =
   | "textSpeed"
   | "autoSpeed"
   | "uiScale"
+  | "windowOpacity"
   | "loreScanDepth"
   | "contextBudget"
   | "keepRecent";
@@ -33,12 +34,23 @@ interface Slider {
   max: number;
   step: number;
   unit?: string;
+  // Shown as a percentage (0.8 -> 80%).
+  percent?: boolean;
 }
 
 const READING: Slider[] = [
   { key: "textSpeed", title: "Text speed", hint: "How fast lines type out.", min: 10, max: 200, step: 5, unit: " chars/s" },
   { key: "autoSpeed", title: "Auto-advance delay", hint: "Pause after each line in Auto mode.", min: 300, max: 6000, step: 100, unit: " ms" },
   { key: "uiScale", title: "Stage text size", hint: "Size of the text on the story screen.", min: 0.8, max: 1.4, step: 0.05, unit: "×" },
+  {
+    key: "windowOpacity",
+    title: "Window opacity",
+    hint: "How solid the message window is (FGO frames). Lower lets the scene show through, as in the game; the text keeps a shadow so it stays readable.",
+    min: 0.4,
+    max: 1,
+    step: 0.05,
+    percent: true,
+  },
 ];
 
 const SAMPLING: Slider[] = [
@@ -171,7 +183,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
           <span className="flex items-baseline justify-between gap-4">
             <span className="text-sm font-medium">{s.title}</span>
             <span className="text-sm tabular-nums text-muted">
-              {form[s.key]}
+              {s.percent ? `${Math.round(form[s.key] * 100)}%` : form[s.key]}
               {s.unit ?? ""}
             </span>
           </span>
@@ -330,6 +342,14 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
 
       <section className="mt-14 border-t border-line pt-10">
         <SectionTitle hint="Pin messages in the Log and write Story memory in the story Menu. Both stay in every prompt.">Memory</SectionTitle>
+        <div className="mb-8">
+          <Toggle
+            title="Characters remember you across stories"
+            hint="Every six exchanges, each character who spoke notes what they learned about you, and brings it into every later story. One small extra request per character, every six exchanges. See or edit it in each character's Memories tab."
+            checked={form.characterMemory}
+            onChange={(characterMemory) => update({ characterMemory })}
+          />
+        </div>
         {sliders(MEMORY)}
       </section>
 

@@ -75,6 +75,36 @@ describe("choices", () => {
     ]);
     expect(parseChoices("SAY: *smiles* Thanks")).toEqual([{ kind: "say", text: "*smiles* Thanks" }]);
   });
+
+  it("finds options inside a roleplay model's prose", () => {
+    const reply = [
+      "*giggles and hides behind BB*",
+      "*holds up the monitor like a shield* SAY: Hey now, no need to get so uptight!",
+      "**DO:** Switch the monitors to a loop of cat videos.",
+      "*DO: Turn off the screens, ignoring Jeanne's demands.*",
+      "She says what to do: nothing.",
+    ].join("\n");
+    expect(parseChoices(reply)).toEqual([
+      { kind: "say", text: "Hey now, no need to get so uptight!" },
+      { kind: "do", text: "Switch the monitors to a loop of cat videos." },
+      { kind: "do", text: "Turn off the screens, ignoring Jeanne's demands." },
+    ]);
+  });
+
+  it("keeps spoken choices to the words, dropping long narration in asterisks", () => {
+    expect(parseChoices("SAY: O-okay… *Her voice is barely above a whisper as she meets his eyes.*")).toEqual([
+      { kind: "say", text: "O-okay…" },
+    ]);
+    expect(parseChoices("SAY: *smiles* Thanks")).toEqual([{ kind: "say", text: "*smiles* Thanks" }]);
+  });
+
+  it("splits a line that holds two options", () => {
+    expect(parseChoices("*grins* *SAY: Fine, you win.*")).toEqual([{ kind: "say", text: "Fine, you win." }]);
+    expect(parseChoices("DO: He gently grabs her hand, SAY: What safeguards did you negotiate?")).toEqual([
+      { kind: "do", text: "He gently grabs her hand" },
+      { kind: "say", text: "What safeguards did you negotiate?" },
+    ]);
+  });
 });
 
 describe("user input", () => {

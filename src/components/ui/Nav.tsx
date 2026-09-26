@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChaldeaEmblem } from "./ChaldeaEmblem";
 import { CommandPalette } from "./CommandPalette";
 
 const links = [
@@ -30,8 +31,9 @@ export function Nav() {
   return (
     <header className="site-nav sticky top-0 z-30 border-b border-line bg-canvas">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:h-16 sm:gap-6 sm:px-8">
-        <Link href="/" className="font-title text-2xl font-semibold text-ink">
-          Bot Garden
+        <Link href="/" className="wordmark flex min-h-10 items-center gap-2.5 text-ink" aria-label="Bot Garden, home">
+          <ChaldeaEmblem className="size-9 shrink-0 text-accent sm:size-10" />
+          <span>Bot Garden</span>
         </Link>
         <button
           type="button"

@@ -25,6 +25,9 @@ model Character {
   openingScene        String   @default("")
   // FGO-style bond points with the user. Grows with every exchange.
   bond                Int      @default(0)
+  // What this character remembers about the user from all their stories together. Written in the
+  // background as stories go on (src/lib/memory), editable in the character editor.
+  memories            String   @default("")
   // How the sprite moves as it talks: expressive, bouncy, calm or still (see src/lib/motion.ts).
   motion              String   @default("expressive")
   defaultSpriteSetId  String?
@@ -111,6 +114,8 @@ model Persona {
   name        String @default("Master")
   description String @default("")
   addressAs   String @default("Master")
+  // Who the user is in the world (a Master, Chaldea staff, a visitor…). Overrides what characters assume from canon.
+  role        String @default("")
 }
 
 model LorebookEntry {
@@ -134,6 +139,8 @@ model Session {
   memory          String   @default("")
   // The scene box: Location, Time, Weather, Present, Mood, Situation. Kept up to date after replies.
   scene           String   @default("")
+  // The last message already folded into the characters' memories.
+  rememberedUntil Int      @default(-1)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -202,6 +209,8 @@ model Settings {
   textSpeed     Int     @default(45)
   autoSpeed     Int     @default(1600)
   uiScale       Float   @default(1)
+  // How opaque the story screen's message window is (FGO frames): 1 is solid.
+  windowOpacity Float   @default(0.8)
   loreScanDepth Int     @default(4)
   contextBudget Int     @default(6000)
   keepRecent    Int     @default(12)
@@ -226,6 +235,8 @@ model Settings {
   customPrompt     String  @default("")
   sceneTracker     Boolean @default(true)
   autoChoices      Boolean @default(false)
+  // Characters remember the user across stories (Character.memories).
+  characterMemory  Boolean @default(true)
   // How many lines a reply should have: short, scene (an FGO-style scene) or long.
   replyLength      String  @default("scene")
 }

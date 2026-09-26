@@ -18,8 +18,11 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
     <div className="place-card pointer-events-none absolute inset-x-0 top-[20%] z-20 flex justify-center px-4 sm:top-[11%]" aria-live="polite">
       <div className="vn-banner text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
         <div className="vn-rule mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        <p className="font-title text-2xl font-semibold tracking-wide sm:text-3xl">{location}</p>
-        {time && <p className="vn-banner-sub mt-1 text-sm uppercase tracking-[0.25em] text-white/80">{time}</p>}
+        {/* Long place names wrap onto two smaller lines instead of stretching the card. */}
+        <p className={`font-title font-semibold leading-tight tracking-wide text-balance ${location.length > 26 ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"}`}>
+          {location}
+        </p>
+        {time && <p className="vn-banner-sub mt-1.5 text-balance text-xs uppercase tracking-[0.16em] text-white/80 sm:text-sm">{time}</p>}
         <div className="vn-rule mx-auto mt-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
       </div>
     </div>
@@ -58,6 +61,18 @@ export function RecapCard() {
   const messages = usePlay((s) => s.messages);
   const beats = usePlay((s) => s.scene.stageBeats);
   const [open, setOpen] = useState(() => messages.length >= 4);
+  // Esc (or Enter) closes it, like the story screen's panels. Captured first, so the key does nothing else.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" && e.key !== "Enter") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open]);
   if (!open) return null;
   const scene = parseScene(session.scene);
   const summary = session.summary

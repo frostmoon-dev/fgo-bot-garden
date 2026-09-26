@@ -1,5 +1,6 @@
 import { ScriptParser, type Effect, type ParserContext, type ScriptLine } from "@/lib/parser";
 import { splitUserText } from "@/lib/userInput";
+import { POSITIONS } from "@/lib/parser/types";
 import { applyLine, type StageOptions, type StageState } from "./stage";
 
 export interface Beat {
@@ -102,6 +103,13 @@ export function userBeats(message: BeatMessage, userName: string, stage: StageSt
   }));
 }
 
+// Takes silent sprites off the stage when the scene box says they are not here. Whoever speaks walks back in.
+function keepPresent(stage: StageState, present: Set<string>): StageState {
+  const slots = { ...stage.slots };
+  for (const p of POSITIONS) if (slots[p] && !present.has(slots[p]!.characterId)) slots[p] = null;
+  return { ...stage, slots };
+}
+
 export function buildBeats(
   messages: BeatMessage[],
   parserCtx: ParserContext,
@@ -109,14 +117,26 @@ export function buildBeats(
   startStage: StageState,
   macros: Macros,
   userName: string,
+  // Cast members the scene box lists as present (its Present: line), or null when it doesn't say.
+  // The scene box is updated after each reply, so it is applied from the latest reply on.
+  present: Set<string> | null = null,
 ): { beats: Beat[]; finalStage: StageState } {
   let stage = startStage;
   const beats: Beat[] = [];
-  for (const message of messages) {
+  const latest = messages.findLastIndex((m) => m.role === "assistant");
+  for (const [i, message] of messages.entries()) {
     if (message.role === "user") {
       beats.push(...userBeats(message, userName, stage));
+      // Someone leaving in the user's own actions ("BB is gone") leaves the stage after them.
+      if (stageOpts.mode === "narrative") {
+        const parser = new ScriptParser(parserCtx);
+        for (const s of splitUserText(message.content, userName)) {
+          if (s.kind === "do") for (const exit of parser.exitsIn(s.text)) stage = applyLine(stage, exit, stageOpts);
+        }
+      }
       continue;
     }
+    if (i === latest && present && stageOpts.mode === "narrative") stage = keepPresent(stage, present);
     const builder = new BeatBuilder(message.id, parserCtx, stageOpts, stage, macros);
     beats.push(...builder.pushText(message.content));
     stage = builder.stage;

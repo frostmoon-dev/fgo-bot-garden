@@ -359,7 +359,10 @@ export function createPlayStore(data: PlayData): PlayStore {
 
     setCast: (cast) => {
       commit({ session: { ...get().session, cast } });
-      setCastAction(get().session.id, cast).then(unwrap).catch(reportError);
+      setCastAction(get().session.id, cast)
+        .then(unwrap)
+        .then((scene) => commit({ session: { ...get().session, scene } }))
+        .catch(reportError);
     },
 
     switchAscension: async (characterId, spriteSetId) => {

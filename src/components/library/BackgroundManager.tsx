@@ -9,6 +9,7 @@ import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
 import type { BackgroundView } from "@/lib/types";
+import { askConfirm } from "@/components/ui/dialogs";
 
 const EMPTY: BackgroundInput = { key: "", label: "", imageUrl: "", description: "" };
 
@@ -107,8 +108,14 @@ export function BackgroundManager({ backgrounds }: { backgrounds: BackgroundView
                   <Button
                     variant="danger"
                     disabled={pending}
-                    onClick={() => {
-                      if (confirm(`Delete background ${b.key}?`)) run(async () => unwrap(await deleteBackground(b.id)));
+                    onClick={async () => {
+                      const ok = await askConfirm({
+                        title: "Delete background?",
+                        body: `"${b.label || b.key}" will be removed from your backgrounds. This cannot be undone.`,
+                        confirmLabel: "Delete background",
+                        danger: true,
+                      });
+                      if (ok) run(async () => unwrap(await deleteBackground(b.id)));
                     }}
                   >
                     Delete

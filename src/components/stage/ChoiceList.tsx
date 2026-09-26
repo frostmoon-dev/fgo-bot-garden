@@ -1,6 +1,7 @@
 "use client";
 
 import { asAction } from "@/lib/userInput";
+import { StageButton } from "./StageButton";
 import { usePlay, usePlayApi } from "./usePlay";
 
 // FGO-style choices for your next move: spoken lines as they are, actions in italics. Picking one sends it.
@@ -22,9 +23,9 @@ export function ChoiceList() {
           <span className={c.kind === "do" ? "vn-action" : ""}>{c.text}</span>
         </button>
       ))}
-      <button type="button" onClick={clearChoices} className="min-h-10 self-end rounded-md px-3 text-xs text-white/70 hover:text-white">
+      <StageButton onClick={clearChoices} className="self-end">
         Hide choices
-      </button>
+      </StageButton>
     </div>
   );
 }

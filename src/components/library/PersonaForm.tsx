@@ -23,10 +23,16 @@ export function PersonaForm({ persona }: { persona: PersonaView }) {
       <Label title="Name" hint="Replaces {{user}} everywhere.">
         <TextInput value={form.name} onChange={(e) => set({ name: e.target.value })} />
       </Label>
+      <Label
+        title="Your role in the story"
+        hint="Who you are in the world. Characters treat you this way even when their canon expects someone else. For example: Master of Chaldea; a Chaldea staff member (not a Master); a café owner in Fuyuki."
+      >
+        <TextInput value={form.role} maxLength={300} onChange={(e) => set({ role: e.target.value })} />
+      </Label>
       <Label title="How characters address you" hint="For example: Master, Senpai, Ritsuka-kun.">
         <TextInput value={form.addressAs} onChange={(e) => set({ addressAs: e.target.value })} />
       </Label>
-      <Label title="Short description" hint="Appearance, role, and anything the characters would know.">
+      <Label title="Short description" hint="Pronouns, appearance, personality, and anything the characters would know.">
         <TextArea rows={5} value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </Label>
       <div className="flex items-center gap-4 border-t border-line pt-6">

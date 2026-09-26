@@ -11,9 +11,10 @@ export function TopBar() {
   const title = usePlay((s) => s.session.title);
   const { setAuto, setSkip, setPanel, setHideUi, stop } = usePlayApi().getState();
 
+  // With FGO frames only Auto, Skip and Menu show, as in the game; the rest are in the Menu and on keys.
   return (
     <div
-      className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-5"
+      className="vn-topbar relative z-20 flex shrink-0 items-center gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-5"
       onClick={(e) => e.stopPropagation()}
     >
       <Link
@@ -23,28 +24,28 @@ export function TopBar() {
       >
         ←<span className="ml-1.5 hidden sm:inline">Home</span>
       </Link>
-      <p className="vn-pill hidden min-w-0 max-w-sm truncate rounded-lg bg-canvas/75 px-5 py-2 text-sm text-muted backdrop-blur-md lg:block">{title}</p>
+      <p data-fgo-hide className="vn-pill hidden min-w-0 max-w-sm truncate rounded-lg bg-canvas/75 px-5 py-2 text-sm text-muted backdrop-blur-md lg:block">{title}</p>
       <div className="ml-auto flex gap-1.5 sm:gap-2">
         {streaming && <StageButton onClick={stop}>Stop</StageButton>}
         <StageButton active={auto} onClick={() => setAuto(!auto)} title="Auto (A)">
           Auto
         </StageButton>
-        <StageButton active={skip} onClick={() => setSkip(!skip)} title="Skip (S)" phoneHidden>
+        <StageButton active={skip} onClick={() => setSkip(!skip)} title="Skip (S)" phoneHidden data-fgo-skip>
           Skip
         </StageButton>
-        <StageButton onClick={() => setPanel("log")} title="Log (L)">
+        <StageButton onClick={() => setPanel("log")} title="Log (L)" data-fgo-hide>
           Log
         </StageButton>
-        <StageButton onClick={() => setPanel("saves")} title="Save and load" phoneHidden>
+        <StageButton onClick={() => setPanel("saves")} title="Save and load" phoneHidden data-fgo-hide>
           Save
         </StageButton>
-        <StageButton onClick={() => setHideUi(true)} title="Hide the interface (H)" aria-label="Hide the interface" phoneHidden>
+        <StageButton onClick={() => setHideUi(true)} title="Hide the interface (H)" aria-label="Hide the interface" phoneHidden data-fgo-hide>
           Hide
         </StageButton>
         <StageButton onClick={() => setPanel("menu")} title="Menu (M)">
           Menu
         </StageButton>
-        <StageButton onClick={() => setPanel("help")} title="Controls (?)" aria-label="Controls and shortcuts">
+        <StageButton onClick={() => setPanel("help")} title="Controls (?)" aria-label="Controls and shortcuts" data-fgo-hide>
           ?
         </StageButton>
       </div>

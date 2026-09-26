@@ -54,6 +54,7 @@ export interface PersonaView {
   name: string;
   description: string;
   addressAs: string;
+  role: string;
 }
 
 export interface SettingsView {
@@ -62,6 +63,7 @@ export interface SettingsView {
   textSpeed: number;
   autoSpeed: number;
   uiScale: number;
+  windowOpacity: number;
   loreScanDepth: number;
   contextBudget: number;
   keepRecent: number;
@@ -83,6 +85,7 @@ export interface SettingsView {
   customPrompt: string;
   sceneTracker: boolean;
   autoChoices: boolean;
+  characterMemory: boolean;
   replyLength: ReplyLength;
 }
 

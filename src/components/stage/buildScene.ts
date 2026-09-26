@@ -1,4 +1,5 @@
 import { userAliases, type ParserContext } from "@/lib/parser";
+import { presentIds } from "@/lib/story/formerCast";
 import { buildBeats, initialStage, type Beat, type StageState } from "@/lib/stage";
 import { activeContent, type BackgroundView, type CharacterView, type MessageView, type PersonaView, type SessionView } from "@/lib/types";
 
@@ -7,6 +8,8 @@ export interface SceneData {
   characters: Record<string, CharacterView>;
   backgrounds: BackgroundView[];
   persona: PersonaView;
+  // With the scene tracker off the scene box can be stale, so it doesn't decide who is on stage.
+  settings?: { sceneTracker: boolean };
 }
 
 export interface Scene {
@@ -49,6 +52,8 @@ export function buildScene(data: SceneData, messages: MessageView[]): Scene {
     start,
     { user: data.persona.name, char: main?.name ?? "" },
     data.persona.name,
+    // Silent sprites the scene box says are not here leave the stage (e.g. after a time skip in your message).
+    data.settings?.sceneTracker === false ? null : presentIds(data.session.scene, cast),
   );
   // Your own lines are part of the stage too: they show in the textbox with your name plate.
   return { beats, stageBeats: beats, startStage: start, warnings };

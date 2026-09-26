@@ -68,7 +68,11 @@ function Stage() {
   return (
     <div
       className="stage relative h-dvh w-full select-none overflow-hidden bg-black"
-      style={{ fontSize: `${16 * s.settings.uiScale}px` }}
+      style={{
+        fontSize: `${16 * s.settings.uiScale}px`,
+        ["--ui-scale" as string]: s.settings.uiScale,
+        ["--window-alpha" as string]: s.settings.windowOpacity,
+      }}
       onClick={() => (s.hideUi ? s.setHideUi(false) : s.advance())}
     >
       <div ref={sceneRef} className="absolute inset-0">
@@ -84,12 +88,15 @@ function Stage() {
       <PlaceCard />
 
       {!s.hideUi && (
-        <>
+        // One column, so the scene box at the top and the window, choices and errors at the bottom
+        // can't overlap: when the bottom grows, it scrolls instead of sliding under the scene box.
+        <div className="absolute inset-0 z-10 flex flex-col">
           <TopBar />
           <SceneBox />
           {s.settings.devMode && <DevOverlay />}
+          <div className="min-h-4 flex-1" />
 
-          <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
+          <div className="min-h-0 shrink overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,calc(var(--fgo-text,1em)*1.7))] [scrollbar-width:none] sm:px-6 sm:pb-6">
             {s.error && (
               <div
                 className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] items-center gap-3 px-4 py-2 text-sm text-danger"
@@ -121,7 +128,7 @@ function Stage() {
             )}
             {inputOpen && <ReplyBar userName={s.persona.name} />}
           </div>
-        </>
+        </div>
       )}
 
       <StageToast />

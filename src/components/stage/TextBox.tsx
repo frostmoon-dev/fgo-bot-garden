@@ -62,7 +62,7 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
             }}
             title="Log (L)"
           >
-            <span aria-hidden className="text-[0.55rem] leading-none">▲</span>
+            <span aria-hidden className="vn-log-arch" />
             LOG
           </button>
         )}

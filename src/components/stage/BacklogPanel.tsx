@@ -5,6 +5,7 @@ import { activeContent, type MessageView } from "@/lib/types";
 import { ColorDot } from "@/components/ui/ColorDot";
 import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
+import { askConfirm } from "@/components/ui/dialogs";
 
 function MessageBlock({ message }: { message: MessageView }) {
   const beats = usePlay((s) => s.scene.beats);
@@ -84,8 +85,14 @@ function MessageBlock({ message }: { message: MessageView }) {
           type="button"
           disabled={streaming}
           className="min-h-9 rounded-lg px-2 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
-          onClick={() => {
-            if (confirm("Delete this message?")) deleteMessage(message.id);
+          onClick={async () => {
+            const ok = await askConfirm({
+              title: "Delete this message?",
+              body: "It will be removed from the story, with all its versions. This cannot be undone.",
+              confirmLabel: "Delete message",
+              danger: true,
+            });
+            if (ok) deleteMessage(message.id);
           }}
         >
           Delete

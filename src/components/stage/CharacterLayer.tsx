@@ -36,6 +36,7 @@ export const CharacterLayer = memo(function CharacterLayer({
             position={position}
             content={content}
             dim={someoneSpeaks && !speaking}
+            front={speaking}
             // Moves when they start talking or change expression, not on every line.
             moveKey={speaking ? slot.expression : null}
           />

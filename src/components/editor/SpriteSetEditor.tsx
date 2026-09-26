@@ -13,6 +13,7 @@ import type { ExpressionView, SpriteSetView } from "@/lib/types";
 import { FaceAssigner } from "./FaceAssigner";
 import { OffsetTool } from "./OffsetTool";
 import { autoAlign, detectFaceCount, loadImage } from "./sheetTools";
+import { askConfirm } from "@/components/ui/dialogs";
 
 const GRID_FIELDS: { key: keyof SheetGrid; title: string }[] = [
   { key: "bodyHeight", title: "Body height" },
@@ -159,8 +160,14 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         <Button
           variant="danger"
           disabled={pending}
-          onClick={() => {
-            if (confirm(`Delete the ascension "${set.name}" and its definition?`)) run(async () => unwrap(await deleteSpriteSet(set.id)));
+          onClick={async () => {
+            const ok = await askConfirm({
+              title: `Delete "${set.name}"?`,
+              body: `This ascension, its sprite sheet and its definition will be deleted. This cannot be undone.`,
+              confirmLabel: "Delete ascension",
+              danger: true,
+            });
+            if (ok) run(async () => unwrap(await deleteSpriteSet(set.id)));
           }}
         >
           Delete ascension

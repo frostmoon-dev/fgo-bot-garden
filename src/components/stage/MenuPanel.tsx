@@ -179,11 +179,38 @@ export function MenuPanel() {
   const backgrounds = usePlay((s) => s.backgrounds);
   const patchSession = usePlay((s) => s.patchSession);
   const setPanel = usePlay((s) => s.setPanel);
+  const setHideUi = usePlay((s) => s.setHideUi);
   const [title, setTitle] = useState(session.title);
 
   return (
     <PanelShell title="Menu">
       <div className="divide-y divide-line [&>section]:py-6 [&>section:first-child]:pt-2">
+        {/* The story screen's other controls. With FGO frames the top bar shows only Auto, Skip and Menu. */}
+        <section className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("scene")}>
+            Scene
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("log")}>
+            Log
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("saves")}>
+            Save or load
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              setPanel(null);
+              setHideUi(true);
+            }}
+          >
+            Hide the interface
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("help")}>
+            Controls
+          </button>
+        </section>
+
         <AscensionPicker />
 
         <NewStory />
@@ -273,15 +300,6 @@ export function MenuPanel() {
           <Link href={`/characters/${session.mainCharacterId}`} className="underline underline-offset-4">
             Edit the main character
           </Link>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("scene")}>
-            Edit the scene
-          </button>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("help")}>
-            Controls and shortcuts
-          </button>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("saves")}>
-            Save or load
-          </button>
         </section>
       </div>
     </PanelShell>

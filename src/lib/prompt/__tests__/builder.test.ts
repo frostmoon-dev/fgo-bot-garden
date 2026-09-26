@@ -51,6 +51,20 @@ describe("buildPrompt", () => {
     expect(messages.at(-1)).toEqual({ role: "user", content: "Hi" });
   });
 
+  it("sends the user's role over the characters' canon, and what each character remembers", () => {
+    const { messages } = buildPrompt({
+      ...base,
+      persona: { ...base.persona, role: "A Chaldea staff member, not a Master" },
+      cast: [{ ...character("bb", "BB"), memories: "- Ritsuka hates coffee" }, character("ob", "Oberon")],
+    });
+    const sys = messages[0].content;
+    expect(sys).toContain("Role in the story: A Chaldea staff member, not a Master");
+    expect(sys).toContain("even where a character's canon or definition assumes someone else");
+    expect(sys).toContain("What BB remembers about Ritsuka");
+    expect(sys).toContain("- Ritsuka hates coffee");
+    expect(sys).not.toContain("What Oberon remembers");
+  });
+
   it("puts world info and the format reminder right before the latest message", () => {
     const { messages } = buildPrompt(base);
     expect(messages[0].content).not.toContain("# WORLD INFO");

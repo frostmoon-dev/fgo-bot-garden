@@ -95,6 +95,12 @@ describe("departures", () => {
     expect(exits("(narration) Oberon vanished.")).toEqual(["oberon"]);
   });
 
+  it("reads he or she as whoever spoke last", () => {
+    const parser = new ScriptParser(makeCtx().ctx);
+    const lines = parser.parseText("[Oberon|neutral] Don't wait up.\n(With that parting remark, he exits the room.)");
+    expect(lines.filter((l) => l.type === "exit")).toEqual([{ type: "exit", characterId: "oberon" }]);
+  });
+
   it("ignores lines where nobody actually leaves", () => {
     expect(exits("(narration) BB leaves a note on the desk.")).toEqual([]);
     expect(exits("(narration) Oberon watches as BB walks out.")).toEqual([]);

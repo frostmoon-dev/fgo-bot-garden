@@ -10,6 +10,7 @@ import { useAsync } from "@/components/ui/useAsync";
 import { unwrap } from "@/lib/actionResult";
 import type { ConnectionView } from "@/lib/llm/connection";
 import { PROVIDERS, type ProviderId } from "@/lib/llm/providers";
+import { askConfirm } from "@/components/ui/dialogs";
 
 function origin(url: string): string {
   try {
@@ -230,8 +231,14 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
             variant="danger"
             className="mt-3"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`Remove the ${PROVIDERS[view.provider].label} connection and its saved API key? You'll need the key again to reconnect.`)) return;
+            onClick={async () => {
+              const ok = await askConfirm({
+                title: "Remove connection?",
+                body: `The ${PROVIDERS[view.provider].label} address, model and saved API key will be deleted. You'll need the key again to reconnect.`,
+                confirmLabel: "Remove connection",
+                danger: true,
+              });
+              if (!ok) return;
               run(async () => {
                 unwrap(await removeConnection());
                 router.refresh();

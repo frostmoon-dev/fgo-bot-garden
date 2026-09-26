@@ -6,20 +6,31 @@ import { ColorDot } from "@/components/ui/ColorDot";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 import { ExpressionEditor } from "./ExpressionEditor";
 import { ManageTab } from "./ManageTab";
+import { MemoriesTab } from "./MemoriesTab";
 import { ProfileForm } from "./ProfileForm";
 import { SpritesTab } from "./SpritesTab";
 
-const TABS = ["Profile", "Ascensions", "Expressions", "Manage"] as const;
+const TABS = ["Profile", "Ascensions", "Expressions", "Memories", "Manage"] as const;
 type Tab = (typeof TABS)[number];
 
-export function CharacterEditor({ character, backgrounds }: { character: CharacterView; backgrounds: BackgroundView[] }) {
+export function CharacterEditor({
+  character,
+  backgrounds,
+  memories,
+  userName,
+}: {
+  character: CharacterView;
+  backgrounds: BackgroundView[];
+  memories: string;
+  userName: string;
+}) {
   const [tab, setTab] = useState<Tab>("Profile");
   return (
     <div>
       <Link href="/characters" className="text-sm text-muted hover:text-ink">
         ← Characters
       </Link>
-      <h1 className="page-title mt-3 flex items-center gap-3 italic">
+      <h1 className="page-title mt-3 flex items-center gap-3">
         <ColorDot color={character.color} className="size-3.5" />
         {character.name}
       </h1>
@@ -41,6 +52,7 @@ export function CharacterEditor({ character, backgrounds }: { character: Charact
         <ExpressionEditor character={character} />
       )}
       {tab === "Ascensions" && <SpritesTab character={character} />}
+      {tab === "Memories" && <MemoriesTab character={character} memories={memories} userName={userName} />}
       {tab === "Manage" && <ManageTab character={character} />}
     </div>
   );

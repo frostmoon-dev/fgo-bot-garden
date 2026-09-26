@@ -21,9 +21,10 @@ const characterInclude = {
   },
 };
 
-// Bond changes with every exchange, so it is read separately (listBonds) and kept out of the cache.
+// Bond and memories change as stories go on, so they are read separately (listBonds, getMemories) and
+// kept out of the cache.
 function findCharacterRows() {
-  return db.character.findMany({ include: characterInclude, omit: { bond: true }, orderBy: { name: "asc" } });
+  return db.character.findMany({ include: characterInclude, omit: { bond: true, memories: true }, orderBy: { name: "asc" } });
 }
 
 type CharacterRow = Awaited<ReturnType<typeof findCharacterRows>>[number];
@@ -56,6 +57,12 @@ export async function listCharacters(): Promise<CharacterView[]> {
   return cachedCharacters();
 }
 
+// Read fresh: they change in the background as stories go on.
+export async function getMemories(characterId: string): Promise<string> {
+  const row = await db.character.findUnique({ where: { id: characterId }, select: { memories: true } });
+  return row?.memories ?? "";
+}
+
 export async function getCharacter(id: string): Promise<CharacterView | null> {
   return (await cachedCharacters()).find((c) => c.id === id) ?? null;
 }
@@ -72,7 +79,7 @@ export const getPersona = unstable_cache(
     const row =
       (await db.persona.findUnique({ where: { id: 1 } })) ??
       (await db.persona.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }));
-    return { name: row.name, description: row.description, addressAs: row.addressAs };
+    return { name: row.name, description: row.description, addressAs: row.addressAs, role: row.role };
   },
   ["persona"],
   { tags: [TAGS.persona], revalidate: REFRESH },

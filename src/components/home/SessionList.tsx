@@ -9,6 +9,7 @@ import { ErrorText } from "@/components/ui/ErrorText";
 import { LocalTime } from "@/components/ui/LocalTime";
 import { useAsync } from "@/components/ui/useAsync";
 import { unwrap } from "@/lib/actionResult";
+import { askConfirm } from "@/components/ui/dialogs";
 
 export interface SessionRow {
   id: string;
@@ -87,8 +88,14 @@ export function SessionList({ sessions, highlightFirst = false }: { sessions: Se
                   className="btn btn-quiet ml-auto shrink-0 px-3 hover:!text-danger"
                   disabled={pending}
                   aria-label={`Delete ${s.title}`}
-                  onClick={() => {
-                    if (confirm(`Delete "${s.title}" and all ${s.messageCount} messages? This cannot be undone.`)) run(async () => unwrap(await deleteSession(s.id)));
+                  onClick={async () => {
+                    const ok = await askConfirm({
+                      title: "Delete this story?",
+                      body: `"${s.title}" and all ${s.messageCount} messages, with its saves, will be deleted. This cannot be undone.`,
+                      confirmLabel: "Delete story",
+                      danger: true,
+                    });
+                    if (ok) run(async () => unwrap(await deleteSession(s.id)));
                   }}
                 >
                   Delete

@@ -54,6 +54,8 @@ export interface PromptCharacter {
   expressions: { key: string; label: string; description: string }[];
   // Bond level with the user, already written out (see lib/bond.ts).
   bond?: string;
+  // What they remember about the user from all their stories together (lib/memory).
+  memories?: string;
   // The ascension in use and the character's other ones, when there are several.
   form?: string;
   otherForms?: string[];
@@ -68,7 +70,7 @@ export interface PromptInput {
   mainCharacterId: string;
   cast: PromptCharacter[];
   backgrounds: { key: string; label: string; description: string }[];
-  persona: { name: string; description: string; addressAs: string };
+  persona: { name: string; description: string; addressAs: string; role?: string };
   lore: { title: string; content: string }[];
   summary: string;
   // The user's own notes for this story. Always sent.
@@ -79,6 +81,8 @@ export interface PromptInput {
   scene?: string;
   // Things that just happened outside the text, such as a form change. Sent with this reply only.
   events?: string[];
+  // Characters with lines in the history who were taken out of the cast.
+  absent?: string[];
   history: PromptHistoryItem[];
   continueScene: boolean;
   options?: Partial<PromptOptions>;
@@ -131,6 +135,7 @@ function characterBlock(
     opts.brief ? null : field("Background", c.lore),
     opts.brief ? null : field("Relationship with {{user}}", c.relationship),
     c.bond ? `Bond with {{user}}: ${c.bond}` : null,
+    c.memories?.trim() ? `What ${c.name} remembers about {{user}} from all their time together (true; bring it up naturally when it fits):\n${c.memories.trim()}` : null,
     `Expressions: ${expressions}`,
     opts.examples && c.exampleDialogues.trim() ? `Example dialogue:\n${c.exampleDialogues.trim()}` : null,
   ]
@@ -165,8 +170,10 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
             .join("\n")}`
       : null;
   const persona = [
-    `# {{user}} — the user's character. You never write for them.`,
+    `# {{user}} — the user's character. You never write for them. Keep every detail below consistent, including their pronouns.`,
     `Name: ${input.persona.name}`,
+    input.persona.role?.trim() &&
+      `Role in the story: ${input.persona.role.trim()}\nThis is who {{user}} is here, even where a character's canon or definition assumes someone else (for example their Master). Every character knows {{user}} in this role and treats them accordingly.`,
     field("Characters address them as", input.persona.addressAs),
     field("About them", input.persona.description),
   ]
@@ -199,6 +206,8 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   const notes = join([
     input.scene?.trim() && `# CURRENT SCENE\n${input.scene.trim()}`,
     !!input.events?.length && `# JUST HAPPENED\n${input.events.map((e) => `- ${e}`).join("\n")}`,
+    !!input.absent?.length &&
+      `# NO LONGER IN THIS STORY\n${input.absent.join(", ")}: out of the story from now on. They do not appear, speak or act, and nobody treats them as present; their earlier lines are only history. If it matters, they have gone elsewhere.`,
     input.lore.length > 0 &&
       `# WORLD INFO\n${input.lore.map((l) => (l.title ? `- ${l.title}: ${l.content}` : `- ${l.content}`)).join("\n")}`,
     (o.formatReminder || o.profile !== "balanced") && formatReminder(input.mode, o.replyLength),

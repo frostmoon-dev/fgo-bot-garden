@@ -102,7 +102,7 @@ export function AppearancePicker({ theme, customBg, font, frameStyle, onChange }
 
       <fieldset>
         <legend className="text-sm font-medium">Font</legend>
-        <p className="mt-0.5 text-sm text-muted">The font for everything you read, including the story. Titles and character names stay in Cormorant Garamond.</p>
+        <p className="mt-0.5 text-sm text-muted">The font for everything: the story, titles and character names.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {(Object.entries(FONTS) as [FontId, (typeof FONTS)[FontId]][]).map(([id, f]) => (
             <label

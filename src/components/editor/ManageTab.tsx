@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
 import type { CharacterView } from "@/lib/types";
+import { askConfirm } from "@/components/ui/dialogs";
 
 export function ManageTab({ character }: { character: CharacterView }) {
   const router = useRouter();
@@ -56,8 +57,14 @@ export function ManageTab({ character }: { character: CharacterView }) {
           variant="danger"
           className="border border-danger/40"
           disabled={pending}
-          onClick={() => {
-            if (!confirm(`Delete ${character.name} and their sessions? This cannot be undone.`)) return;
+          onClick={async () => {
+            const ok = await askConfirm({
+              title: `Delete ${character.name}?`,
+              body: `${character.name}, their ascensions and sprites, and every story where they are the main character will be deleted. Other stories keep going without them. This cannot be undone.`,
+              confirmLabel: `Delete ${character.name}`,
+              danger: true,
+            });
+            if (!ok) return;
             run(async () => {
               unwrap(await deleteCharacter(character.id));
               router.push("/characters");

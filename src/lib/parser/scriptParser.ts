@@ -20,6 +20,9 @@ const BARE_TAG = /^([^\s|:[\](){}*"“][^|:[\](){}*"“]{0,40}?)\s*\|\s*([\w -]{
 // Name (expression): text, or Name: text. Only used when Name is a known character or the user.
 const NAME_LABEL = /^([^\s:[\](){}*"“][^:[\](){}*"“]{0,40}?)\s*(?:\(([\w -]{1,40})\))?\s*:\s*([\s\S]*)$/;
 const WRAPPED_NARRATION = /^(?:\(([\s\S]+)\)|\*([^*]+)\*)$/;
+// Commands written without braces, often as narration: "(Enter:Shiru:center)", "JeanneAlter enters:right".
+const LOOSE_COMMAND = /^([a-z]{3,10})\s*:\s*([^:\s][^:]*(?::[^:]*)??)[.!]?$/i;
+const LOOSE_MOVE = /^(\S+(?:\s\S+)?)\s+(enters|exits|leaves)\s*:\s*([a-z]*)[.!]?$/i;
 const INLINE_TAG = /\[[^\][|]+\|[^\]]*\]/g;
 // A tag in the wrong brackets: (Oberon|serious), {BB|smirk}, <BB|smirk>, 【BB|smirk】, [BB|smirk).
 // The "|" is required, so a plain "(smiles)" stays an action.
@@ -39,6 +42,10 @@ const VERBS =
   "promise|promises|promised|agree|agrees|agreed|decide|decides|decided|accept|accepts|accepted|refuse|refuses|refused";
 const ADVERB = "(?:\\p{L}+ly\\s+|then\\s+|finally\\s+|just\\s+)?";
 const PRONOUNS = ["he", "she", "they", "him", "her", "them"];
+// A sentence that carries on about whoever the last one was about: "She sets down her pen."
+const CARRY_ON = /^(?:he|she|they|his|her|their)(?![\p{L}])/iu;
+// "he"/"she" as the subject of a sentence, after at most a short opening clause.
+const LEADING_PRONOUN = /^((?:[^,.!?"“”]{0,40},\s*)?(?:then\s+|finally\s+)?)(?:he|she)(?![\p{L}])/iu;
 // Leaving the scene, for one character (singular and past forms) and for two ("BB and Oberon leave").
 const LEAVE_END = String.raw`(?=\s*(?:[.!?,;…—–-]|$)|\s+(?:the\s+(?:room|hall|hallway|corridor|office|area|building|scene|house|shop|library|kitchen|stage)|without|through|for\s+(?:good|now|the\s+(?:night|day))|together|quietly|silently|at\s+last|as\s+well))`;
 const MOVE_OFF = String.raw`\s+(?:out|off|away)`;
@@ -59,7 +66,7 @@ const DEPART_TWO = [
 ].join("|");
 // Words between the name and the verb that mean someone else leaves, or nobody does:
 // "Oberon watches as BB walks out", "BB almost leaves".
-const NOT_LEAVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|won't|refuses?)$/i;
+const NOT_LEAVING = /^(?:as|while|when|until|after|before|because|since|that|who|which|watch(?:es|ing)?|let(?:s|ting)?|see(?:s|ing)?|tell(?:s|ing)?|ask(?:s|ing)?|make(?:s|ing)?|almost|nearly|never|not|doesn't|don't|didn't|won't|wouldn't|can't|cannot|couldn't|isn't|wasn't|refuses?|refused|tries|tried|wants?|wanted|pretends?|pretended)$/i;
 
 // Names a model uses for the user's character in a tag: [You|smile], [Senpai|…], [Master|…].
 const USER_WORDS = ["you", "user", "player", "senpai", "master"];
@@ -184,6 +191,8 @@ export class ScriptParser {
   private readonly userSubject: RegExp;
   // "…," says Shiru
   private readonly userInverted: RegExp;
+  // "Shiru looks up", "With a sigh, you nod": the user as the subject of a narration sentence.
+  private readonly userActs: RegExp;
   // Anyone a quote can belong to: cast, user, pronouns.
   private readonly anyName: string;
   // "BB waves and heads out." / "With a sigh, Oberon leaves the room." / "BB and Oberon walk away."
@@ -201,6 +210,11 @@ export class ScriptParser {
       "iu",
     );
     this.userInverted = new RegExp(`["”]\\s*(?:${VERBS})\\s+(?:${user})(?![\\p{L}])`, "iu");
+    // At the start of the sentence, after at most a short opening clause; not "Shiru's phone buzzes".
+    this.userActs = new RegExp(
+      `^(?:[^,.!?"“”]{0,40},\\s*)?(?:(?:then|finally|meanwhile|slowly|suddenly)\\s+)?(?:${user}|you)(?![\\p{L}\\p{N}'’])\\s+\\p{L}`,
+      "iu",
+    );
     const cast = ctx.characters.flatMap((c) => [c.name, ...c.aliases]).filter(Boolean);
     this.anyName = [...cast, ...this.userNames]
       .sort((a, b) => b.length - a.length)
@@ -307,6 +321,8 @@ export class ScriptParser {
   }
 
   private textLine(text: string, depth = 0): ScriptLine[] {
+    const loose = this.looseCommand(text);
+    if (loose) return loose;
     const head = readHead(text);
     if (head?.kind === "narration") return this.narration(head.rest);
     if (head?.kind === "dialogue") return depth < 2 && head.rest.trim() ? this.textLine(head.rest, depth + 1) : [];
@@ -402,17 +418,22 @@ export class ScriptParser {
 
   // Narration sentences that speak or choose for the user are dropped, with a quote right before them
   // ('"Wait!" Shiru shouts.'). Quotes inside a sentence don't count: '"Do you agree?" she asks.' stays.
+  // Narration may describe the cast and the world, never the user's character: sentences where they speak
+  // or decide ("Shiru says"), or act ("Shiru looks up from her desk.", "With a sigh, you nod."), are dropped,
+  // with a following "She sets down her pen." that carries on about them. "Oberon hands Shiru a cup." stays.
   private withoutUserSpeech(text: string): string {
     const sentences = text.match(SENTENCE) ?? [text];
     const drop = new Set<number>();
     sentences.forEach((s, i) => {
-      if (this.userSubject.test(s.replace(QUOTED, '""')) || this.userInverted.test(s)) {
+      const plain = s.replace(QUOTED, '""').trim();
+      const carriesOn = drop.has(i - 1) && CARRY_ON.test(plain);
+      if (this.userSubject.test(plain) || this.userInverted.test(s) || this.userActs.test(plain) || carriesOn) {
         drop.add(i);
         if (i > 0 && QUOTE_ONLY.test(sentences[i - 1])) drop.add(i - 1);
       }
     });
     if (!drop.size) return text;
-    this.warn(`Dropped narration that speaks for the user: "${sentences.find((_, i) => drop.has(i))!.trim().slice(0, 40)}"`);
+    this.warn(`Dropped narration that writes for the user: "${sentences.find((_, i) => drop.has(i))!.trim().slice(0, 40)}"`);
     return sentences.filter((_, i) => !drop.has(i)).join("").trim();
   }
 
@@ -484,13 +505,21 @@ export class ScriptParser {
     return [{ type: "narration", text }, ...this.departures(text)];
   }
 
+  // Exits in the user's own actions: "*BB is gone.*" takes BB off the stage too.
+  exitsIn(text: string): ScriptLine[] {
+    return this.ctx.mode === "dialogue" ? [] : this.departures(text);
+  }
+
   // Narration that has a character leave also takes their sprite off the stage, after the line.
   // Models often forget {exit:…}, and a sprite left standing gets in the way of whoever stays.
   private departures(text: string): ScriptLine[] {
     if (!this.departure) return [];
     const ids = new Set<string>();
+    // "With that parting remark, he exits the room.": he or she is whoever spoke last.
+    const speaker = this.activeSpeakerId ? this.ctx.characters.find((c) => c.id === this.activeSpeakerId) : undefined;
     for (const sentence of text.replace(QUOTED, '""').match(SENTENCE) ?? []) {
-      const m = sentence.trim().match(this.departure);
+      const plain = speaker ? sentence.trim().replace(LEADING_PRONOUN, (_, lead: string) => `${lead}${speaker.name}`) : sentence.trim();
+      const m = plain.match(this.departure);
       if (!m) continue;
       const gap = m[3].split(/[\s,]+/).filter(Boolean);
       if (gap.some((w) => NOT_LEAVING.test(w) || this.findCharacter(w) || this.isUser(w))) continue;
@@ -506,6 +535,23 @@ export class ScriptParser {
       this.warn(`${this.ctx.characters.find((c) => c.id === characterId)?.name} leaves the scene: sprite removed`);
       return { type: "exit" as const, characterId };
     });
+  }
+
+  // A stage command the model wrote without braces. Run it (or drop it) so it never reads as story text.
+  private looseCommand(text: string): ScriptLine[] | null {
+    const inner = text.trim().replace(/^\(([\s\S]*)\)$|^\*([\s\S]*)\*$/, "$1$2").trim();
+    const cmd = inner.match(LOOSE_COMMAND);
+    if (cmd && COMMANDS.some((c) => c === cmd[1].toLowerCase() || near(cmd[1].toLowerCase(), c))) {
+      this.warn(`Read "${inner}" as a command`);
+      return this.command(`{${cmd[1]}:${cmd[2]}}`);
+    }
+    const move = inner.match(LOOSE_MOVE);
+    if (move && (this.findCharacter(move[1]) || this.isUser(move[1]))) {
+      this.warn(`Read "${inner}" as a command`);
+      const kind = move[2].toLowerCase() === "enters" ? "enter" : "exit";
+      return this.command(`{${kind}:${move[1]}${move[3] ? `:${move[3]}` : ""}}`);
+    }
+    return null;
   }
 
   private command(raw: string): ScriptLine[] {
@@ -578,6 +624,10 @@ export class ScriptParser {
       (c) => norm(c.name) === key || c.aliases.some((a) => norm(a) === key),
     );
     if (exact) return exact;
+    // "JeanneAlter" for Jeanne Alter.
+    const joined = key.replace(/_/g, "");
+    const squashed = this.ctx.characters.find((c) => [c.name, ...c.aliases].some((n) => norm(n).replace(/_/g, "") === joined));
+    if (squashed) return squashed;
     // "Oberon Vortigern" or "BB (Summer)": a known name as a whole word of a longer one.
     const words = new Set(key.split(/[_()]+/).filter(Boolean));
     const partial = this.ctx.characters.filter((c) => [c.name, ...c.aliases].some((n) => words.has(norm(n))));

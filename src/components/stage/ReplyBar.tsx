@@ -58,7 +58,6 @@ export function ReplyBar({ userName }: { userName: string }) {
               markAction(e.currentTarget);
             }
           }}
-          placeholder={`Talk as ${userName}…  *asterisks* for actions`}
           title="Plain text is what you say. *Text in asterisks* is what you do. Ctrl+I marks the selection as an action."
           className="block max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 leading-relaxed outline-none placeholder:text-muted focus-visible:outline-none"
         />
@@ -68,7 +67,7 @@ export function ReplyBar({ userName }: { userName: string }) {
         onClick={() => void suggestChoices()}
         disabled={choicesBusy || hasChoices}
         title="Suggest three things you could do next"
-        className="min-h-11 shrink-0 rounded-lg border border-line px-3 text-sm text-muted hover:text-ink disabled:opacity-50"
+        className="btn btn-outline shrink-0"
       >
         {choicesBusy ? <span className="shimmer">Thinking…</span> : "Choices"}
       </button>

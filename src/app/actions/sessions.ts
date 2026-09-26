@@ -11,6 +11,7 @@ import { normalizeScene } from "@/lib/scene";
 import { applyMacros } from "@/lib/stage/beats";
 import { getPersona } from "@/lib/data/queries";
 import { formChangeLine, readFormChange } from "@/lib/story/formChange";
+import { withoutPresent } from "@/lib/story/formerCast";
 import type { MessageView } from "@/lib/types";
 
 const snapshotSchema = z.object({
@@ -227,19 +228,27 @@ export async function updateSession(id: string, patch: SessionPatch): Promise<Ac
 export async function setCast(
   sessionId: string,
   cast: { characterId: string; spriteSetId: string | null }[],
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<string>> {
   return safe(async () => {
     await requireAuth();
-    const session = await db.session.findUniqueOrThrow({ where: { id: sessionId } });
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: { cast: { include: { character: { select: { id: true, name: true, aliases: true } } } } },
+    });
     const list = z.array(z.object({ characterId: z.string(), spriteSetId: z.string().nullable() })).max(12).parse(cast);
     if (!list.some((c) => c.characterId === session.mainCharacterId)) {
       throw new Error("The main character must stay in the cast");
     }
+    // Whoever leaves the cast leaves the scene box too, so the next reply doesn't bring them back.
+    const kept = new Set(list.map((c) => c.characterId));
+    const scene = withoutPresent(session.scene, session.cast.filter((c) => !kept.has(c.characterId)).map((c) => c.character));
     await db.$transaction([
       db.sessionCast.deleteMany({ where: { sessionId } }),
       db.sessionCast.createMany({ data: list.map((c) => ({ ...c, sessionId })) }),
+      db.session.update({ where: { id: sessionId }, data: { scene } }),
     ]);
     revalidatePath(`/play/${sessionId}`);
+    return scene;
   });
 }
 
@@ -335,6 +344,10 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
         (c) => c.id,
       ),
     );
+    // The characters' memories already hold the restored messages (or some of them). Messages written
+    // after loading reuse later positions, so the memory mark must not stay past the restored story.
+    const { rememberedUntil } = await db.session.findUniqueOrThrow({ where: { id: sessionId }, select: { rememberedUntil: true } });
+    const lastOrder = Math.max(-1, ...snap.messages.map((m) => m.order));
     await db.$transaction(async (tx) => {
       await tx.message.deleteMany({ where: { sessionId } });
       await tx.sessionCast.deleteMany({ where: { sessionId } });
@@ -347,6 +360,7 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
           summarizedUntil: snap.summarizedUntil,
           memory: snap.memory,
           scene: snap.scene,
+          rememberedUntil: Math.min(rememberedUntil, lastOrder),
         },
       });
       await tx.sessionCast.createMany({
