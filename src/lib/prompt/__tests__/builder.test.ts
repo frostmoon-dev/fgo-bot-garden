@@ -190,3 +190,16 @@ describe("who speaks", () => {
     expect(all({ ...base, mode: "dialogue", history: [{ role: "user", content: "Oberon?" }] })).not.toContain("# WHO SPEAKS");
   });
 });
+
+describe("cache-friendly prompt start", () => {
+  it("keeps the rules and character cards the same when a bond or memory changes", () => {
+    const withBond = (bond: string, memories: string) =>
+      buildPrompt({ ...base, cast: [{ ...character("bb", "BB"), bond, memories }, character("ob", "Oberon")] }).messages[0].content;
+    const before = withBond("Lv 2: friendly", "- Ritsuka likes tea");
+    const after = withBond("Lv 3: close", "- Ritsuka likes tea\n- Ritsuka hates coffee");
+    const cardsEnd = (text: string) => text.indexOf("# BONDS AND MEMORIES");
+    expect(cardsEnd(before)).toBeGreaterThan(0);
+    expect(before.slice(0, cardsEnd(before))).toBe(after.slice(0, cardsEnd(after)));
+    expect(after).toContain("## BB\nBond with Ritsuka: Lv 3: close");
+  });
+});

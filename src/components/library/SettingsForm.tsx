@@ -300,7 +300,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
               onChange={(memoryPlacement) => update({ memoryPlacement })}
               options={[
                 ["end", "Near the latest message", "Followed best, and the rest of the prompt can be cached by the provider (cheaper, faster)."],
-                ["top", "In the system prompt", "For APIs that reject system messages mid-chat."],
+                ["top", "In the system prompt", "For APIs that reject system messages mid-chat. Changes the start of the prompt every reply, so the provider can't reuse its cache."],
               ]}
             />
           </div>

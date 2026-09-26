@@ -1,8 +1,16 @@
-// Reads an OpenAI-compatible SSE stream and yields content deltas.
-export async function* readSseDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+import type { ChatUsage } from "./types";
+
+// Reads an OpenAI-compatible SSE stream and yields content deltas. Token counts, which providers send in a
+// chunk of their own when asked (stream_options.include_usage), go to onUsage.
+export async function* readSseDeltas(body: ReadableStream<Uint8Array>, onUsage?: (usage: ChatUsage) => void): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  const read = (line: string) => {
+    const usage = onUsage ? parseSseUsage(line) : null;
+    if (usage) onUsage!(usage);
+    return parseSseLine(line);
+  };
   try {
     while (true) {
       const { value, done } = await reader.read();
@@ -12,12 +20,12 @@ export async function* readSseDeltas(body: ReadableStream<Uint8Array>): AsyncGen
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
-        const delta = parseSseLine(line);
+        const delta = read(line);
         if (delta === null) return;
         if (delta) yield delta;
       }
     }
-    const tail = parseSseLine(buffer.trim());
+    const tail = read(buffer.trim());
     if (tail) yield tail;
   } finally {
     reader.releaseLock();
@@ -34,5 +42,34 @@ export function parseSseLine(line: string): string | null {
     return json.choices?.[0]?.delta?.content ?? "";
   } catch {
     return "";
+  }
+}
+
+interface RawUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  // OpenAI, Gemini, OpenRouter, Grok, Groq…
+  prompt_tokens_details?: { cached_tokens?: number } | null;
+  // DeepSeek
+  prompt_cache_hit_tokens?: number;
+}
+
+// Token counts from a usage object, in whichever field the provider uses for cached tokens.
+export function readUsage(usage: RawUsage | null | undefined): ChatUsage | null {
+  if (!usage || typeof usage.prompt_tokens !== "number") return null;
+  const cached = usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens;
+  return {
+    promptTokens: usage.prompt_tokens,
+    cachedTokens: typeof cached === "number" ? cached : null,
+    completionTokens: usage.completion_tokens ?? 0,
+  };
+}
+
+export function parseSseUsage(line: string): ChatUsage | null {
+  if (!line.startsWith("data:") || !line.includes('"usage"')) return null;
+  try {
+    return readUsage((JSON.parse(line.slice(5).trim()) as { usage?: RawUsage | null }).usage);
+  } catch {
+    return null;
   }
 }
