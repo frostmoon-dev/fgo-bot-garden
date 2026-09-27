@@ -53,7 +53,12 @@ function Sprite({
       data-dim={dim}
       data-front={front}
       data-solo={solo}
-      style={{ ["--ar" as string]: spriteAspect(set) }}
+      // Where the face is across the image (0–1): on a phone the face, not the image, is centred. Only from
+      // sheets with face cells, and kept near the middle, so a badly placed face cell can't push anyone off.
+      style={{
+        ["--ar" as string]: spriteAspect(set),
+        ["--face-x" as string]: set.faceCount > 0 ? Math.min(0.7, Math.max(0.3, (set.faceX + set.cellSize / 2) / set.sheetWidth)) : 0.5,
+      }}
     >
       <div ref={body} className="sprite-body">
         <SpriteView grid={set} sheetUrl={set.sheetUrl} cell={resolveCell(set, slot.expression)} className="h-full w-full" />

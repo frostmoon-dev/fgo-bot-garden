@@ -379,11 +379,11 @@
 
 /* Wide screens: two share it half and half (CharacterLayer puts them in left and right). */
 @container (aspect-ratio > 1/1) {
-  [data-crowded="false"] > .sprite-slot[data-pos="left"] {
+  [data-count="2"] > .sprite-slot[data-pos="left"] {
     left: 25%;
   }
 
-  [data-crowded="false"] > .sprite-slot[data-pos="right"] {
+  [data-count="2"] > .sprite-slot[data-pos="right"] {
     left: 75%;
   }
 }
@@ -404,25 +404,37 @@
     width: min(calc(var(--sprite-h) * var(--ar)), 270cqw);
   }
 
-  /* Three don't fit on a narrow screen: only the speaker shows, in the middle (see CharacterLayer).
-     The others fade out, so a new speaker cross-fades in. The body carries the fade, since the slot's
-     own opacity belongs to the enter/exit animation. */
-  [data-crowded="true"] > .sprite-slot[data-pos] {
+  /* Two or three don't fit on a narrow screen at this size (their faces end up at the edges): only the
+     speaker shows, in the middle (see CharacterLayer). The others fade out, so a new speaker cross-fades in.
+     The body carries the fade, since the slot's own opacity belongs to the enter/exit animation. */
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot[data-pos] {
     left: 50%;
     transition: filter 300ms ease;
   }
 
-  [data-crowded="true"] > .sprite-slot:not([data-solo="true"]) {
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot:not([data-solo="true"]) {
     visibility: hidden;
     transition: visibility 0s 300ms;
   }
 
-  [data-crowded="true"] > .sprite-slot:not([data-solo="true"]) .sprite-body {
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot:not([data-solo="true"]) .sprite-body {
     opacity: 0;
   }
 
-  [data-crowded="true"] > .sprite-slot[data-solo="true"] {
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot[data-solo="true"] {
     filter: none;
+  }
+
+  /* Alone on a phone, a character stands in the middle, whichever slot the story put them in (at the side
+     slots' 12% / 88% their face would sit at the screen edge). */
+  [data-count="1"] > .sprite-slot[data-pos] {
+    left: 50%;
+  }
+
+  /* One character in the middle of a phone: centre their face, not the image. Many sheets are drawn off
+     centre (Ishtar's boat fills the right half), which would push the face towards the edge. */
+  :is([data-count="1"], [data-count="2"], [data-count="3"]) > .sprite-slot {
+    transform: translateX(calc(-50% + (0.5 - var(--face-x, 0.5)) * 100%));
   }
 
   .sprite-slot[data-pos="left"] {
