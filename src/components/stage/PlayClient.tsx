@@ -72,6 +72,8 @@ function Stage() {
   }, [effect, effectKey]);
 
   return (
+    // The frame letterboxes the stage to 16:9 on a navy lattice with FGO frames (see .vn-frame).
+    <div className="vn-frame">
     <div
       className="stage relative h-dvh w-full select-none overflow-hidden bg-black"
       style={{
@@ -134,6 +136,8 @@ function Stage() {
                 pending={pending}
                 done={typedDone && !inputOpen}
                 onLog={() => s.setPanel("log")}
+                auto={s.auto}
+                onAuto={() => s.setAuto(!s.auto)}
               />
             )}
             {inputOpen && <ReplyBar userName={s.persona.name} />}
@@ -152,6 +156,7 @@ function Stage() {
       {s.panel === "menu" && <MenuPanel />}
       {s.panel === "help" && <HelpPanel />}
       {s.panel === "scene" && <ScenePanel />}
+    </div>
     </div>
   );
 }

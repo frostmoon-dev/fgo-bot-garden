@@ -13,6 +13,9 @@ interface Props {
   done: boolean;
   // Opens the Log from the window's LOG tab (shown with FGO frames).
   onLog?: () => void;
+  // Auto mode, switched from the window's AUTO tab (shown with FGO frames).
+  auto?: boolean;
+  onAuto?: () => void;
 }
 
 function Dots() {
@@ -25,7 +28,7 @@ function Dots() {
   );
 }
 
-export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: Props) {
+export function TextBox({ beat, typed, color, waiting, pending, done, onLog, auto = false, onAuto }: Props) {
   const name = beat?.kind === "dialogue" || beat?.kind === "user" ? beat.speakerName : null;
   const text = beat ? beat.text.slice(0, Math.floor(typed)) : "";
   const narration = beat?.kind === "narration";
@@ -54,20 +57,39 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
             {pending && <Dots />}
           </p>
         )}
-        {onLog && (
-          <button
-            type="button"
-            className="vn-log-tab absolute right-3 top-1.5 min-h-10 min-w-10 flex-col items-center justify-center text-[0.65rem] font-semibold tracking-wider text-muted hover:text-ink"
-            onClick={(e) => {
-              e.stopPropagation();
-              onLog();
-            }}
-            title="Log (L)"
-          >
-            <span aria-hidden className="vn-log-arch" />
-            LOG
-          </button>
-        )}
+        <div className="absolute inset-y-1 right-3 flex flex-col items-center justify-center">
+          {onLog && (
+            <button
+              type="button"
+              className="vn-log-tab min-h-9 min-w-10 flex-col items-center justify-center text-[0.65rem] font-semibold tracking-wider text-muted hover:text-ink"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLog();
+              }}
+              title="Log (L)"
+            >
+              <span aria-hidden className="vn-log-arch" />
+              LOG
+            </button>
+          )}
+          {onAuto && (
+            <button
+              type="button"
+              aria-pressed={auto}
+              className="vn-auto-tab min-h-9 min-w-10 flex-col items-center justify-center font-semibold hover:text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAuto();
+              }}
+              title="Auto (A)"
+            >
+              <span aria-hidden className="vn-auto-icon">
+                ▶
+              </span>
+              AUTO
+            </button>
+          )}
+        </div>
         {done && !waiting && !pending && <span aria-hidden className="vn-next pulse-dot absolute bottom-3 right-5 text-xs text-muted" />}
       </div>
     </div>

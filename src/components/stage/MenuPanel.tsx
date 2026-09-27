@@ -11,7 +11,7 @@ import { resolveCell } from "@/components/sprite/sheet";
 import { ColorDot } from "@/components/ui/ColorDot";
 import { pickAscension } from "@/lib/ascension";
 import { bondLevel } from "@/lib/bond";
-import { PanelShell } from "./PanelShell";
+import { PanelShell, Plate } from "./PanelShell";
 import { usePlay } from "./usePlay";
 
 // The main character's ascensions. Switching one changes their definition, sprites and greeting.
@@ -180,12 +180,29 @@ export function MenuPanel() {
   const patchSession = usePlay((s) => s.patchSession);
   const setPanel = usePlay((s) => s.setPanel);
   const setHideUi = usePlay((s) => s.setHideUi);
+  const fgo = usePlay((s) => s.settings.frameStyle === "fgo");
+  const router = useRouter();
   const [title, setTitle] = useState(session.title);
+  const hideUi = () => {
+    setPanel(null);
+    setHideUi(true);
+  };
 
   return (
     <PanelShell title="Menu">
       <div className="divide-y divide-line [&>section]:py-6 [&>section:first-child]:pt-2">
-        {/* The story screen's other controls. With FGO frames the top bar shows only Auto, Skip and Menu. */}
+        {/* The story screen's other controls. With FGO frames the top bar shows only Skip and Menu,
+            so these are the game's cream menu plates, and the way home is here too. */}
+        {fgo ? (
+          <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Plate label="Log" sub="backlog" onClick={() => setPanel("log")} />
+            <Plate label="Save" sub="save · load" onClick={() => setPanel("saves")} />
+            <Plate label="Scene" sub="scene" onClick={() => setPanel("scene")} />
+            <Plate label="Hide" sub="interface" onClick={hideUi} />
+            <Plate label="Controls" sub="controls" onClick={() => setPanel("help")} />
+            <Plate label="My Room" sub="home" onClick={() => router.push("/")} />
+          </section>
+        ) : (
         <section className="flex flex-wrap gap-2">
           <button type="button" className="btn btn-outline" onClick={() => setPanel("scene")}>
             Scene
@@ -210,6 +227,7 @@ export function MenuPanel() {
             Controls
           </button>
         </section>
+        )}
 
         <AscensionPicker />
 
