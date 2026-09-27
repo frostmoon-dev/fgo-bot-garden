@@ -377,6 +377,12 @@
   left: 78%;
 }
 
+/* Alone on stage, a character stands in the middle, whichever slot the story put them in: at a side slot
+   they'd stand off to one side of an empty stage (on a phone, with their face at the edge). */
+[data-count="1"] > .sprite-slot[data-pos] {
+  left: 50%;
+}
+
 /* Wide screens: two share it half and half (CharacterLayer puts them in left and right). */
 @container (aspect-ratio > 1/1) {
   [data-count="2"] > .sprite-slot[data-pos="left"] {
@@ -423,12 +429,6 @@
 
   :is([data-count="2"], [data-count="3"]) > .sprite-slot[data-solo="true"] {
     filter: none;
-  }
-
-  /* Alone on a phone, a character stands in the middle, whichever slot the story put them in (at the side
-     slots' 12% / 88% their face would sit at the screen edge). */
-  [data-count="1"] > .sprite-slot[data-pos] {
-    left: 50%;
   }
 
   /* One character in the middle of a phone: centre their face, not the image. Many sheets are drawn off
