@@ -2,7 +2,7 @@ import "@fontsource/opendyslexic/400.css";
 import { DialogHost } from "@/components/ui/DialogHost";
 import "@fontsource/opendyslexic/700.css";
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible_Next, Cormorant_Garamond, Figtree } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, Figtree } from "next/font/google";
 import { schemeOf, themeColors, themeStyle } from "@/lib/appearance";
 import { getSettings } from "@/lib/data/queries";
 import "./globals.css";
@@ -20,10 +20,7 @@ const atkinson = Atkinson_Hyperlegible_Next({
   preload: false,
 });
 
-// Only for the italic titles of the story screen's menu screens ("Menu", "Log", "Save"), as in the game.
-const screenTitle = Cormorant_Garamond({ variable: "--font-screen", subsets: ["latin"], weight: "600", style: "italic", preload: false });
-
-const fontVariables = [figtree, atkinson, screenTitle].map((f) => f.variable).join(" ");
+const fontVariables = [figtree, atkinson].map((f) => f.variable).join(" ");
 
 // Appearance settings live in the database, so every page renders per request.
 export const dynamic = "force-dynamic";

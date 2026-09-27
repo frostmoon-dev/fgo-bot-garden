@@ -116,7 +116,7 @@ export function ReplyBar({ userName }: { userName: string }) {
       </button>
       <button
         type="submit"
-        className="vn-send btn btn-primary ml-auto shrink-0 px-5 sm:ml-0"
+        className="btn btn-primary ml-auto shrink-0 px-5 sm:ml-0"
         title={text.trim() ? "Send (Enter)" : "Let the story continue without you"}
       >
         {text.trim() ? "Send" : "Continue"}

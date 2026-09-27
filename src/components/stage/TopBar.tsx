@@ -11,8 +11,7 @@ export function TopBar() {
   const title = usePlay((s) => s.session.title);
   const { setAuto, setSkip, setPanel, setHideUi, stop } = usePlayApi().getState();
 
-  // With FGO frames only Skip and Menu show, as in the game: Auto sits on the window under LOG, and the
-  // rest (Home included) are in the Menu and on keys.
+  // With FGO frames only Auto, Skip and Menu show, as in the game; the rest are in the Menu and on keys.
   return (
     <div
       className="vn-topbar relative z-20 flex shrink-0 items-center gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-5"
@@ -20,7 +19,6 @@ export function TopBar() {
     >
       <Link
         href="/"
-        data-fgo-hide
         aria-label="Back to home"
         className="vn-pill inline-flex min-h-10 items-center rounded-lg bg-canvas/75 px-3 text-sm shadow-sm ring-1 ring-ink/10 backdrop-blur-md hover:bg-canvas/90"
       >
@@ -29,7 +27,7 @@ export function TopBar() {
       <p data-fgo-hide className="vn-pill hidden min-w-0 max-w-sm truncate rounded-lg bg-canvas/75 px-5 py-2 text-sm text-muted backdrop-blur-md lg:block">{title}</p>
       <div className="ml-auto flex gap-1.5 sm:gap-2">
         {streaming && <StageButton onClick={stop}>Stop</StageButton>}
-        <StageButton active={auto} onClick={() => setAuto(!auto)} title="Auto (A)" data-fgo-hide>
+        <StageButton active={auto} onClick={() => setAuto(!auto)} title="Auto (A)">
           Auto
         </StageButton>
         <StageButton active={skip} onClick={() => setSkip(!skip)} title="Skip (S)" phoneHidden data-fgo-skip>
