@@ -30,7 +30,7 @@ function StatusLine({ view }: { view: ConnectionView }) {
   }
   return (
     <p className="flex flex-wrap items-center gap-x-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm">
-      <span className="size-2 rounded-full bg-[#7fc98f]" aria-hidden />
+      <span className="size-2 rounded-full bg-[var(--success)]" aria-hidden />
       <span>
         Connected to <strong>{PROVIDERS[view.provider].label}</strong> · <span className="font-mono">{view.model}</span>
       </span>
@@ -313,7 +313,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
         </Button>
         {tested && (
           <span role="status" className="text-sm">
-            <span className="text-[#7fc98f]">Works</span> · answered in {(tested.ms / 1000).toFixed(1)} s{tested.reply && <> · “{tested.reply}”</>}
+            <span className="text-[var(--success)]">Works</span> · answered in {(tested.ms / 1000).toFixed(1)} s{tested.reply && <> · “{tested.reply}”</>}
           </span>
         )}
         {saved && !tested && <span className="text-sm text-muted">Saved. New replies use this model.</span>}

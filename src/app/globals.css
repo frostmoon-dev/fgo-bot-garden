@@ -42,6 +42,22 @@
    size and the diamonds keep their shape: faint scanlines, a faint diamond lattice, and the cluster of
    brighter diamonds in the bottom-right corner. Layer them over a navy fill. */
 :root {
+  /* The FGO palette, defined once. Every navy, edge and on-navy text colour on the site comes from here, so
+     the nav bar, cards, section tabs, message window, panels and buttons match. Channels (r g b) so any
+     alpha can be applied: rgb(var(--navy-800) / 0.8). One navy hue, stepped by lightness. */
+  --navy-950: 8 20 50; /* the darkest: button backs over the scene */
+  --navy-900: 10 27 66; /* bottom of surfaces */
+  --navy-800: 15 38 88; /* top of surfaces */
+  --navy-700: 23 63 136; /* name tab, bottom */
+  --navy-600: 27 75 158; /* name tab, middle */
+  --navy-500: 45 106 200; /* name tab, top */
+  --sky-300: 111 178 240; /* name tab's light edge, place card stripe */
+  --sky-200: 169 220 255; /* name tab's light edge, top */
+  --edge: 150 185 240; /* the thin light line round every navy surface */
+  --on-navy: #f1f4f9; /* text on navy: off-white, never pure white */
+  --on-navy-2: #cdd6e8; /* secondary text on navy */
+  --on-navy-muted: #b6c1d6; /* muted text on navy, 8:1 on navy-800 */
+  --success: #7fc98f; /* "it works" (connection test) */
   --fgo-scan: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.16) 0 1px, transparent 1px 3px);
   --fgo-cluster: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 160'%3E%3Cg fill='%235a8fe6'%3E%3Cpath fill-opacity='.2' d='M200 62 248 110 200 158 152 110Z'/%3E%3Cpath fill-opacity='.3' d='M262 30 296 64 262 98 228 64Z'/%3E%3Cpath fill-opacity='.24' d='M294 102 322 130 294 158 266 130Z'/%3E%3Cpath fill-opacity='.14' d='M126 122 152 148 126 174 100 148Z'/%3E%3C/g%3E%3C/svg%3E");
   --fgo-lattice: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 144'%3E%3Cg fill='%235a8fe6' fill-opacity='.05'%3E%3Cpath d='M72 22 122 72 72 122 22 72Z'/%3E%3Cpath d='M0 -50 50 0 0 50 -50 0Z'/%3E%3Cpath d='M144 -50 194 0 144 50 94 0Z'/%3E%3Cpath d='M0 94 50 144 0 194 -50 144Z'/%3E%3Cpath d='M144 94 194 144 144 194 94 144Z'/%3E%3C/g%3E%3C/svg%3E");
@@ -236,7 +252,7 @@
     font-size: 1.05rem;
     font-weight: 700;
     line-height: 1.2;
-    color: #fff;
+    color: var(--on-navy);
     text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
   }
 }
@@ -247,7 +263,7 @@
     var(--fgo-scan),
     var(--fgo-cluster) right bottom / auto min(100%, 10rem) no-repeat,
     var(--fgo-lattice) 0 0 / 9rem 9rem,
-    linear-gradient(#0f2555, #0a1b42);
+    linear-gradient(rgb(var(--navy-800)), rgb(var(--navy-900)));
 }
 :root[data-frames="fgo"][data-scheme="dark"] .site-nav {
   background-size: auto, auto 100%, 9rem 9rem, auto;
@@ -266,26 +282,26 @@
 :is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::after {
   inset: 0;
   z-index: -2;
-  background: linear-gradient(to right, #a9dcff, #6fb2f0);
+  background: linear-gradient(to right, rgb(var(--sky-200)), rgb(var(--sky-300)));
 }
 :is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::before {
   inset: 2px 0 2px 2.5px;
-  background: linear-gradient(#2d6ac8, #1b4b9e 55%, #173f88);
+  background: linear-gradient(rgb(var(--navy-500)), rgb(var(--navy-600)) 55%, rgb(var(--navy-700)));
 }
 :root[data-frames="fgo"][data-scheme="dark"] .card:not(.vn-panel *) {
-  --muted: #b3bfd4;
-  --line: rgb(150 185 255 / 0.22);
+  --muted: var(--on-navy-muted);
+  --line: rgb(var(--edge) / 0.25);
   --raised: rgb(255 255 255 / 0.07);
-  border-color: rgb(150 185 255 / 0.22);
+  border-color: rgb(var(--edge) / 0.25);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.05),
     0 8px 20px rgb(0 0 0 / 0.25);
 }
 :root[data-frames="fgo"][data-scheme="dark"] :is(a, button).card:not(.vn-panel *):hover {
-  border-color: rgb(170 200 255 / 0.45);
+  border-color: rgb(var(--edge) / 0.5);
 }
 :root[data-frames="fgo"][data-scheme="dark"] .site-nav {
-  border-bottom-color: rgb(150 185 255 / 0.25);
+  border-bottom-color: rgb(var(--edge) / 0.25);
 }
 
 /* Character names: semibold, like the names on FGO's name tabs. */
@@ -346,17 +362,14 @@
   container-type: size;
 }
 
-/* Sized by height, so the body runs past the bottom of the screen as in the game: the waist, where FGO bodies
-   end, is never seen through the translucent message window (a body that stops there looks like it floats).
-   FGO canvases leave headroom above most heads, so the canvas top sits above the screen top: that empty band
-   is cut off and the face sits in the upper third. Hair, wings and weapons that reach the canvas top are cut,
-   as in the game. Wide sprites may run off the sides. */
+/* The whole sprite is always on screen: sized to the stage's height (scaled down, never cropped) and
+   standing on the bottom edge, so no part of the body is cut off at the bottom. The message window covers
+   the lower body, translucent, as in the game. Very wide sprites may run off the sides. */
 .sprite-slot {
-  --sprite-h: 118cqh;
+  --sprite-h: 100cqh;
   position: absolute;
-  top: -13cqh;
+  bottom: 0;
   width: min(calc(var(--sprite-h) * var(--ar)), 150cqw);
-  mask-image: linear-gradient(to top, transparent, #000 9%);
   aspect-ratio: var(--ar);
   transform: translateX(-50%);
   transition:
@@ -405,8 +418,7 @@
 /* Portrait phones: the same, with a width cap so very wide sprites don't grow far past the screen. */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
-    --sprite-h: 114cqh;
-    top: -11cqh;
+    --sprite-h: 100cqh;
     width: min(calc(var(--sprite-h) * var(--ar)), 270cqw);
   }
 
@@ -823,10 +835,10 @@
 
 /* The message window: text box, reply bar, choices, scene box, toasts. Always dark, so its text is light. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-box:not([data-frames-preview="simple"] *, .vn-panel) {
-  --fg: #f3f5f9;
-  --muted: #b9c4da;
-  --bg: #0e1b3a;
-  --line: rgb(255 255 255 / 0.2);
+  --fg: var(--on-navy);
+  --muted: var(--on-navy-muted);
+  --bg: rgb(var(--navy-900));
+  --line: rgb(var(--edge) / 0.25);
   --raised: rgb(255 255 255 / 0.08);
   color: var(--fg);
   /* The transparent border keeps the window's inner spacing; the surface runs under it. */
@@ -837,19 +849,19 @@
     var(--fgo-scan),
     var(--fgo-cluster) right bottom / auto 100% no-repeat,
     var(--fgo-lattice) 0 0 / 9rem 9rem,
-    linear-gradient(rgb(16 42 98 / var(--window-alpha, 0.8)), rgb(8 26 68 / var(--window-alpha, 0.8)));
+    linear-gradient(rgb(var(--navy-800) / var(--window-alpha, 0.8)), rgb(var(--navy-900) / var(--window-alpha, 0.8)));
   background-origin: border-box;
   background-clip: border-box;
   box-shadow:
-    0 0 0 1px rgb(150 185 240 / 0.45),
+    0 0 0 1px rgb(var(--edge) / 0.45),
     0 10px 28px rgb(0 0 0 / 0.3);
   backdrop-filter: none;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) button.vn-box:not([data-frames-preview="simple"] *):is(:hover, :focus-visible) {
   box-shadow:
-    0 0 0 1px rgb(150 190 255 / 0.55),
-    0 0 18px rgb(70 130 255 / 0.35);
+    0 0 0 1px rgb(var(--edge) / 0.8),
+    0 10px 28px rgb(0 0 0 / 0.3);
 }
 
 /* The reply bar holds controls, so it gets the window's navy without the diamonds: nothing drawn behind the
@@ -858,7 +870,7 @@
   border-width: 6px;
   background:
     var(--fgo-scan),
-    linear-gradient(rgb(16 42 98 / var(--window-alpha, 0.8)), rgb(8 26 68 / var(--window-alpha, 0.8)));
+    linear-gradient(rgb(var(--navy-800) / var(--window-alpha, 0.8)), rgb(var(--navy-900) / var(--window-alpha, 0.8)));
   background-origin: border-box;
 }
 
@@ -880,7 +892,7 @@
   border-radius: 0;
   box-shadow: none;
   backdrop-filter: none;
-  color: #fff;
+  color: var(--on-navy);
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
   background: none;
   isolation: isolate;
@@ -933,7 +945,7 @@
   gap: 0.2em;
   font-size: max(0.65rem, 0.42em);
   letter-spacing: 0.08em;
-  color: #cdd6e8;
+  color: var(--on-navy-2);
 }
 
 /* The flat arch above LOG. */
@@ -983,12 +995,12 @@
 
 /* Stage buttons: white outline buttons, like FGO's SKIP. Filled white while switched on. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill:not([data-frames-preview="simple"] *) {
-  color: #fff;
+  color: var(--on-navy);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
-  background: rgb(8 14 32 / 0.45);
-  border: 2.5px solid rgb(255 255 255 / 0.92);
+  background: rgb(var(--navy-950) / 0.45);
+  border: 2.5px solid var(--on-navy);
   border-radius: 999px;
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.4);
   backdrop-filter: blur(2px);
@@ -1026,33 +1038,33 @@
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill[aria-pressed="true"]:not([data-frames-preview="simple"] *) {
-  background: #fff;
-  color: #1c2a4e;
+  background: var(--on-navy);
+  color: rgb(var(--navy-900));
   text-shadow: none;
 }
 
 /* The place card: the message window's navy, flat and small, with the same thin light edge, and the name
    tab's light blue edge down its left side. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) {
-  color: #f3f5f9;
-  background: rgb(12 30 72 / 0.9);
-  border-left-color: #6fb2f0;
+  color: var(--on-navy);
+  background: rgb(var(--navy-900) / 0.9);
+  border-left-color: rgb(var(--sky-300));
   border-radius: 4px;
   box-shadow:
-    0 0 0 1px rgb(150 185 240 / 0.45),
+    0 0 0 1px rgb(var(--edge) / 0.45),
     0 6px 16px rgb(0 0 0 / 0.25);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-banner-sub {
-  color: #b9c4da;
+  color: var(--on-navy-muted);
 }
 
 /* Panels on the story screen (Menu, Log, Save) use the game's dialog window. Light text, like the window. */
 :root[data-frames="fgo"] .vn-panel {
-  --fg: #f3f5f9;
-  --muted: #b9c4da;
-  --bg: #0e1b3a;
-  --line: rgb(255 255 255 / 0.2);
+  --fg: var(--on-navy);
+  --muted: var(--on-navy-muted);
+  --bg: rgb(var(--navy-900));
+  --line: rgb(var(--edge) / 0.25);
   --raised: rgb(255 255 255 / 0.08);
   color: var(--fg);
   border: 0;
@@ -1072,8 +1084,8 @@
     var(--fgo-scan),
     var(--fgo-cluster) right bottom / auto 10rem no-repeat,
     var(--fgo-lattice) 0 0 / 9rem 9rem,
-    linear-gradient(#10285c, #0a1d48);
-  box-shadow: 0 0 0 1px rgb(150 185 240 / 0.4);
+    linear-gradient(rgb(var(--navy-800)), rgb(var(--navy-900)));
+  box-shadow: 0 0 0 1px rgb(var(--edge) / 0.45);
 }
 
 

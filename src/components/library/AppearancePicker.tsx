@@ -33,7 +33,7 @@ const FONT_VARS: Record<FontId, string> = {
 // A miniature of the story text box in each style.
 function FramePreview({ style }: { style: FrameStyle }) {
   return (
-    <span data-frames-preview={style} className="relative block h-20 overflow-hidden rounded-lg bg-[#1d2233]">
+    <span data-frames-preview={style} className="relative block h-20 overflow-hidden rounded-lg bg-[rgb(var(--navy-950))]">
       <span className="vn-box vn-name absolute left-3 top-2 z-10 px-3 py-0.5 font-name text-xs font-bold">Oberon</span>
       <span className="vn-box absolute inset-x-2 bottom-2 top-5 flex items-center px-4 pt-2 text-xs">Welcome back to Chaldea.</span>
     </span>
