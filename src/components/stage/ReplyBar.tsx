@@ -42,7 +42,7 @@ export function ReplyBar({ userName }: { userName: string }) {
   return (
     <form
       // The direction line takes a row of its own above the box, so the row wraps while it is open.
-      className={`vn-box vn-lane mx-auto mt-3 flex w-full max-w-[52rem] flex-wrap items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-accent/50 ${directing ? "" : "sm:flex-nowrap"}`}
+      className={`vn-box vn-reply vn-lane mx-auto mt-3 flex w-full max-w-[52rem] flex-wrap items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-accent/50 ${directing ? "" : "sm:flex-nowrap"}`}
       onClick={(e) => e.stopPropagation()}
       onSubmit={(e) => {
         e.preventDefault();
@@ -89,6 +89,7 @@ export function ReplyBar({ userName }: { userName: string }) {
               markAction(e.currentTarget);
             }
           }}
+          placeholder={`What does ${userName} say or do?`}
           title="Plain text is what you say. *Text in asterisks* is what you do. Ctrl+I marks the selection as an action."
           className="block max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 leading-relaxed outline-none placeholder:text-muted focus-visible:outline-none"
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useFaceCenter } from "./faceCenter";
 import { SpriteView } from "@/components/sprite/SpriteView";
 import { resolveCell, spriteAspect } from "@/components/sprite/sheet";
 import { useFadeLayers } from "@/components/sprite/useFadeLayers";
@@ -35,6 +36,7 @@ function Sprite({
 }) {
   const { set, slot, motion: style } = content;
   const body = useRef<HTMLDivElement>(null);
+  const faceX = useFaceCenter(set);
 
   // A move when this character starts talking or changes expression, picked by the feeling and the
   // character's motion style (a jump when startled, a shake in anger; nothing for "still").
@@ -53,11 +55,10 @@ function Sprite({
       data-dim={dim}
       data-front={front}
       data-solo={solo}
-      // Where the face is across the image (0–1): on a phone the face, not the image, is centred. Only from
-      // sheets with face cells, and kept near the middle, so a badly placed face cell can't push anyone off.
+      // Where the face is across the image (0–1): on a phone the face, not the image, is centred.
       style={{
         ["--ar" as string]: spriteAspect(set),
-        ["--face-x" as string]: set.faceCount > 0 ? Math.min(0.7, Math.max(0.3, (set.faceX + set.cellSize / 2) / set.sheetWidth)) : 0.5,
+        ["--face-x" as string]: faceX,
       }}
     >
       <div ref={body} className="sprite-body">

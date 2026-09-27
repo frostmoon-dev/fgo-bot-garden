@@ -72,6 +72,8 @@ function Stage() {
   }, [effect, effectKey]);
 
   return (
+    // With FGO frames the frame letterboxes the stage to 16:9, as in the game (see .vn-frame).
+    <div className="vn-frame">
     <div
       className="stage relative h-dvh w-full select-none overflow-hidden bg-black"
       style={{
@@ -103,6 +105,7 @@ function Stage() {
           <div className="min-h-4 flex-1" />
 
           <div className="min-h-0 shrink overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,calc(var(--fgo-text,1em)*1.7))] [scrollbar-width:none] sm:px-6 sm:pb-6">
+            <CastSuggestionCard className="vn-lane mx-auto mb-3 max-w-[52rem]" />
             {s.error && (
               <div
                 className="vn-box vn-lane mx-auto mb-3 flex max-w-[52rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm text-danger"
@@ -121,7 +124,8 @@ function Stage() {
             )}
             {inputOpen && <ChoiceList />}
             {(onLatest || waiting) && !s.choices && (
-              <div className="vn-lane mx-auto mb-7 flex max-w-[52rem] justify-end" onClick={(e) => e.stopPropagation()}>
+              // Clear of the name tab, which rises above the window by about 1.5 lines of story text.
+              <div className="vn-lane mx-auto mb-[calc(var(--fgo-text,1em)*1.5+0.75rem)] flex max-w-[52rem] justify-end" onClick={(e) => e.stopPropagation()}>
                 {onLatest && lastMessage && <VariantControls messageId={lastMessage.id} />}
               </div>
             )}
@@ -141,9 +145,8 @@ function Stage() {
         </div>
       )}
 
-      {/* Notices at the top: the offer to add someone to the cast, with short toasts below it. */}
+      {/* Short toasts at the top. */}
       <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-40 flex flex-col items-center gap-2 px-4">
-        {!s.hideUi && <CastSuggestionCard />}
         <StageToast />
       </div>
       <RecapCard />
@@ -152,6 +155,7 @@ function Stage() {
       {s.panel === "menu" && <MenuPanel />}
       {s.panel === "help" && <HelpPanel />}
       {s.panel === "scene" && <ScenePanel />}
+    </div>
     </div>
   );
 }

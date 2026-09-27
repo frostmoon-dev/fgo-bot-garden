@@ -46,9 +46,9 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
       {message.pinned && <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">Pinned</p>}
       {lines.length === 0 && <p className="text-sm italic text-muted">(no visible lines)</p>}
       {lines.map((b) => (
-        <p key={b.key} className={`leading-relaxed [&+p]:mt-2 ${b.kind === "narration" ? "vn-narration" : ""}`}>
+        <p key={b.key} className={`vn-log-line leading-relaxed [&+p]:mt-2 ${b.kind === "narration" ? "vn-narration" : ""}`}>
           {b.speakerName && (
-            <span className="mr-2 inline-flex items-center gap-1.5 font-name font-bold">
+            <span className="vn-log-name mr-2 inline-flex items-center gap-1.5 font-name font-bold">
               {b.kind !== "user" && b.speakerId && characters[b.speakerId] && <ColorDot color={characters[b.speakerId].color} />}
               {b.speakerName}
             </span>

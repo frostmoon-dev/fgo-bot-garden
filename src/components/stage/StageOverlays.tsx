@@ -54,8 +54,8 @@ export function StageToast() {
 }
 
 // A character the story named isn't in the cast, so they can't appear: offer to add them. It stays until
-// answered, since it asks for a choice.
-export function CastSuggestionCard() {
+// answered, since it asks for a choice. It sits above the message window, never over the characters.
+export function CastSuggestionCard({ className = "" }: { className?: string }) {
   const suggestion = usePlay((s) => s.castSuggestion);
   const characters = usePlay((s) => s.characters);
   const accept = usePlay((s) => s.acceptCastSuggestion);
@@ -66,7 +66,7 @@ export function CastSuggestionCard() {
     <div
       key={suggestion.id}
       role="status"
-      className="toast-in vn-box pointer-events-auto flex max-w-md flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm"
+      className={`toast-in vn-box pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       <p className="min-w-0 flex-1 basis-60">

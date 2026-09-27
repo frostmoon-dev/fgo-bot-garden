@@ -852,6 +852,16 @@
     0 0 18px rgb(70 130 255 / 0.35);
 }
 
+/* The reply bar holds controls, so it gets the window's navy without the diamonds: nothing drawn behind the
+   buttons, and a thinner edge so the input and buttons aren't lost in padding. */
+:root[data-frames="fgo"] .vn-box.vn-reply {
+  border-width: 6px;
+  background:
+    var(--fgo-scan),
+    linear-gradient(rgb(16 42 98 / var(--window-alpha, 0.8)), rgb(8 26 68 / var(--window-alpha, 0.8)));
+  background-origin: border-box;
+}
+
 /* The speaker's name: a blue tab with a pointed end, sitting on the window's top edge with its point just
    past the left side, in the same plain type and size as the story text, as in the game. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *) {
@@ -1083,4 +1093,43 @@
 :root[data-frames="fgo"] .vn-dialog-title {
   top: calc(-14px - 1.1em);
   left: calc(-14px - 0.35em);
+}
+
+/* ---------- FGO frames: letterbox and Log ---------- */
+
+/* The story screen sits in a 16:9 frame, as in the game, on plain bands a step darker than the theme
+   (no texture). Portrait phones use the whole screen: a 16:9 frame would leave the scene tiny. */
+.vn-frame {
+  display: flex;
+  height: 100dvh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--bg) 80%, black);
+}
+
+:root[data-frames="fgo"] .vn-frame > .stage {
+  width: min(100vw, calc(100dvh * 16 / 9));
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  :root[data-frames="fgo"] .vn-frame > .stage {
+    width: 100%;
+    height: 100dvh;
+    aspect-ratio: auto;
+  }
+}
+
+/* The Log as in the game: the name on its own line, the text indented below it. */
+:root[data-frames="fgo"] .vn-panel .vn-log-line {
+  padding-left: 1.5em;
+}
+
+:root[data-frames="fgo"] .vn-panel .vn-log-name {
+  display: flex;
+  margin-left: -1.5em;
+  margin-right: 0;
 }
