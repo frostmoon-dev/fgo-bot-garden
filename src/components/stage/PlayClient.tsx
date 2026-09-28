@@ -17,7 +17,7 @@ import { StageButton } from "./StageButton";
 import { CastSuggestionCard, HelpPanel, PlaceCard, RecapCard, StageToast } from "./StageOverlays";
 import { TextBox } from "./TextBox";
 import { TopBar } from "./TopBar";
-import { createPlayStore, PlayStoreProvider, usePlay, type PlayData } from "./usePlay";
+import { createPlayStore, PlayStoreProvider, usePlay, usePlayApi, type PlayData } from "./usePlay";
 import { usePlaybackEffects } from "./usePlaybackEffects";
 import { VariantControls } from "./VariantControls";
 
@@ -53,6 +53,16 @@ function Stage() {
   for (let i = Math.min(s.cursor, beats.length - 1); !focusId && i >= 0; i--) {
     if (beats[i].kind === "dialogue" && onStage(beats[i].speakerId)) focusId = beats[i].speakerId;
   }
+
+  // A story from "Write a scene" has no greeting: its first reply opens it, as soon as the stage is up.
+  const api = usePlayApi();
+  const begun = useRef(false);
+  useEffect(() => {
+    const { messages, session, send } = api.getState();
+    if (begun.current || messages.length > 0 || !session.premise.trim()) return;
+    begun.current = true;
+    void send("");
+  }, [api]);
 
   const world = parseScene(s.session.scene);
   const time = timeOfDay(world.Time);

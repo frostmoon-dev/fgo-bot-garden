@@ -175,6 +175,7 @@ export async function POST(request: Request) {
     events,
     absent,
     storyStarted,
+    premise: session.premise,
     // Pins that were folded into the summary still go in word for word.
     pinned: history.filter((m) => m.pinned && m.order <= session.summarizedUntil).map((m) => m.content),
     history: history

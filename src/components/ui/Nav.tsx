@@ -26,7 +26,8 @@ export function Nav() {
     router.replace("/login");
   }
 
-  const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  // "Write a scene" starts a story, so it belongs under Home.
+  const active = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/scene") : pathname.startsWith(href));
 
   return (
     <header className="site-nav sticky top-0 z-30 border-b border-line bg-canvas">

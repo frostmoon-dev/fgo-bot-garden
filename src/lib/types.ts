@@ -114,6 +114,8 @@ export interface SessionView {
   summarizedUntil: number;
   memory: string;
   scene: string;
+  // The scene the user wrote for this story, if it was started from Write a scene.
+  premise: string;
   cast: { characterId: string; spriteSetId: string | null }[];
   messages: MessageView[];
   saves: SaveSlotView[];

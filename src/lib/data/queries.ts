@@ -167,6 +167,7 @@ export async function getSession(id: string): Promise<SessionView | null> {
     summarizedUntil: row.summarizedUntil,
     memory: row.memory,
     scene: row.scene,
+    premise: row.premise,
     cast: row.cast.map((c) => ({ characterId: c.characterId, spriteSetId: c.spriteSetId })),
     messages: row.messages.map(
       (m): MessageView => ({

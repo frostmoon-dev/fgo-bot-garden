@@ -232,4 +232,21 @@ describe("direction", () => {
     expect(sys).toContain("It is still the same BB");
     expect(sys).toContain("They remember everything that has happened in this story");
   });
+  it("uses a written scene instead of the main character's scenario, and opens the story from it", () => {
+    const premise = "Midnight in the canteen. Oberon sits by the window.";
+    const opening = buildPrompt({ ...base, premise, history: [] });
+    const sys = opening.messages[0].content;
+    expect(sys).toContain(`# SCENARIO\n${premise}`);
+    expect(sys).not.toContain("Moon Cell, BB waits.");
+    expect(opening.messages.at(-1)?.content).toMatch(/^\[Begin the story with the SCENARIO/);
+    expect(opening.messages.at(-1)?.content).toContain("do not write for Ritsuka");
+
+    const later = buildPrompt({ ...base, premise, storyStarted: true }).messages[0].content;
+    expect(later).toContain(`# HOW THIS STORY BEGAN\n${premise}`);
+  });
+
+  it("continues, not begins, a written-scene story that already has messages", () => {
+    const sys = buildPrompt({ ...base, premise: "A scene.", history: [{ role: "assistant", content: "[BB|neutral] Hi." }] });
+    expect(sys.messages.at(-1)?.content).toMatch(/Continue the scene/);
+  });
 });

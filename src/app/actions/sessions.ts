@@ -7,7 +7,9 @@ import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
 import { pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
-import { normalizeScene } from "@/lib/scene";
+import { cleanScene, normalizeScene, parseScene } from "@/lib/scene";
+import { completeChat } from "@/lib/llm/client";
+import { aboutUser, scenePrompt } from "@/lib/prompt/rules";
 import { applyMacros } from "@/lib/stage/beats";
 import { getPersona } from "@/lib/data/queries";
 import { formChangeLine, readFormChange } from "@/lib/story/formChange";
@@ -51,8 +53,15 @@ async function ascensionProfile(characterId: string, spriteSetId: string | null)
 async function startStory(
   characterId: string,
   spriteSetId: string | null,
-  setup?: { cast: { characterId: string; spriteSetId: string | null }[]; mode: string; backgroundId: string | null },
+  setup?: {
+    cast: { characterId: string; spriteSetId: string | null }[];
+    mode: string;
+    backgroundId: string | null;
+    premise?: string;
+  },
 ): Promise<string> {
+  // A story that began from a written scene starts from that scene again, without a greeting.
+  if (setup?.premise) return createPremiseStory({ ...setup, premise: setup.premise, mainCharacterId: characterId });
   const { character, set, profile, openingScene } = await ascensionProfile(characterId, spriteSetId);
   const titleName = set && character.spriteSets.length > 1 ? `${character.name} (${set.name})` : character.name;
   const others = (setup?.cast ?? []).filter((c) => c.characterId !== character.id);
@@ -88,10 +97,102 @@ export async function restartStory(sessionId: string): Promise<ActionResult<stri
     await requireAuth();
     const session = await db.session.findUniqueOrThrow({
       where: { id: sessionId },
-      select: { mainCharacterId: true, mode: true, backgroundId: true, cast: { select: { characterId: true, spriteSetId: true } } },
+      select: {
+        mainCharacterId: true,
+        mode: true,
+        backgroundId: true,
+        premise: true,
+        cast: { select: { characterId: true, spriteSetId: true } },
+      },
     });
     const main = session.cast.find((c) => c.characterId === session.mainCharacterId);
     return startStory(session.mainCharacterId, main?.spriteSetId ?? null, session);
+  });
+}
+
+async function createPremiseStory(input: {
+  premise: string;
+  cast: { characterId: string; spriteSetId: string | null }[];
+  mainCharacterId: string;
+  mode: string;
+  backgroundId: string | null;
+}): Promise<string> {
+  const characters = await db.character.findMany({
+    where: { id: { in: input.cast.map((c) => c.characterId) } },
+    select: { id: true, name: true },
+  });
+  const names = input.cast.flatMap((c) => characters.find((ch) => ch.id === c.characterId)?.name ?? []);
+  const scene = await sceneBoxFor(input.premise, names);
+  const place = parseScene(scene).Location;
+  const session = await db.session.create({
+    data: {
+      title: `${names.join(", ")} — ${place && place.length <= 40 ? place : new Date().toLocaleDateString("en-GB")}`.slice(0, 120),
+      mainCharacterId: input.mainCharacterId,
+      mode: input.mode,
+      backgroundId: input.backgroundId,
+      premise: input.premise,
+      scene,
+      // Characters deleted since a restart's story began are left out.
+      cast: { create: input.cast.filter((c) => characters.some((ch) => ch.id === c.characterId)) },
+    },
+  });
+  revalidatePath("/");
+  return session.id;
+}
+
+const sceneStorySchema = z.object({
+  premise: z.string().trim().min(1, "Write the scene first").max(6000),
+  cast: z
+    .array(z.object({ characterId: z.string(), spriteSetId: z.string().nullable() }))
+    .min(1, "Choose at least one character")
+    .max(12),
+  mainCharacterId: z.string(),
+  mode: z.enum(["narrative", "dialogue"]),
+  backgroundId: z.string().nullable(),
+});
+export type SceneStoryInput = z.infer<typeof sceneStorySchema>;
+
+// The scene box for a written scene. One short model call; if it fails, the scene text itself is the Situation.
+async function sceneBoxFor(premise: string, names: string[]): Promise<string> {
+  const persona = await getPersona();
+  try {
+    const text = await completeChat({
+      messages: [
+        { role: "system", content: scenePrompt(persona.name) },
+        {
+          role: "user",
+          content: `${aboutUser(persona, 400)}\n\nCharacters in the story: ${names.join(", ")}.\n\nCurrent scene:\n(not set yet)\n\nHow the story begins:\n${premise}`,
+        },
+      ],
+      temperature: 0.2,
+      maxTokens: 220,
+    });
+    const scene = cleanScene(text);
+    if (scene) return scene;
+  } catch {
+    // The story still starts; the scene box fills in after the first reply.
+  }
+  return normalizeScene(premise.length > 300 ? `${premise.slice(0, 300)}…` : premise);
+}
+
+// "Write a scene": a story that starts from the player's own scene and cast, instead of a character's greeting.
+export async function createSceneStory(input: SceneStoryInput): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const data = sceneStorySchema.parse(input);
+    if (!data.cast.some((c) => c.characterId === data.mainCharacterId)) {
+      throw new Error("The main character must be in the scene");
+    }
+    const characters = await db.character.findMany({
+      where: { id: { in: data.cast.map((c) => c.characterId) } },
+      select: { id: true, defaultBackgroundId: true },
+    });
+    if (characters.length !== data.cast.length) throw new Error("One of the characters no longer exists");
+    // No background chosen: the main character's own.
+    const backgroundId = data.backgroundId ?? characters.find((c) => c.id === data.mainCharacterId)?.defaultBackgroundId ?? null;
+    // The main character goes first, so they stand at the center of the cast list.
+    const cast = [...data.cast].sort((a, b) => Number(b.characterId === data.mainCharacterId) - Number(a.characterId === data.mainCharacterId));
+    return createPremiseStory({ ...data, cast, backgroundId });
   });
 }
 

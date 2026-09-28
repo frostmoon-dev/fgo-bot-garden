@@ -97,6 +97,8 @@ export interface PromptInput {
   history: PromptHistoryItem[];
   // True once the user has replied. The scenario then only describes how the story began, not the present.
   storyStarted?: boolean;
+  // The scene the user wrote for this story (Write a scene). It replaces the main character's scenario.
+  premise?: string;
   continueScene: boolean;
   // The user's direction for this reply only, from outside the story (see the chat route).
   direction?: string;
@@ -215,6 +217,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   ]
     .filter(Boolean)
     .join("\n");
+  const scenario = input.premise?.trim() || main?.scenario.trim();
   const staticPrompt = join([
     SYSTEM_RULES,
     o.profile !== "balanced" && STRICT_RULES,
@@ -224,10 +227,10 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     `# CHARACTERS\n${cast
       .map((c) => characterBlock(c, c.id === main?.id, { brief: compact && c.id !== main?.id, examples, hints: !compact }))
       .join("\n\n")}`,
-    main?.scenario.trim() &&
+    scenario &&
       (input.storyStarted
-        ? `# HOW THIS STORY BEGAN\n${main.scenario.trim()}\nThe story has moved on since. What happened in the conversation, the story so far and the current scene are what is true now.`
-        : `# SCENARIO\n${main.scenario.trim()}`),
+        ? `# HOW THIS STORY BEGAN\n${scenario}\nThe story has moved on since. What happened in the conversation, the story so far and the current scene are what is true now.`
+        : `# SCENARIO\n${scenario}`),
     backgrounds,
     persona,
     o.customPrompt.trim() && `# EXTRA INSTRUCTIONS\n${o.customPrompt.trim()}`,
@@ -274,7 +277,13 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
 
   const history: PromptHistoryItem[] = input.history.map((m) => ({ ...m, content: applyMacros(m.content, macros) }));
   const last = history.at(-1);
-  if (input.continueScene || !last || last.role !== "user") {
+  if (!last && input.premise?.trim()) {
+    // A written scene has no greeting: the first reply opens the story.
+    history.push({
+      role: "user",
+      content: `[Begin the story with the SCENARIO: set the scene and let the characters act, then stop when it is ${macros.user}'s turn. Remember: do not write for ${macros.user}.]`,
+    });
+  } else if (input.continueScene || !last || last.role !== "user") {
     history.push({ role: "user", content: `[Continue the scene. Remember: do not write for ${macros.user}.]` });
   }
 

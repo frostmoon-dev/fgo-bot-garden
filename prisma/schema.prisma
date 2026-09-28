@@ -139,6 +139,8 @@ model Session {
   memory          String   @default("")
   // The scene box: Location, Time, Weather, Present, Mood, Situation. Kept up to date after replies.
   scene           String   @default("")
+  // The scene the user wrote for this story (Write a scene). It replaces the main character's scenario.
+  premise         String   @default("")
   // The last message already folded into the characters' memories.
   rememberedUntil Int      @default(-1)
   createdAt       DateTime @default(now())

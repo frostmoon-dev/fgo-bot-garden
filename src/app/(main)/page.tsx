@@ -121,6 +121,14 @@ export default async function HomePage() {
 
       <section>
         <SectionTitle hint="Start a new story. Characters with several ascensions let you pick a form first.">Characters</SectionTitle>
+        {characters.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/scene" className="btn btn-outline">
+              Write a scene
+            </Link>
+            <span className="text-sm text-muted">Or set up your own opening and choose who is in it.</span>
+          </div>
+        )}
         <CharacterGallery characters={characters} bonds={bonds} />
       </section>
     </>

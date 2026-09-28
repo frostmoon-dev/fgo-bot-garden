@@ -16,6 +16,7 @@ interface Item {
 
 const PAGES: [string, string, string][] = [
   ["/", "Home", "stories characters start"],
+  ["/scene", "Write a scene", "new story premise scenario setting cast"],
   ["/characters", "Characters", "bots edit create import"],
   ["/backgrounds", "Backgrounds", "scenes images"],
   ["/lorebook", "Lorebook", "world info lore"],

@@ -190,3 +190,16 @@ Stories can have different settings, and ${user}'s role or job in them can diffe
 Keep what is still true; update what changed. At most 150 words. Refer to ${user} by name and with the pronouns from their description.
 Reply with the bullet points only.`;
 }
+
+// "Write a scene": the player drafts where their story starts, and the model finishes the draft.
+export function sceneWriterPrompt(user: string): string {
+  return `You are a writing assistant, not a character. The player is setting up the opening scene of a visual novel and wrote a rough draft. Finish it into a complete scene.
+- Keep every idea, name and fact in the draft. Keep the player's own sentences where they work; finish sentences that stop halfway.
+- Fill in what is missing: the place, the time, the atmosphere, and what is happening as the story begins.
+- Use only the characters listed below, plus ${user}. Do not invent other named characters.
+- ${user} is the player's character. Say only what the draft already says about ${user}: never add their words, feelings, thoughts or choices.
+- Present tense, third person. Two to four short paragraphs, at most 170 words.
+- End at the moment the story begins, with something about to happen.
+- No dialogue lines, no title, no markdown, no notes to the player. Use the language the draft is written in.
+Reply with the finished scene only.`;
+}
