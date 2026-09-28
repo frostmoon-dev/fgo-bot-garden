@@ -249,4 +249,25 @@ describe("direction", () => {
     const sys = buildPrompt({ ...base, premise: "A scene.", history: [{ role: "assistant", content: "[BB|neutral] Hi." }] });
     expect(sys.messages.at(-1)?.content).toMatch(/Continue the scene/);
   });
+  it("drops old messages in steps, so the start of the conversation stays the same between replies", () => {
+    const firstKept = (n: number) => {
+      const { messages } = buildPrompt({ ...base, history: [...turns(n), { role: "user", content: "Now" }], options: { contextSize: 3000 } });
+      return messages.find((m) => m.role !== "system")?.content;
+    };
+    const starts = [60, 61, 62, 63].map(firstKept);
+    // Without steps the first message would move on every reply; with them it moves at most once here.
+    expect(new Set(starts).size).toBeLessThanOrEqual(2);
+    expect(firstKept(60)).not.toBe("Question 0");
+  });
+
+  it("marks where providers may cache: rules, memory, and the settled conversation", () => {
+    const { messages } = buildPrompt({ ...base, history: [...turns(2), { role: "user", content: "Now" }] });
+    const [system] = messages;
+    const [rulesEnd, memoryEnd] = system.cacheAt!;
+    expect(system.content.slice(0, rulesEnd)).toContain("# CHARACTERS");
+    expect(system.content.slice(rulesEnd, memoryEnd)).toContain("# STORY SO FAR");
+    const marked = messages.filter((m) => m.role !== "system" && m.cacheAt);
+    expect(marked.map((m) => m.content)).toEqual(["[BB|neutral] Answer 1"]);
+    expect(messages.at(-1)?.cacheAt).toBeUndefined();
+  });
 });

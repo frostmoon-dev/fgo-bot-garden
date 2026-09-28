@@ -2,7 +2,7 @@ import "server-only";
 import { activeConnection, type LlmConnection } from "./connection";
 import { stripReasoning, stripReasoningStream } from "./reasoning";
 import { readSseDeltas } from "./sse";
-import type { ChatOptions } from "./types";
+import type { ChatMessage, ChatOptions } from "./types";
 
 export function endpoint(connection: LlmConnection, path: string): string {
   return `${connection.baseUrl.replace(/\/+$/, "")}${path}`;
@@ -13,11 +13,7 @@ export function authHeaders(connection: LlmConnection): Record<string, string> {
 }
 
 function isAnthropic(connection: LlmConnection): boolean {
-  try {
-    return new URL(connection.baseUrl).hostname === "api.anthropic.com";
-  } catch {
-    return false;
-  }
+  return hostOf(connection) === "api.anthropic.com";
 }
 
 // The model list request. Anthropic only makes chat OpenAI-compatible: its model list is the native API, which
@@ -48,6 +44,38 @@ export function describeFailure(status: number, body: string): string {
   return `${reason} (${status}${detail ? `: ${detail}` : ""})`;
 }
 
+function hostOf(connection: LlmConnection): string {
+  try {
+    return new URL(connection.baseUrl).hostname;
+  } catch {
+    return "";
+  }
+}
+
+// Most providers (OpenAI, DeepSeek, Grok, Gemini's implicit cache, local servers) reuse a repeated prompt start
+// on their own. On OpenRouter, Anthropic, Gemini and Qwen models only cache what the request marks.
+// https://openrouter.ai/docs/features/prompt-caching
+function marksCache(connection: LlmConnection): boolean {
+  return hostOf(connection) === "openrouter.ai" && /^(anthropic|google|qwen)\//i.test(connection.model);
+}
+
+// The messages as sent: only role and content. With cache marks, a marked message becomes text parts that
+// end at each mark, the way those providers expect them.
+export function wireMessages(messages: ChatMessage[], marks: boolean) {
+  return messages.map(({ role, content, cacheAt }) => {
+    const points = marks ? [...new Set(cacheAt ?? [])].filter((at) => at > 0 && at <= content.length).sort((a, b) => a - b) : [];
+    if (!points.length) return { role, content };
+    const parts: { type: "text"; text: string; cache_control?: { type: "ephemeral" } }[] = [];
+    let from = 0;
+    for (const at of points) {
+      parts.push({ type: "text", text: content.slice(from, at), cache_control: { type: "ephemeral" } });
+      from = at;
+    }
+    if (from < content.length) parts.push({ type: "text", text: content.slice(from) });
+    return { role, content: parts };
+  });
+}
+
 // Servers that refused stream_options, so it isn't sent to them again (until the server restarts).
 const noUsageOption = new Set<string>();
 
@@ -61,13 +89,15 @@ async function post(options: ChatOptions, stream: boolean): Promise<Response> {
       // Optional parameters are only sent when set, since some providers reject ones they don't know.
       body: JSON.stringify({
         model: connection.model,
-        messages: options.messages,
+        messages: wireMessages(options.messages, marksCache(connection)),
         temperature: options.temperature,
         max_tokens: options.maxTokens,
         ...(options.topP !== undefined && options.topP < 1 && { top_p: options.topP }),
         ...(options.frequencyPenalty && { frequency_penalty: options.frequencyPenalty }),
         ...(options.presencePenalty && { presence_penalty: options.presencePenalty }),
         ...(options.stop?.length && { stop: options.stop.slice(0, 4) }),
+        // OpenAI routes requests with the same key to the same cache. Other providers may reject the field.
+        ...(options.cacheKey && hostOf(connection) === "api.openai.com" && { prompt_cache_key: options.cacheKey }),
         // Token counts at the end of the stream, including how much of the prompt came from the provider's cache.
         ...(askUsage && { stream_options: { include_usage: true } }),
         stream,

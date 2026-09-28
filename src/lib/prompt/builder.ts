@@ -124,6 +124,9 @@ const EXAMPLE_REPLIES = 3;
 // Per-message overhead of the chat format, and a safety margin for the rough token estimate.
 const MESSAGE_TOKENS = 4;
 const MARGIN_TOKENS = 64;
+// When old messages must go, they go this many at a time. Dropping one per turn would change the start of
+// the conversation on every reply, and providers only reuse (cache) a prompt up to its first change.
+const TRIM_STEP = 8;
 
 function field(label: string, value: string): string | null {
   return value.trim() ? `${label}: ${value.trim()}` : null;
@@ -307,6 +310,8 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     room -= price;
     keepFrom--;
   }
+  // Cut at a multiple of TRIM_STEP, so the first kept message stays the same for several replies.
+  if (keepFrom > 0) keepFrom = Math.min(history.length - 1, Math.ceil(keepFrom / TRIM_STEP) * TRIM_STEP);
   const dropped = history.slice(0, keepFrom);
   const kept = history.slice(keepFrom);
   const pinned = [...(input.pinned ?? []), ...dropped.filter((m) => m.pinned).map((m) => m.content)].map((p) =>
@@ -319,8 +324,15 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   const top = o.memoryPlacement === "top";
 
   const chat: ChatMessage[] = kept.map(({ role, content }) => ({ role, content }));
+  // Cache marks, for providers that only cache what is marked (see lib/llm/client.ts): the end of the rules
+  // and cards, the end of memory, and the end of the conversation before the newest message. Each part
+  // changes less often than the one after it.
+  const settled = chat.at(-2);
+  if (settled) settled.cacheAt = [settled.content.length];
   if (!top && notesText) chat.splice(chat.length - 1, 0, { role: "system", content: notesText });
-  const messages: ChatMessage[] = [{ role: "system", content: join([system, memory, top && notesText]) }, ...chat];
+  const head = join([system, memory, top && notesText]);
+  const memoryEnd = memory ? join([system, memory]).length : system.length;
+  const messages: ChatMessage[] = [{ role: "system", content: head, cacheAt: [system.length, memoryEnd] }, ...chat];
 
   const breakdown: PromptBreakdown = {
     system: estimateTokens(system),

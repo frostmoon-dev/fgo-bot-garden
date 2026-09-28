@@ -210,6 +210,7 @@ export async function POST(request: Request) {
     // Stop the model before it starts a line for the user's character.
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,
+    cacheKey: `bond-garden:${sessionId}`,
     onUsage: (u) => {
       usage = u;
     },
