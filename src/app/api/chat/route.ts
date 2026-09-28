@@ -15,7 +15,7 @@ import { canonicalize } from "@/lib/parser/transcript";
 import { userTextForPrompt } from "@/lib/userInput";
 import type { Mode, ParserContext } from "@/lib/parser/types";
 import { buildPrompt } from "@/lib/prompt/builder";
-import { formChangeNote, pendingFormChanges } from "@/lib/story/formChange";
+import { formChangeNote, pendingFormChanges, readFormChange } from "@/lib/story/formChange";
 import { formerCast } from "@/lib/story/formerCast";
 import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
@@ -137,6 +137,12 @@ export async function POST(request: Request) {
   // Characters taken out of the cast who still have lines in the history: the model is told they are gone.
   const absent = formerCast(session.messages.map(content), everyone, new Set(cast.map(({ character: c }) => c.id))).map((c) => c.name);
   const events = pendingFormChanges(past.map((m) => ({ role: m.role, content: content(m) }))).map(formChangeNote);
+  // Once the user has replied, a scenario only says how the story began. If the main character has changed
+  // form since, their current form's scenario never happened in this story, so it is left out: sending it
+  // made the model jump to that form's opening scene and act as if nothing had happened before.
+  const storyStarted = session.messages.some((m) => m.role === "user") || !!userText;
+  const mainName = cast.find(({ character: c }) => c.id === session.mainCharacterId)?.character.name;
+  const mainChangedForm = session.messages.some((m) => readFormChange(content(m))?.name === mainName);
 
   const scanTexts = history.slice(-settings.loreScanDepth).map((m) => m.content);
   const lore = await getTriggeredLore(localLoreProvider, scanTexts);
@@ -153,7 +159,7 @@ export async function POST(request: Request) {
       speechStyle: profile.speechStyle,
       lore: profile.lore,
       relationship: profile.relationship,
-      scenario: profile.scenario,
+      scenario: c.id === session.mainCharacterId && mainChangedForm ? "" : profile.scenario,
       exampleDialogues: profile.exampleDialogues,
       expressions: expressions.map(({ key, label, description }) => ({ key, label, description })),
       bond: bondPrompt(c.bond),
@@ -168,6 +174,7 @@ export async function POST(request: Request) {
     scene: session.scene,
     events,
     absent,
+    storyStarted,
     // Pins that were folded into the summary still go in word for word.
     pinned: history.filter((m) => m.pinned && m.order <= session.summarizedUntil).map((m) => m.content),
     history: history

@@ -95,6 +95,8 @@ export interface PromptInput {
   // Characters with lines in the history who were taken out of the cast.
   absent?: string[];
   history: PromptHistoryItem[];
+  // True once the user has replied. The scenario then only describes how the story began, not the present.
+  storyStarted?: boolean;
   continueScene: boolean;
   // The user's direction for this reply only, from outside the story (see the chat route).
   direction?: string;
@@ -140,7 +142,7 @@ function characterBlock(
     `## ${c.name}${isMain ? " (main character)" : ""}`,
     `Tag name: ${c.name}${c.aliases.length ? ` (also accepted: ${c.aliases.join(", ")})` : ""}`,
     c.form
-      ? `Current form: ${c.form}${c.otherForms?.length ? ` (other forms: ${c.otherForms.join(", ")})` : ""}. Everything below describes this form.`
+      ? `Current form: ${c.form}${c.otherForms?.length ? ` (other forms: ${c.otherForms.join(", ")})` : ""}. Everything below describes this form. It is still the same ${c.name}: a form changes how they look and act, never what they know. They remember everything that has happened in this story and everything in their memories.`
       : null,
     field("Description", c.description),
     opts.brief ? null : field("Personality", c.personality),
@@ -222,7 +224,10 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     `# CHARACTERS\n${cast
       .map((c) => characterBlock(c, c.id === main?.id, { brief: compact && c.id !== main?.id, examples, hints: !compact }))
       .join("\n\n")}`,
-    main?.scenario.trim() && `# SCENARIO\n${main.scenario.trim()}`,
+    main?.scenario.trim() &&
+      (input.storyStarted
+        ? `# HOW THIS STORY BEGAN\n${main.scenario.trim()}\nThe story has moved on since. What happened in the conversation, the story so far and the current scene are what is true now.`
+        : `# SCENARIO\n${main.scenario.trim()}`),
     backgrounds,
     persona,
     o.customPrompt.trim() && `# EXTRA INSTRUCTIONS\n${o.customPrompt.trim()}`,

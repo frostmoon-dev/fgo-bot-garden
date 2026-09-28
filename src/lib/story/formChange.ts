@@ -27,5 +27,5 @@ export function pendingFormChanges(messages: { role: string; content: string }[]
 }
 
 export function formChangeNote(change: { name: string; form: string }): string {
-  return `${change.name} has just changed form: ${change.form}. In this reply, show it: ${change.name} and anyone present notice the change and react in character, then ${change.name} carries on as this form (its description, personality and voice above).`;
+  return `${change.name} has just changed form: ${change.form}. In this reply, show it: ${change.name} and anyone present notice the change and react in character, then ${change.name} carries on as this form (its description, personality and voice above). It is the same ${change.name}: they remember everything that happened before the change, and the story continues from where it was.`;
 }

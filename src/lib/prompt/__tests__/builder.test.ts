@@ -213,4 +213,23 @@ describe("direction", () => {
     expect(messages[0].content).not.toContain("Oberon gets jealous");
     expect(buildPrompt(base).messages.map((m) => m.content).join("\n")).not.toContain("DIRECTION FOR THIS REPLY");
   });
+
+  it("sends the scenario as the opening before the user replies, and as how the story began after", () => {
+    const opening = buildPrompt({ ...base, history: [] }).messages[0].content;
+    expect(opening).toContain("# SCENARIO\nMoon Cell, BB waits.");
+    const later = buildPrompt({ ...base, storyStarted: true }).messages[0].content;
+    expect(later).not.toContain("# SCENARIO");
+    expect(later).toContain("# HOW THIS STORY BEGAN\nMoon Cell, BB waits.");
+    expect(later).toContain("The story has moved on since.");
+  });
+
+  it("tells the model a new form is the same character, who remembers the story", () => {
+    const sys = buildPrompt({
+      ...base,
+      cast: [{ ...character("bb", "BB"), form: "Summer", otherForms: ["Moon Cancer"] }, character("ob", "Oberon")],
+    }).messages[0].content;
+    expect(sys).toContain("Current form: Summer (other forms: Moon Cancer).");
+    expect(sys).toContain("It is still the same BB");
+    expect(sys).toContain("They remember everything that has happened in this story");
+  });
 });
