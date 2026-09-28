@@ -67,6 +67,8 @@ export function ReplyBar({ userName }: { userName: string }) {
               }
             }}
             maxLength={1000}
+            enterKeyHint="send"
+            autoCapitalize="sentences"
             placeholder="Where the next reply should go, e.g. BB gets jealous"
             title="Guides the next reply only. It isn't part of the story and isn't saved."
             className="min-h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
@@ -90,6 +92,10 @@ export function ReplyBar({ userName }: { userName: string }) {
             }
           }}
           placeholder={`What does ${userName} say or do?`}
+          enterKeyHint="send"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
           title="Plain text is what you say. *Text in asterisks* is what you do. Ctrl+I marks the selection as an action."
           className="block max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 leading-relaxed outline-none placeholder:text-muted focus-visible:outline-none"
         />

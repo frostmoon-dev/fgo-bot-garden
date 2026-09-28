@@ -20,7 +20,7 @@ export function TopBar() {
       <Link
         href="/"
         aria-label="Back to home"
-        className="vn-pill inline-flex min-h-10 items-center rounded-lg bg-canvas/75 px-3 text-sm shadow-sm ring-1 ring-ink/10 backdrop-blur-md hover:bg-canvas/90"
+        className="vn-pill inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg bg-canvas/75 px-3 text-sm shadow-sm ring-1 ring-ink/10 backdrop-blur-md hover:bg-canvas/90"
       >
         ←<span className="ml-1.5 hidden sm:inline">Home</span>
       </Link>

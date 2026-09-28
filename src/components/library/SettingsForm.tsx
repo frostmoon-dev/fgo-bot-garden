@@ -371,7 +371,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
         </p>
       </section>
 
-      <div className="sticky bottom-0 z-10 mt-12 flex items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-0 mt-12 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button
           variant="primary"
           disabled={pending}

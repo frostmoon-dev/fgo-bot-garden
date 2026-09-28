@@ -27,6 +27,12 @@ export function PanelShell({ title, children }: { title: string; children: React
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">{children}</div>
+        {/* On a phone the sheet is tall: a second Close at the bottom, where the thumb is. */}
+        <div className="border-t border-line px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:hidden">
+          <button type="button" className="btn btn-outline w-full" onClick={() => setPanel(null)}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

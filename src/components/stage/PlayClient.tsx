@@ -64,6 +64,30 @@ function Stage() {
     void send("");
   }, [api]);
 
+  // iPhones lay the keyboard over the page instead of shrinking it. While typing, the stage takes the
+  // height that is left, so the reply box sits right above the keyboard. (Android shrinks the page itself.)
+  const stageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = stageRef.current;
+    if (!vv || !el) return;
+    const fit = () => {
+      const typing = document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLInputElement;
+      if (typing && vv.height < window.innerHeight - 80) {
+        el.style.height = `${vv.height}px`;
+        window.scrollTo(0, 0);
+      } else {
+        el.style.height = "";
+      }
+    };
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+    };
+  }, []);
+
   const world = parseScene(s.session.scene);
   const time = timeOfDay(world.Time);
   const weather = weatherOf(world.Weather);
@@ -85,6 +109,7 @@ function Stage() {
     // With FGO frames the frame letterboxes the stage to 16:9, as in the game (see .vn-frame).
     <div className="vn-frame">
     <div
+      ref={stageRef}
       className="stage relative h-dvh w-full select-none overflow-hidden bg-black"
       style={{
         fontSize: `${16 * s.settings.uiScale}px`,

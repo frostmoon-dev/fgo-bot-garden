@@ -114,6 +114,16 @@
   }
 }
 
+/* Phones zoom the whole page into any text box smaller than 16px when it's tapped. Unlayered, so it wins
+   over text-sm and friends on touch screens only. */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
+
 @layer components {
   /* A card: a calm surface one step lighter than the page. */
   .card {

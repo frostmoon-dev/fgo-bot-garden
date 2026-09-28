@@ -297,7 +297,7 @@ export function MenuPanel() {
         />
 
         <section className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <Link href={`/characters/${session.mainCharacterId}`} className="underline underline-offset-4">
+          <Link href={`/characters/${session.mainCharacterId}`} className="inline-flex min-h-10 items-center underline underline-offset-4">
             Edit the main character
           </Link>
         </section>

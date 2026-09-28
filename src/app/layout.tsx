@@ -28,6 +28,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Bond Garden",
   description: "A personal Fate/Grand Order style visual novel chat",
+  // Opened from the home screen, the page runs full screen under a see-through status bar (see the safe-area padding).
+  appleWebApp: { capable: true, title: "Bond Garden", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -35,6 +37,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0f1724",
+  // The on-screen keyboard shrinks the page instead of covering it, so the reply box stays in view (Android).
+  interactiveWidget: "resizes-content",
 };
 
 async function appearance() {
