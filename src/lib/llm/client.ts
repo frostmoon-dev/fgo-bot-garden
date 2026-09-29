@@ -2,6 +2,18 @@ import "server-only";
 import { activeConnection, type LlmConnection } from "./connection";
 import { stripReasoning, stripReasoningStream } from "./reasoning";
 import { readSseDeltas } from "./sse";
+import {
+  COMPLETE_MS,
+  DEFAULT_BUDGET_MS,
+  isNetworkError,
+  isRetryableStatus,
+  parseRetryAfter,
+  RetryableError,
+  retryDelay,
+  sleep,
+  STREAM_IDLE_MS,
+  STREAM_START_MS,
+} from "./retry";
 import type { ChatMessage, ChatOptions } from "./types";
 
 export function endpoint(connection: LlmConnection, path: string): string {
@@ -79,9 +91,25 @@ export function wireMessages(messages: ChatMessage[], marks: boolean) {
 // Servers that refused stream_options, so it isn't sent to them again (until the server restarts).
 const noUsageOption = new Set<string>();
 
-async function post(options: ChatOptions, stream: boolean): Promise<Response> {
+// One try at a request. The answer must start within `timeoutMs` (the whole answer, when not streamed: call
+// release() once the body is read). A timeout, a dropped connection or a "try again later" status becomes a
+// RetryableError; anything else (a wrong key, a bad model id) fails at once.
+async function postOnce(
+  options: ChatOptions,
+  stream: boolean,
+  timeoutMs: number,
+): Promise<{ res: Response; release: () => void }> {
   const connection = options.connection ?? (await activeConnection());
   const url = endpoint(connection, "/chat/completions");
+  const attempt = new AbortController();
+  const onAbort = () => attempt.abort(options.signal!.reason);
+  if (options.signal?.aborted) throw options.signal.reason;
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  const timer = setTimeout(
+    () => attempt.abort(new RetryableError(`The model didn't answer within ${Math.round(timeoutMs / 1000)} seconds.`)),
+    timeoutMs,
+  );
+  const release = () => clearTimeout(timer);
   const send = (askUsage: boolean) =>
     fetch(url, {
       method: "POST",
@@ -102,28 +130,91 @@ async function post(options: ChatOptions, stream: boolean): Promise<Response> {
         ...(askUsage && { stream_options: { include_usage: true } }),
         stream,
       }),
-      signal: options.signal,
+      signal: attempt.signal,
     });
-  const askUsage = stream && !!options.onUsage && !noUsageOption.has(url);
-  let res = await send(askUsage);
-  // A server that doesn't know stream_options may reject the request: try once more without it.
-  if (askUsage && (res.status === 400 || res.status === 422)) {
-    await res.body?.cancel().catch(() => {});
-    const retry = await send(false);
-    if (retry.ok) noUsageOption.add(url);
-    res = retry;
+  try {
+    const askUsage = stream && !!options.onUsage && !noUsageOption.has(url);
+    let res = await send(askUsage);
+    // A server that doesn't know stream_options may reject the request: try once more without it.
+    if (askUsage && (res.status === 400 || res.status === 422)) {
+      await res.body?.cancel().catch(() => {});
+      const retry = await send(false);
+      if (retry.ok) noUsageOption.add(url);
+      res = retry;
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const message = describeFailure(res.status, text);
+      if (isRetryableStatus(res.status)) throw new RetryableError(message, parseRetryAfter(res.headers.get("retry-after")));
+      throw new Error(message);
+    }
+    // A stream has started: from here the reader watches for it going quiet.
+    if (stream) release();
+    return { res, release };
+  } catch (error) {
+    release();
+    throw asRetryable(error, attempt.signal, options.signal);
   }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(describeFailure(res.status, text));
-  }
-  return res;
 }
 
+// What a failed try means: the user stopped it (not retried), it timed out, or the connection broke.
+function asRetryable(error: unknown, attempt: AbortSignal, user?: AbortSignal): unknown {
+  if (user?.aborted) return error;
+  if (attempt.aborted && attempt.reason instanceof RetryableError) return attempt.reason;
+  if (isNetworkError(error)) return new RetryableError(`The connection to the provider broke (${(error as Error).message}).`);
+  return error;
+}
+
+// Runs a try again and again while it fails with a RetryableError, waiting a little longer each time,
+// until the deadline. Then the last error is reported, saying how often it was tried.
+async function withRetry<T>(options: ChatOptions, deadline: number, run: (timeLeft: number) => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run(Math.max(MIN_TRY_MS, deadline - Date.now()));
+    } catch (error) {
+      if (options.signal?.aborted || !(error instanceof RetryableError)) throw error;
+      if (options.retry === false) throw new Error(error.message);
+      const wait = retryDelay(attempt, error.retryAfter);
+      if (Date.now() + wait + MIN_TRY_MS > deadline) {
+        throw new Error(`${error.message} Tried ${attempt} time${attempt === 1 ? "" : "s"}, then gave up. Try again in a moment.`);
+      }
+      console.warn(`Model request failed, retry ${attempt} in ${wait} ms: ${error.message}`);
+      await sleep(wait, options.signal);
+    }
+  }
+}
+
+// A retry only starts if at least this much time is left for it.
+const MIN_TRY_MS = 10_000;
+
 export async function* streamChat(options: ChatOptions): AsyncGenerator<string> {
-  const res = await post(options, true);
-  if (!res.body) throw new Error("The provider sent an empty response.");
-  yield* stripReasoningStream(readSseDeltas(res.body, options.onUsage));
+  const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
+  let retriedEmpty = false;
+  for (let attempt = 1; ; attempt++) {
+    const { res } = await withRetry(options, deadline, (left) => postOnce(options, true, Math.min(STREAM_START_MS, left)));
+    if (!res.body) throw new Error("The provider sent an empty response.");
+    let yielded = false;
+    try {
+      for await (const delta of stripReasoningStream(readSseDeltas(res.body, options.onUsage, STREAM_IDLE_MS))) {
+        if (!delta) continue;
+        yielded = true;
+        yield delta;
+      }
+    } catch (error) {
+      // Once text has reached the reader it can't be taken back: what arrived is kept and the error reported.
+      const retryable = asRetryable(error, new AbortController().signal, options.signal);
+      if (yielded || !(retryable instanceof RetryableError) || options.retry === false) throw retryable;
+      const wait = retryDelay(attempt, retryable.retryAfter);
+      if (Date.now() + wait + MIN_TRY_MS > deadline) throw retryable;
+      console.warn(`Model stream failed before any text, retry ${attempt} in ${wait} ms: ${retryable.message}`);
+      await sleep(wait, options.signal);
+      continue;
+    }
+    // Overloaded free providers sometimes end the stream without a word: ask once more.
+    if (yielded || retriedEmpty || Date.now() + MIN_TRY_MS > deadline) return;
+    retriedEmpty = true;
+    console.warn("Model sent an empty reply, asking once more");
+  }
 }
 
 // Reasoning models (DeepSeek R1, Nemotron, Qwen and others on Nvidia, OpenRouter, local servers) think before
@@ -133,11 +224,20 @@ const THINKING_ROOM = 4;
 const MAX_HELPER_TOKENS = 4000;
 
 export async function completeChat(options: ChatOptions): Promise<string> {
+  const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   const once = async (maxTokens: number) => {
-    const res = await post({ ...options, maxTokens }, false);
-    const json = (await res.json()) as {
-      choices?: { message?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string }[];
-    };
+    const json = await withRetry(options, deadline, async (left) => {
+      const { res, release } = await postOnce({ ...options, maxTokens }, false, Math.min(COMPLETE_MS, left));
+      try {
+        return (await res.json()) as {
+          choices?: { message?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string }[];
+        };
+      } catch (error) {
+        throw asRetryable(error, new AbortController().signal, options.signal);
+      } finally {
+        release();
+      }
+    });
     const choice = json.choices?.[0];
     const raw = choice?.message?.content ?? "";
     const cutOff = choice?.finish_reason === "length" || /<think/i.test(raw) || !!choice?.message?.reasoning_content;

@@ -166,6 +166,8 @@ async function sceneBoxFor(premise: string, names: string[]): Promise<string> {
       ],
       temperature: 0.2,
       maxTokens: 220,
+      // The story is waiting to start; without an answer soon, the scene text itself is used.
+      deadline: Date.now() + 20_000,
     });
     const scene = cleanScene(text);
     if (scene) return scene;

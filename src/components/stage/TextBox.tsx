@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ColorDot } from "@/components/ui/ColorDot";
 import type { Beat } from "@/lib/stage";
 
@@ -21,6 +22,21 @@ function Dots() {
       <span className="pulse-dot size-1.5 rounded-full bg-current" />
       <span className="pulse-dot size-1.5 rounded-full bg-current [animation-delay:200ms]" />
       <span className="pulse-dot size-1.5 rounded-full bg-current [animation-delay:400ms]" />
+    </span>
+  );
+}
+
+// After a while with no reply, say what is going on, so a slow model doesn't look like a frozen screen.
+function SlowNote() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 15_000);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!slow) return null;
+  return (
+    <span className="mt-2 block text-[0.85em] not-italic text-muted">
+      Still waiting for the model. If it&apos;s busy or times out, it&apos;s asked again on its own.
     </span>
   );
 }
@@ -47,11 +63,13 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
         {waiting ? (
           <p className="pt-1 text-muted">
             <Dots />
+            <SlowNote />
           </p>
         ) : (
           <p className={`whitespace-pre-wrap ${narration ? "vn-narration" : ""}`}>
             {text}
             {pending && <Dots />}
+            {pending && <SlowNote />}
           </p>
         )}
         {onLog && (

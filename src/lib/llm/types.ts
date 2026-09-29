@@ -26,6 +26,11 @@ export interface ChatOptions {
   signal?: AbortSignal;
   // Called with the provider's token counts, when it reports them (streaming: at the end).
   onUsage?: (usage: ChatUsage) => void;
+  // Epoch ms by which the request, retries included, must have started answering. Failures that usually pass
+  // (timeouts, overload, rate limits, dropped connections) are retried until then (lib/llm/retry.ts).
+  deadline?: number;
+  // False: one try only, errors reported at once (the connection test).
+  retry?: boolean;
   // Groups requests that share a prompt start (one story), for providers that route caching by key.
   cacheKey?: string;
   // Defaults to the active connection (Connection page, else the LLM_* environment variables).

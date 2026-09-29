@@ -20,7 +20,11 @@ import { formerCast } from "@/lib/story/formerCast";
 import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
 
-export const maxDuration = 60;
+// Vercel's limit on every plan with fluid compute (the default). Slow models and retries need the room.
+export const maxDuration = 300;
+// Retries of a failed or stuck request may start until this long after the request came in, leaving the
+// rest of maxDuration for the reply itself to be written.
+const RETRY_WINDOW_MS = 200_000;
 
 const bodySchema = z.object({
   sessionId: z.string().min(1),
@@ -36,6 +40,7 @@ function jsonError(status: number, error: string) {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!(await isAuthed())) return jsonError(401, "Not signed in");
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "Invalid request");
@@ -211,6 +216,7 @@ export async function POST(request: Request) {
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,
     cacheKey: `bond-garden:${sessionId}`,
+    deadline: startedAt + RETRY_WINDOW_MS,
     onUsage: (u) => {
       usage = u;
     },

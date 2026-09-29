@@ -1,9 +1,27 @@
+import { RetryableError } from "./retry";
 import type { ChatUsage } from "./types";
 
 // Reads an OpenAI-compatible SSE stream and yields content deltas. Token counts, which providers send in a
 // chunk of their own when asked (stream_options.include_usage), go to onUsage.
-export async function* readSseDeltas(body: ReadableStream<Uint8Array>, onUsage?: (usage: ChatUsage) => void): AsyncGenerator<string> {
+// With idleMs, a stream that sends nothing at all for that long is cancelled with a RetryableError.
+export async function* readSseDeltas(
+  body: ReadableStream<Uint8Array>,
+  onUsage?: (usage: ChatUsage) => void,
+  idleMs?: number,
+): AsyncGenerator<string> {
   const reader = body.getReader();
+  const next = (): Promise<ReadableStreamReadResult<Uint8Array>> => {
+    if (!idleMs) return reader.read();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const quiet = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        // Reject first: cancelling ends the pending read, which would otherwise look like a normal end.
+        reject(new RetryableError(`The model stopped sending for ${Math.round(idleMs / 1000)} seconds.`));
+        reader.cancel().catch(() => {});
+      }, idleMs);
+    });
+    return Promise.race([reader.read(), quiet]).finally(() => clearTimeout(timer));
+  };
   const decoder = new TextDecoder();
   let buffer = "";
   const read = (line: string) => {
@@ -13,7 +31,7 @@ export async function* readSseDeltas(body: ReadableStream<Uint8Array>, onUsage?:
   };
   try {
     while (true) {
-      const { value, done } = await reader.read();
+      const { value, done } = await next();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       let newline: number;
@@ -28,7 +46,11 @@ export async function* readSseDeltas(body: ReadableStream<Uint8Array>, onUsage?:
     const tail = read(buffer.trim());
     if (tail) yield tail;
   } finally {
-    reader.releaseLock();
+    try {
+      reader.releaseLock();
+    } catch {
+      // A read cancelled by the idle timer may still be settling.
+    }
   }
 }
 
