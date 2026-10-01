@@ -27,12 +27,20 @@ export interface ConnectionView {
   envModel: string;
 }
 
-// The row is cached with its key still encrypted.
-const savedRow = unstable_cache(
-  async () => db.connection.findUnique({ where: { id: 1 }, select: { provider: true, baseUrl: true, model: true, apiKey: true } }),
-  ["connection"],
+// Slot 1 is the main model; slot 2 the backup, used when the main one fails even after retrying.
+export type ConnectionSlot = 1 | 2;
+
+// The rows are cached with their keys still encrypted.
+const savedRows = unstable_cache(
+  async () =>
+    db.connection.findMany({ where: { id: { in: [1, 2] } }, select: { id: true, provider: true, baseUrl: true, model: true, apiKey: true } }),
+  ["connections"],
   { tags: [TAGS.connection], revalidate: 600 },
 );
+
+async function savedRow(slot: ConnectionSlot) {
+  return (await savedRows()).find((r) => r.id === slot) ?? null;
+}
 
 function fromEnv(): LlmConnection | null {
   const baseUrl = process.env.LLM_BASE_URL?.trim();
@@ -54,27 +62,34 @@ export function sameOrigin(a: string, b: string): boolean {
   }
 }
 
-// The stored key for an address: the app's saved key, else the environment's. A key is only ever
-// sent to the server it was saved for, so switching provider never leaks it to another one.
-export async function keyFor(baseUrl: string): Promise<string> {
-  const row = await savedRow();
+// The stored key for an address: the slot's saved key, else (main model only) the environment's. A key is only
+// ever sent to the server it was saved for, so switching provider never leaks it to another one.
+export async function keyFor(baseUrl: string, slot: ConnectionSlot = 1): Promise<string> {
+  const row = await savedRow(slot);
   const saved = row?.apiKey && sameOrigin(row.baseUrl, baseUrl) ? decryptSecret(row.apiKey) : null;
   if (saved) return saved;
+  if (slot !== 1) return "";
   const env = fromEnv();
   return env?.apiKey && sameOrigin(env.baseUrl, baseUrl) ? env.apiKey : "";
 }
 
 export async function activeConnection(): Promise<LlmConnection> {
-  const row = await savedRow();
+  const row = await savedRow(1);
   if (row?.baseUrl && row.model) return { baseUrl: row.baseUrl, model: row.model, apiKey: await keyFor(row.baseUrl) };
   const env = fromEnv();
   if (!env) throw new NotConnectedError();
   return env;
 }
 
-export async function connectionView(): Promise<ConnectionView> {
-  const row = await savedRow();
-  const env = fromEnv();
+// The backup model, if one is saved.
+export async function backupConnection(): Promise<LlmConnection | null> {
+  const row = await savedRow(2);
+  return row?.baseUrl && row.model ? { baseUrl: row.baseUrl, model: row.model, apiKey: await keyFor(row.baseUrl, 2) } : null;
+}
+
+export async function connectionView(slot: ConnectionSlot = 1): Promise<ConnectionView> {
+  const row = await savedRow(slot);
+  const env = slot === 1 ? fromEnv() : null;
   const inApp = !!(row?.baseUrl && row.model);
   const baseUrl = row?.baseUrl || env?.baseUrl || "";
   const key = row?.apiKey ? decryptSecret(row.apiKey) : null;
@@ -83,7 +98,7 @@ export async function connectionView(): Promise<ConnectionView> {
     provider: row && isProviderId(row.provider) && row.baseUrl ? row.provider : providerFor(baseUrl),
     baseUrl,
     model: row?.model || env?.model || "",
-    hasKey: !!(await keyFor(baseUrl)),
+    hasKey: !!(await keyFor(baseUrl, slot)),
     keyHint: key ? keyHint(key) : env?.apiKey ? keyHint(env.apiKey) : "",
     keyUnreadable: !!row?.apiKey && key === null,
     envModel: env?.model ?? "",

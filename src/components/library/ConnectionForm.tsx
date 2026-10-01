@@ -20,7 +20,15 @@ function origin(url: string): string {
   }
 }
 
-function StatusLine({ view }: { view: ConnectionView }) {
+function StatusLine({ view, slot }: { view: ConnectionView; slot: 1 | 2 }) {
+  if (view.source === "none" && slot === 2) {
+    return (
+      <p className="rounded-lg border border-line bg-surface px-4 py-3 text-sm">
+        No backup model yet. It is optional: when the main model fails even after retrying, the reply comes from this one instead.
+        A free model on another provider works well here.
+      </p>
+    );
+  }
   if (view.source === "none") {
     return (
       <p className="rounded-lg border border-accent/40 bg-accent-soft px-4 py-3 text-sm">
@@ -32,7 +40,7 @@ function StatusLine({ view }: { view: ConnectionView }) {
     <p className="flex flex-wrap items-center gap-x-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm">
       <span className="size-2 rounded-full bg-[var(--success)]" aria-hidden />
       <span>
-        Connected to <strong>{PROVIDERS[view.provider].label}</strong> · <span className="font-mono">{view.model}</span>
+        {slot === 2 ? "Backup" : "Connected to"} <strong>{PROVIDERS[view.provider].label}</strong> · <span className="font-mono">{view.model}</span>
       </span>
       {view.source === "env" && <span className="text-muted">(from the server&apos;s LLM_* settings; saving here replaces them)</span>}
     </p>
@@ -142,7 +150,8 @@ function ModelBox({
   );
 }
 
-export function ConnectionForm({ view }: { view: ConnectionView }) {
+// slot 1 is the main model, slot 2 the backup.
+export function ConnectionForm({ view, slot = 1 }: { view: ConnectionView; slot?: 1 | 2 }) {
   const router = useRouter();
   const listId = useId();
   const [provider, setProvider] = useState<ProviderId>(view.provider);
@@ -160,7 +169,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
   // The saved key is tied to its address: another provider needs its own.
   const keyApplies = view.hasKey && !!origin(baseUrl) && origin(baseUrl) === origin(view.baseUrl);
   const needsKey = !keyApplies && !("keyOptional" in preset && preset.keyOptional) && !apiKey.trim();
-  const input = { provider, baseUrl, model, apiKey };
+  const input = { provider, baseUrl, model, apiKey, slot };
 
   const changed = () => {
     setSaved(false);
@@ -177,7 +186,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <StatusLine view={view} />
+      <StatusLine view={view} slot={slot} />
 
       <Label title="Provider" hint={preset.hint}>
         <select className="field" value={provider} onChange={(e) => pickProvider(e.target.value as ProviderId)}>
@@ -259,7 +268,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
               disabled={pending || !baseUrl.trim()}
               onClick={() =>
                 run(async () => {
-                  const list = unwrap(await listModels({ provider, baseUrl, apiKey }));
+                  const list = unwrap(await listModels({ provider, baseUrl, apiKey, slot }));
                   setModels(list);
                   if (!model.trim() && list.length === 1) setModel(list[0]);
                   setListOpen(list.length > 1);
@@ -297,7 +306,7 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
             })
           }
         >
-          {pending ? "Working…" : "Save connection"}
+          {pending ? "Working…" : slot === 2 ? "Save backup" : "Save connection"}
         </Button>
         <Button
           disabled={pending || !model.trim() || !baseUrl.trim() || needsKey}
@@ -316,33 +325,41 @@ export function ConnectionForm({ view }: { view: ConnectionView }) {
             <span className="text-[var(--success)]">Works</span> · answered in {(tested.ms / 1000).toFixed(1)} s{tested.reply && <> · “{tested.reply}”</>}
           </span>
         )}
-        {saved && !tested && <span className="text-sm text-muted">Saved. New replies use this model.</span>}
+        {saved && !tested && (
+          <span className="text-sm text-muted">
+            {slot === 2 ? "Saved. Replies switch to this model when the main one fails." : "Saved. New replies use this model."}
+          </span>
+        )}
       </div>
       <ErrorText error={error} />
 
       {view.source === "app" && (
         <section className="border-t border-line pt-8">
-          <h2 className="text-sm font-medium">Remove the saved connection</h2>
-          <p className="mt-1 text-sm text-muted">Deletes the address, model and API key saved here. Replies then use the server&apos;s LLM_* settings, if it has them.</p>
+          <h2 className="text-sm font-medium">{slot === 2 ? "Remove the backup model" : "Remove the saved connection"}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {slot === 2
+              ? "Deletes the backup's address, model and API key. Failed replies then show an error instead."
+              : "Deletes the address, model and API key saved here. Replies then use the server's LLM_* settings, if it has them."}
+          </p>
           <Button
             variant="danger"
             className="mt-3"
             disabled={pending}
             onClick={async () => {
               const ok = await askConfirm({
-                title: "Remove connection?",
+                title: slot === 2 ? "Remove the backup model?" : "Remove connection?",
                 body: `The ${PROVIDERS[view.provider].label} address, model and saved API key will be deleted. You'll need the key again to reconnect.`,
-                confirmLabel: "Remove connection",
+                confirmLabel: slot === 2 ? "Remove backup" : "Remove connection",
                 danger: true,
               });
               if (!ok) return;
               run(async () => {
-                unwrap(await removeConnection());
+                unwrap(await removeConnection(slot));
                 router.refresh();
               });
             }}
           >
-            Remove connection
+            {slot === 2 ? "Remove backup" : "Remove connection"}
           </Button>
         </section>
       )}

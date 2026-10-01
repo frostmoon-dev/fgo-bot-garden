@@ -26,12 +26,14 @@ const connectionSchema = z.object({
   model: z.string().trim().min(1, "Enter a model id, or load the list and pick one").max(200),
   // Empty keeps the saved key. The page never receives the saved key, so it can't send it back.
   apiKey: z.string().trim().max(500),
+  // 1: the main model. 2: the backup.
+  slot: z.union([z.literal(1), z.literal(2)]).default(1),
 });
-export type ConnectionInput = z.infer<typeof connectionSchema>;
+export type ConnectionInput = z.input<typeof connectionSchema>;
 
 async function resolve(input: ConnectionInput): Promise<LlmConnection> {
   const data = connectionSchema.parse(input);
-  return { baseUrl: data.baseUrl, model: data.model, apiKey: data.apiKey || (await keyFor(data.baseUrl)) };
+  return { baseUrl: data.baseUrl, model: data.model, apiKey: data.apiKey || (await keyFor(data.baseUrl, data.slot)) };
 }
 
 export async function saveConnection(input: ConnectionInput): Promise<ActionResult<void>> {
@@ -39,21 +41,22 @@ export async function saveConnection(input: ConnectionInput): Promise<ActionResu
     await requireAuth();
     const data = connectionSchema.parse(input);
     const baseUrl = data.baseUrl.replace(/\/+$/, "");
-    const before = await db.connection.findUnique({ where: { id: 1 }, select: { baseUrl: true } });
+    const id = data.slot;
+    const before = await db.connection.findUnique({ where: { id }, select: { baseUrl: true } });
     // A new key replaces the old one; a new server without a key drops the old one, which belongs elsewhere.
     const apiKey = data.apiKey ? encryptSecret(data.apiKey) : before && !sameOrigin(before.baseUrl, baseUrl) ? "" : undefined;
     const fields = { provider: data.provider, baseUrl, model: data.model, ...(apiKey !== undefined && { apiKey }) };
-    await db.connection.upsert({ where: { id: 1 }, update: fields, create: { id: 1, ...fields } });
+    await db.connection.upsert({ where: { id }, update: fields, create: { id, ...fields } });
     invalidate(TAGS.connection);
     revalidatePath("/", "layout");
   });
 }
 
-// Forgets the saved connection and key. The LLM_* environment variables apply again, if set.
-export async function removeConnection(): Promise<ActionResult<void>> {
+// Forgets a saved connection and its key. For the main model, the LLM_* environment variables apply again, if set.
+export async function removeConnection(slot: 1 | 2 = 1): Promise<ActionResult<void>> {
   return safe(async () => {
     await requireAuth();
-    await db.connection.deleteMany({});
+    await db.connection.deleteMany({ where: { id: z.union([z.literal(1), z.literal(2)]).parse(slot) } });
     invalidate(TAGS.connection);
     revalidatePath("/", "layout");
   });
@@ -83,7 +86,9 @@ export async function testConnection(input: ConnectionInput): Promise<ActionResu
       return { ms: Date.now() - started, reply: reply.trim().slice(0, 80) };
     } catch (error) {
       if (error instanceof Error && error.name === "TimeoutError") throw new Error("No answer within 30 seconds.");
-      if (error instanceof TypeError) throw new Error(`Couldn't reach ${new URL(connection.baseUrl).host}. Check the address.`);
+      if (error instanceof TypeError || (error instanceof Error && /connection to the provider broke/.test(error.message))) {
+        throw new Error(`Couldn't reach ${new URL(connection.baseUrl).host}. Check the address.`);
+      }
       throw error;
     }
   });

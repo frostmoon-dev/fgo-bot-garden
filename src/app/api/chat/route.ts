@@ -205,6 +205,8 @@ export async function POST(request: Request) {
 
   const user = persona.name;
   let usage: ChatUsage | null = null;
+  // Set before the first text arrives, so it can go in the response headers.
+  let usedBackup = false as boolean;
   const iterator = streamChat({
     messages: prompt.messages,
     temperature: settings.temperature,
@@ -217,6 +219,9 @@ export async function POST(request: Request) {
     signal: abort.signal,
     cacheKey: `bond-garden:${sessionId}`,
     deadline: startedAt + RETRY_WINDOW_MS,
+    onFallback: () => {
+      usedBackup = true;
+    },
     onUsage: (u) => {
       usage = u;
     },
@@ -347,6 +352,7 @@ export async function POST(request: Request) {
       "X-User-Message-Id": userMessageId ?? "",
       "X-Prompt-Tokens": String(prompt.tokens),
       "X-Prompt-Breakdown": JSON.stringify(breakdown),
+      ...(usedBackup && { "X-Backup-Model": "1" }),
     },
   });
 }

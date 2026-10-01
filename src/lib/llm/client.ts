@@ -1,5 +1,5 @@
 import "server-only";
-import { activeConnection, type LlmConnection } from "./connection";
+import { activeConnection, backupConnection, type LlmConnection } from "./connection";
 import { stripReasoning, stripReasoningStream } from "./reasoning";
 import { readSseDeltas } from "./sse";
 import {
@@ -187,7 +187,7 @@ async function withRetry<T>(options: ChatOptions, deadline: number, run: (timeLe
 // A retry only starts if at least this much time is left for it.
 const MIN_TRY_MS = 10_000;
 
-export async function* streamChat(options: ChatOptions): AsyncGenerator<string> {
+async function* streamFrom(options: ChatOptions): AsyncGenerator<string> {
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   let retriedEmpty = false;
   for (let attempt = 1; ; attempt++) {
@@ -217,13 +217,42 @@ export async function* streamChat(options: ChatOptions): AsyncGenerator<string> 
   }
 }
 
+// The main model gets this share of the time when a backup is saved; the backup gets the rest.
+const MAIN_SHARE = 0.6;
+
+// The backup model, when the request uses the main one and a backup is saved. Then onFallback is told, so
+// the reader can be shown which model answered.
+async function backupFor(options: ChatOptions): Promise<LlmConnection | null> {
+  return options.connection ? null : backupConnection().catch(() => null);
+}
+
+export async function* streamChat(options: ChatOptions): AsyncGenerator<string> {
+  const backup = await backupFor(options);
+  if (!backup) return yield* streamFrom(options);
+  const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
+  let yielded = false;
+  try {
+    for await (const delta of streamFrom({ ...options, deadline: Date.now() + (deadline - Date.now()) * MAIN_SHARE })) {
+      yielded = true;
+      yield delta;
+    }
+    return;
+  } catch (error) {
+    // Text already shown can't be continued by another model; a stop from the reader is not a failure.
+    if (yielded || options.signal?.aborted) throw error;
+    console.warn(`Main model failed, using the backup: ${error instanceof Error ? error.message : error}`);
+    options.onFallback?.(error instanceof Error ? error.message : String(error));
+  }
+  yield* streamFrom({ ...options, connection: backup, deadline });
+}
+
 // Reasoning models (DeepSeek R1, Nemotron, Qwen and others on Nvidia, OpenRouter, local servers) think before
 // they answer. With the small limits the helper requests use, the thinking can use up every token, leaving
 // no answer. Then the request is sent once more with room to finish.
 const THINKING_ROOM = 4;
 const MAX_HELPER_TOKENS = 4000;
 
-export async function completeChat(options: ChatOptions): Promise<string> {
+async function completeFrom(options: ChatOptions): Promise<string> {
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   const once = async (maxTokens: number) => {
     const json = await withRetry(options, deadline, async (left) => {
@@ -246,4 +275,18 @@ export async function completeChat(options: ChatOptions): Promise<string> {
   const first = await once(options.maxTokens);
   if (first.text.trim() || !first.cutOff || options.maxTokens >= MAX_HELPER_TOKENS) return first.text;
   return (await once(Math.min(MAX_HELPER_TOKENS, options.maxTokens * THINKING_ROOM))).text;
+}
+
+export async function completeChat(options: ChatOptions): Promise<string> {
+  const backup = await backupFor(options);
+  if (!backup) return completeFrom(options);
+  const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
+  try {
+    return await completeFrom({ ...options, deadline: Date.now() + (deadline - Date.now()) * MAIN_SHARE });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    console.warn(`Main model failed, using the backup: ${error instanceof Error ? error.message : error}`);
+    options.onFallback?.(error instanceof Error ? error.message : String(error));
+    return completeFrom({ ...options, connection: backup, deadline });
+  }
 }

@@ -29,6 +29,8 @@ export interface ChatOptions {
   // Epoch ms by which the request, retries included, must have started answering. Failures that usually pass
   // (timeouts, overload, rate limits, dropped connections) are retried until then (lib/llm/retry.ts).
   deadline?: number;
+  // Called when the main model failed and the backup model is answering instead.
+  onFallback?: (reason: string) => void;
   // False: one try only, errors reported at once (the connection test).
   retry?: boolean;
   // Groups requests that share a prompt start (one story), for providers that route caching by key.

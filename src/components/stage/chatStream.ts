@@ -16,6 +16,8 @@ export interface StreamHandlers {
     userMessageId: string | null;
     promptTokens: number;
     breakdown: PromptBreakdown | null;
+    // The main model failed and the backup model wrote this reply.
+    backup: boolean;
   }) => void;
   onLine: (line: string) => void;
   // The provider's token counts, when it reports them, after the last line.
@@ -51,6 +53,7 @@ export async function runChat(
     userMessageId: res.headers.get("X-User-Message-Id") || null,
     promptTokens: Number(res.headers.get("X-Prompt-Tokens") ?? 0),
     breakdown: parseBreakdown(res.headers.get("X-Prompt-Breakdown")),
+    backup: res.headers.get("X-Backup-Model") === "1",
   });
 
   const reader = res.body.getReader();

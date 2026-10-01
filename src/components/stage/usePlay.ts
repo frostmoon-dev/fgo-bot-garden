@@ -203,6 +203,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         {
           onStart: (info) => {
             set({ promptTokens: info.promptTokens, promptBreakdown: info.breakdown, lastUsage: null });
+            if (info.backup) showToast("The main model didn't answer, so the backup model wrote this reply.");
             messageId = info.messageId;
             messageIndex = target(info).messageIndex;
           },
