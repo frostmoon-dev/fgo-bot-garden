@@ -21,8 +21,9 @@ const backgroundSchema = z.object({
   label: z.string().max(120),
   imageUrl: z.string().trim().min(1).max(2000),
   description: z.string().max(1000),
+  musicUrl: z.string().trim().max(2000).default(""),
 });
-export type BackgroundInput = z.infer<typeof backgroundSchema>;
+export type BackgroundInput = z.input<typeof backgroundSchema>;
 
 export async function saveBackground(id: string | null, input: BackgroundInput): Promise<ActionResult<void>> {
   return safe(async () => {
@@ -107,6 +108,7 @@ const settingsSchema = z.object({
   autoSpeed: z.number().int().min(200).max(10000),
   uiScale: z.number().min(0.7).max(1.6),
   windowOpacity: z.number().min(0.3).max(1),
+  musicVolume: z.number().min(0).max(1),
   loreScanDepth: z.number().int().min(1).max(20),
   contextBudget: z.number().int().min(1000).max(100000),
   keepRecent: z.number().int().min(2).max(100),

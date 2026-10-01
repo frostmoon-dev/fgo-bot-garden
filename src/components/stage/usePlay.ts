@@ -54,6 +54,8 @@ interface PlayState extends PlayData {
   auto: boolean;
   skip: boolean;
   hideUi: boolean;
+  // Background music switched off with V (or the Menu). Remembered in this browser.
+  musicMuted: boolean;
   panel: Panel;
   error: string | null;
   toast: Toast | null;
@@ -91,10 +93,21 @@ interface PlayState extends PlayData {
   setAuto: (on: boolean) => void;
   setSkip: (on: boolean) => void;
   setHideUi: (on: boolean) => void;
+  toggleMusic: () => void;
   setError: (error: string | null) => void;
   showToast: (text: string) => void;
   acceptCastSuggestion: () => void;
   declineCastSuggestion: () => void;
+}
+
+const MUSIC_MUTED_KEY = "music-muted";
+
+function readMusicMuted(): boolean {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(MUSIC_MUTED_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 // "BB", "BB and Meltryllis", "BB, Meltryllis and Kiara".
@@ -241,6 +254,7 @@ export function createPlayStore(data: PlayData): PlayStore {
     auto: false,
     skip: false,
     hideUi: false,
+    musicMuted: readMusicMuted(),
     panel: null,
     error: null,
     toast: null,
@@ -508,6 +522,16 @@ export function createPlayStore(data: PlayData): PlayStore {
     setAuto: (on) => set({ auto: on, skip: false }),
     setSkip: (on) => set({ skip: on, auto: false }),
     setHideUi: (on) => set({ hideUi: on, auto: false, skip: false }),
+    toggleMusic: () => {
+      const musicMuted = !get().musicMuted;
+      set({ musicMuted });
+      try {
+        localStorage.setItem(MUSIC_MUTED_KEY, musicMuted ? "1" : "");
+      } catch {
+        // Private windows can block storage; the choice then lasts for this visit.
+      }
+      showToast(musicMuted ? "Music off. Press V to turn it back on." : "Music on.");
+    },
     setError: (error) => set({ error }),
     showToast,
   };

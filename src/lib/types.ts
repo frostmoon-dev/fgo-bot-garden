@@ -48,6 +48,8 @@ export interface BackgroundView {
   label: string;
   imageUrl: string;
   description: string;
+  // A looping track for this background, or "".
+  musicUrl: string;
 }
 
 export interface PersonaView {
@@ -64,6 +66,8 @@ export interface SettingsView {
   autoSpeed: number;
   uiScale: number;
   windowOpacity: number;
+  // Background music loudness, 0 to 1 (0 is off).
+  musicVolume: number;
   loreScanDepth: number;
   contextBudget: number;
   keepRecent: number;

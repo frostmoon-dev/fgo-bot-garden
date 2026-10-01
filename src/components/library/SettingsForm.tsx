@@ -22,6 +22,7 @@ type NumKey =
   | "autoSpeed"
   | "uiScale"
   | "windowOpacity"
+  | "musicVolume"
   | "loreScanDepth"
   | "contextBudget"
   | "keepRecent";
@@ -47,6 +48,15 @@ const READING: Slider[] = [
     title: "Window opacity",
     hint: "How solid the message window is (FGO frames). Lower lets the scene show through, as in the game; the text keeps a shadow so it stays readable.",
     min: 0.4,
+    max: 1,
+    step: 0.05,
+    percent: true,
+  },
+  {
+    key: "musicVolume",
+    title: "Music volume",
+    hint: "Background music set on the Backgrounds page. 0% turns it off; V mutes it in a story.",
+    min: 0,
     max: 1,
     step: 0.05,
     percent: true,

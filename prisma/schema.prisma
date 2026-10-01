@@ -107,6 +107,8 @@ model Background {
   label       String @default("")
   imageUrl    String
   description String @default("")
+  // A looping track that plays while this background is on screen. Empty for silence.
+  musicUrl    String @default("")
 }
 
 model Persona {
@@ -215,6 +217,8 @@ model Settings {
   uiScale       Float   @default(1)
   // How opaque the story screen's message window is (FGO frames): 1 is solid.
   windowOpacity Float   @default(0.8)
+  // How loud background music plays, 0 to 1. 0 turns it off.
+  musicVolume   Float   @default(0.5)
   loreScanDepth Int     @default(4)
   contextBudget Int     @default(6000)
   keepRecent    Int     @default(12)

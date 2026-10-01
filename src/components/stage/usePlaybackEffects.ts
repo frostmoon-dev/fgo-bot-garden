@@ -12,6 +12,7 @@ export const SHORTCUTS: [string, string][] = [
   ["L", "Log (backlog)"],
   ["M", "Menu"],
   ["R", "Replay the latest reply from its first line"],
+  ["V", "Music on/off"],
   ["?", "This list"],
   ["Ctrl+I", "In the reply box: mark text as an action"],
   ["Esc", "Close a panel"],
@@ -101,6 +102,7 @@ export function usePlaybackEffects() {
         l: () => s.setPanel("log"),
         m: () => s.setPanel("menu"),
         r: () => s.replay(),
+        v: () => s.toggleMusic(),
         "?": () => s.setPanel("help"),
       };
       const action = actions[e.key.toLowerCase()];

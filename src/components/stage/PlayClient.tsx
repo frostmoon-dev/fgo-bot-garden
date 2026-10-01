@@ -9,6 +9,7 @@ import { CharacterLayer } from "./CharacterLayer";
 import { ChoiceList } from "./ChoiceList";
 import { DevOverlay } from "./DevOverlay";
 import { MenuPanel } from "./MenuPanel";
+import { MusicPlayer } from "./MusicPlayer";
 import { ReplyBar } from "./ReplyBar";
 import { SavePanel } from "./SavePanel";
 import { SceneBox } from "./SceneBox";
@@ -45,6 +46,7 @@ function Stage() {
   const lastMessage = s.messages.at(-1);
   const onLatest = !!beat && beat.messageId === lastMessage?.id && lastMessage.role === "assistant";
   const bgUrl = s.backgrounds.find((b) => b.key === stage.backgroundKey)?.imageUrl ?? null;
+  const musicUrl = s.musicMuted ? null : s.backgrounds.find((b) => b.key === stage.backgroundKey)?.musicUrl || null;
   const speakerId = shownBeat?.kind === "dialogue" ? shownBeat.speakerId : null;
   const pending = !!shownBeat && shownBeat.role === "user" && atEnd && s.streaming;
   // On a crowded phone screen only one character shows: the speaker, or during narration the last one who spoke.
@@ -129,6 +131,7 @@ function Stage() {
       <div ref={fadeRef} aria-hidden className="pointer-events-none absolute inset-0 z-30 bg-black opacity-0" />
 
       <PlaceCard />
+      <MusicPlayer url={musicUrl} volume={s.settings.musicVolume} />
 
       {!s.hideUi && (
         // One column, so the scene box at the top and the window, choices and errors at the bottom

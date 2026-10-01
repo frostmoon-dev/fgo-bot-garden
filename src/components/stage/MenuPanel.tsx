@@ -180,6 +180,9 @@ export function MenuPanel() {
   const patchSession = usePlay((s) => s.patchSession);
   const setPanel = usePlay((s) => s.setPanel);
   const setHideUi = usePlay((s) => s.setHideUi);
+  const musicMuted = usePlay((s) => s.musicMuted);
+  const toggleMusic = usePlay((s) => s.toggleMusic);
+  const hasMusic = usePlay((s) => s.backgrounds.some((b) => b.musicUrl));
   const [title, setTitle] = useState(session.title);
 
   return (
@@ -209,6 +212,11 @@ export function MenuPanel() {
           <button type="button" className="btn btn-outline" onClick={() => setPanel("help")}>
             Controls
           </button>
+          {hasMusic && (
+            <button type="button" className="btn btn-outline" aria-pressed={!musicMuted} onClick={toggleMusic} title="V">
+              {musicMuted ? "Music on" : "Music off"}
+            </button>
+          )}
         </section>
 
         <AscensionPicker />
