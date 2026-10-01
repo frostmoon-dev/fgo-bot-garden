@@ -442,6 +442,16 @@
   }
 }
 
+/* In the scene but not on screen (three on stage: two are shown). It fades out, and back in when it returns. */
+.sprite-slot[data-offstage="true"] {
+  visibility: hidden;
+  transition: visibility 0s 300ms;
+}
+
+.sprite-slot[data-offstage="true"] .sprite-body {
+  opacity: 0;
+}
+
 .sprite-slot[data-dim="true"] {
   filter: brightness(0.6) saturate(0.85);
 }

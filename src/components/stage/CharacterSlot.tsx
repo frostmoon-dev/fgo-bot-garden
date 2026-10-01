@@ -23,6 +23,7 @@ function Sprite({
   dim,
   front,
   solo,
+  offstage,
   leaving,
   moveKey,
 }: {
@@ -30,6 +31,7 @@ function Sprite({
   position: Position;
   dim: boolean;
   solo: boolean;
+  offstage: boolean;
   front: boolean;
   leaving: boolean;
   moveKey: string | null;
@@ -55,6 +57,7 @@ function Sprite({
       data-dim={dim}
       data-front={front}
       data-solo={solo}
+      data-offstage={offstage}
       // Where the face is across the image (0–1): on a phone the face, not the image, is centred.
       // And how far down (0–1): on wide screens the face, not the image, decides the height (see .sprite-slot).
       style={{
@@ -77,12 +80,15 @@ export function CharacterSlot({
   dim,
   front,
   solo,
+  offstage = false,
   moveKey,
 }: {
   position: Position;
   content: SlotContent | null;
   dim: boolean;
   solo: boolean;
+  // Present in the scene but not shown: with three on stage, only two are on screen at once.
+  offstage?: boolean;
   // The speaker stands in front, so a neighbour's wide sprite never covers them.
   front: boolean;
   moveKey: string | null;
@@ -92,7 +98,7 @@ export function CharacterSlot({
   return (
     <>
       {layers.map((l) => (
-        <Sprite key={l.key} content={l.value} position={position} dim={dim && !l.leaving} front={front && !l.leaving} solo={solo && !l.leaving} leaving={l.leaving} moveKey={l.leaving ? null : moveKey} />
+        <Sprite key={l.key} content={l.value} position={position} dim={dim && !l.leaving} front={front && !l.leaving} solo={solo && !l.leaving} offstage={offstage && !l.leaving} leaving={l.leaving} moveKey={l.leaving ? null : moveKey} />
       ))}
     </>
   );

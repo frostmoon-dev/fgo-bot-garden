@@ -15,6 +15,7 @@ export const CharacterLayer = memo(function CharacterLayer({
   speakerId,
   focusId,
   subjectId = null,
+  partnerId = null,
 }: {
   stage: StageState;
   characters: Record<string, CharacterView>;
@@ -24,9 +25,22 @@ export const CharacterLayer = memo(function CharacterLayer({
   focusId: string | null;
   // Who the narration on screen is about: they step to the front while nobody speaks.
   subjectId?: string | null;
+  // Who the focus last exchanged lines with: with three on stage, the two of them are the ones shown.
+  partnerId?: string | null;
 }) {
   const someoneSpeaks = !!speakerId && POSITIONS.some((p) => stage.slots[p]?.characterId === speakerId);
-  const occupied = POSITIONS.filter((p) => stage.slots[p]);
+  const all = POSITIONS.filter((p) => stage.slots[p]);
+  // Three on stage don't fit side by side (wide sprites cover each other), so two are shown, as FGO frames
+  // a scene: the focus and whoever they last exchanged lines with. The third steps out of view, and swaps
+  // back in when they speak or the narration turns to them.
+  const at = (id: string | null) => all.find((p) => stage.slots[p]!.characterId === id);
+  const pair = new Set<string>();
+  if (all.length >= 3) {
+    const lead = at(focusId) ?? (stage.slots.center ? "center" : all[0]);
+    pair.add(lead);
+    pair.add(at(partnerId) && at(partnerId) !== lead ? at(partnerId)! : all.find((p) => p !== lead)!);
+  }
+  const occupied = all.length >= 3 ? all.filter((p) => pair.has(p)) : all;
   // On a phone (portrait), two or more don't fit at the stage's sprite size: only one shows (CSS, data-count).
   const shared = occupied.length >= 2;
   // Nobody has spoken yet: the one in the middle, else the first on stage.
@@ -45,7 +59,8 @@ export const CharacterLayer = memo(function CharacterLayer({
           <CharacterSlot
             key={position}
             // Two share the screen half and half, whichever slots the story put them in.
-            position={occupied.length === 2 && slot ? (occupied[0] === position ? "left" : "right") : position}
+            position={occupied.length === 2 && slot && occupied.includes(position) ? (occupied[0] === position ? "left" : "right") : position}
+            offstage={!!slot && !occupied.includes(position)}
             content={content}
             solo={shared && !!slot && slot.characterId === solo}
             dim={someoneSpeaks && !speaking}

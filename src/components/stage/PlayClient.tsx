@@ -64,6 +64,16 @@ function Stage() {
   for (let i = Math.min(s.cursor, beats.length - 1); !focusId && i >= 0; i--) {
     if (beats[i].kind === "dialogue" && onStage(beats[i].speakerId)) focusId = beats[i].speakerId;
   }
+  // Whoever was active before the focus (spoke, or the narration was about them): with three on stage,
+  // the focus and this partner are the two shown.
+  const activeIn = (b: (typeof beats)[number]) =>
+    b.kind === "dialogue" ? b.speakerId : b.kind === "narration" ? (b.thinker?.id ?? narrationSubject(b.text, present)) : null;
+  let partnerId: string | null = null;
+  // The last 60 lines are plenty; the stage redraws on every typed letter, so it doesn't read the whole story.
+  for (let i = Math.min(s.cursor, beats.length - 1), stop = i - 60; !partnerId && i >= 0 && i > stop; i--) {
+    const id = activeIn(beats[i]);
+    if (id && id !== focusId && onStage(id)) partnerId = id;
+  }
 
   // A story from "Write a scene" has no greeting: its first reply opens it, as soon as the stage is up.
   const api = usePlayApi();
@@ -132,7 +142,7 @@ function Stage() {
       <div ref={sceneRef} className="absolute inset-0">
         <BackgroundLayer url={bgUrl} />
         <TimeTint time={time} layer="bg" />
-        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} subjectId={subjectId} />
+        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} subjectId={subjectId} partnerId={partnerId} />
         <WeatherLayer kind={weather} />
         <TimeTint time={time} layer="all" />
       </div>
