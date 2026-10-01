@@ -42,6 +42,15 @@ export async function saveConnection(input: ConnectionInput): Promise<ActionResu
     const data = connectionSchema.parse(input);
     const baseUrl = data.baseUrl.replace(/\/+$/, "");
     const id = data.slot;
+    // The backup is only ever used when the main model has already failed, so a broken one would turn one
+    // error into two. It is tried once before it is saved, and not saved if it doesn't answer.
+    if (id === 2) {
+      try {
+        await tryConnection(await resolve(input));
+      } catch (error) {
+        throw new Error(`The backup wasn't saved, because it didn't answer a test request: ${error instanceof Error ? error.message : error}`);
+      }
+    }
     const before = await db.connection.findUnique({ where: { id }, select: { baseUrl: true } });
     // A new key replaces the old one; a new server without a key drops the old one, which belongs elsewhere.
     const apiKey = data.apiKey ? encryptSecret(data.apiKey) : before && !sameOrigin(before.baseUrl, baseUrl) ? "" : undefined;
@@ -71,28 +80,32 @@ export interface TestResult {
 export async function testConnection(input: ConnectionInput): Promise<ActionResult<TestResult>> {
   return safe(async () => {
     await requireAuth();
-    const connection = await resolve(input);
-    const started = Date.now();
-    try {
-      const reply = await completeChat({
-        connection,
-        messages: [{ role: "user", content: "Reply with one short friendly word." }],
-        temperature: 0,
-        maxTokens: 16,
-        signal: AbortSignal.timeout(30_000),
-        // A test reports what is wrong right away instead of retrying.
-        retry: false,
-        purpose: "test",
-      });
-      return { ms: Date.now() - started, reply: reply.trim().slice(0, 80) };
-    } catch (error) {
-      if (error instanceof Error && error.name === "TimeoutError") throw new Error("No answer within 30 seconds.");
-      if (error instanceof TypeError || (error instanceof Error && /connection to the provider broke/.test(error.message))) {
-        throw new Error(`Couldn't reach ${new URL(connection.baseUrl).host}. Check the address.`);
-      }
-      throw error;
-    }
+    return tryConnection(await resolve(input));
   });
+}
+
+// Sends "reply with one word" once, without retries, and says plainly what went wrong.
+async function tryConnection(connection: LlmConnection): Promise<TestResult> {
+  const started = Date.now();
+  try {
+    const reply = await completeChat({
+      connection,
+      messages: [{ role: "user", content: "Reply with one short friendly word." }],
+      temperature: 0,
+      maxTokens: 16,
+      signal: AbortSignal.timeout(30_000),
+      // A test reports what is wrong right away instead of retrying.
+      retry: false,
+      purpose: "test",
+    });
+    return { ms: Date.now() - started, reply: reply.trim().slice(0, 80) };
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") throw new Error("No answer within 30 seconds.");
+    if (error instanceof TypeError || (error instanceof Error && /connection to the provider broke/.test(error.message))) {
+      throw new Error(`Couldn't reach ${new URL(connection.baseUrl).host}. Check the address.`);
+    }
+    throw error;
+  }
 }
 
 // The provider's model list (GET /models), for the model picker.

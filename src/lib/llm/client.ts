@@ -238,6 +238,7 @@ export async function* streamChat(options: ChatOptions): AsyncGenerator<string> 
   if (!backup) return yield* streamFrom(options);
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   let yielded = false;
+  let mainError = "";
   try {
     for await (const delta of streamFrom({ ...options, deadline: Date.now() + (deadline - Date.now()) * MAIN_SHARE })) {
       yielded = true;
@@ -247,10 +248,25 @@ export async function* streamChat(options: ChatOptions): AsyncGenerator<string> 
   } catch (error) {
     // Text already shown can't be continued by another model; a stop from the reader is not a failure.
     if (yielded || options.signal?.aborted) throw error;
-    console.warn(`Main model failed, using the backup: ${error instanceof Error ? error.message : error}`);
-    options.onFallback?.(error instanceof Error ? error.message : String(error));
+    mainError = error instanceof Error ? error.message : String(error);
+    console.warn(`Main model failed, using the backup: ${mainError}`);
+    options.onFallback?.(mainError);
   }
-  yield* streamFrom({ ...options, connection: backup, deadline });
+  let backupYielded = false;
+  try {
+    for await (const delta of streamFrom({ ...options, connection: backup, deadline })) {
+      backupYielded = true;
+      yield delta;
+    }
+  } catch (error) {
+    if (backupYielded || options.signal?.aborted) throw error;
+    throw bothFailed(mainError, error);
+  }
+}
+
+// Both models failed: say both, so the main model's problem isn't hidden behind the backup's.
+function bothFailed(main: string, backup: unknown): Error {
+  return new Error(`The main model failed: ${main} The backup model failed too: ${backup instanceof Error ? backup.message : String(backup)}`);
 }
 
 // Reasoning models (DeepSeek R1, Nemotron, Qwen and others on Nvidia, OpenRouter, local servers) think before
@@ -295,8 +311,14 @@ export async function completeChat(options: ChatOptions): Promise<string> {
     return await completeFrom({ ...options, deadline: Date.now() + (deadline - Date.now()) * MAIN_SHARE });
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    console.warn(`Main model failed, using the backup: ${error instanceof Error ? error.message : error}`);
-    options.onFallback?.(error instanceof Error ? error.message : String(error));
-    return completeFrom({ ...options, connection: backup, deadline });
+    const mainError = error instanceof Error ? error.message : String(error);
+    console.warn(`Main model failed, using the backup: ${mainError}`);
+    options.onFallback?.(mainError);
+    try {
+      return await completeFrom({ ...options, connection: backup, deadline });
+    } catch (backupError) {
+      if (options.signal?.aborted) throw backupError;
+      throw bothFailed(mainError, backupError);
+    }
   }
 }

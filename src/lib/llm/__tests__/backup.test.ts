@@ -50,4 +50,14 @@ describe("backup model", () => {
     expect(await completeChat({ messages: [], temperature: 1, maxTokens: 10 })).toBe("Main");
     expect(urls).toHaveLength(1);
   });
+  it("names both problems when the backup fails too", async () => {
+    stub((url) => (url.startsWith(main.baseUrl) ? new Response("no credits", { status: 402 }) : new Response("bad key", { status: 401 })));
+    await expect(completeChat({ messages: [], temperature: 1, maxTokens: 10 })).rejects.toThrow(
+      /main model failed: .*out of credits.*backup model failed too: .*API key was refused/,
+    );
+    const read = async () => {
+      for await (const d of streamChat({ messages: [], temperature: 1, maxTokens: 10 })) void d;
+    };
+    await expect(read()).rejects.toThrow(/main model failed: .*backup model failed too/);
+  });
 });

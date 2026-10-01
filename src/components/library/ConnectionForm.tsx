@@ -25,7 +25,8 @@ function StatusLine({ view, slot }: { view: ConnectionView; slot: 1 | 2 }) {
     return (
       <p className="rounded-lg border border-line bg-surface px-4 py-3 text-sm">
         No backup model yet. It is optional: when the main model fails even after retrying, the reply comes from this one instead.
-        A free model on another provider works well here.
+        A free model on another provider works well here. Saving sends one tiny test request first, and a backup that doesn&apos;t answer isn&apos;t
+        saved.
       </p>
     );
   }
@@ -306,7 +307,7 @@ export function ConnectionForm({ view, slot = 1 }: { view: ConnectionView; slot?
             })
           }
         >
-          {pending ? "Working…" : slot === 2 ? "Save backup" : "Save connection"}
+          {pending ? (slot === 2 ? "Testing and saving…" : "Working…") : slot === 2 ? "Test and save backup" : "Save connection"}
         </Button>
         <Button
           disabled={pending || !model.trim() || !baseUrl.trim() || needsKey}
