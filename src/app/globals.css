@@ -406,6 +406,19 @@
   left: 50%;
 }
 
+/* Wide screens: sized as in FGO's story screen. The sprite is drawn larger than the screen is tall, and
+   placed by its face: the face sits at about a third of the way down, and the lower body goes behind the
+   message window and past the bottom edge. A sprite whose face is drawn low on its sheet would leave a gap
+   under it that way, so it never rises above the bottom edge. */
+@container (aspect-ratio > 1/1) {
+  .sprite-slot {
+    --sprite-h: min(130cqh, calc(150cqw / var(--ar)));
+    width: calc(var(--sprite-h) * var(--ar));
+    bottom: auto;
+    top: max(calc(100cqh - var(--sprite-h)), calc(32cqh - var(--face-y, 0.3) * var(--sprite-h)));
+  }
+}
+
 /* Wide screens: two share it half and half (CharacterLayer puts them in left and right). */
 @container (aspect-ratio > 1/1) {
   [data-count="2"] > .sprite-slot[data-pos="left"] {

@@ -56,9 +56,11 @@ function Sprite({
       data-front={front}
       data-solo={solo}
       // Where the face is across the image (0–1): on a phone the face, not the image, is centred.
+      // And how far down (0–1): on wide screens the face, not the image, decides the height (see .sprite-slot).
       style={{
         ["--ar" as string]: spriteAspect(set),
         ["--face-x" as string]: faceX,
+        ["--face-y" as string]: Math.min(0.6, Math.max(0.05, (set.faceY + set.cellSize / 2) / set.bodyHeight)),
       }}
     >
       <div ref={body} className="sprite-body">
