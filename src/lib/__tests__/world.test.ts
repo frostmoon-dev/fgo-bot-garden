@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { availableExpressions, pickAscension, resolveProfile, type AscensionProfile } from "../ascension";
 import { bondLevel, bondProgress, bondSpeakers } from "../bond";
-import { cleanScene, normalizeScene, parseScene, timeOfDay, weatherOf } from "../scene";
+import { cleanScene, normalizeScene, paintedTime, parseScene, timeOfDay, weatherOf } from "../scene";
 import { parseChoices } from "../story/choices";
 import { asAction, splitUserText, userTextForPrompt } from "../userInput";
 
@@ -59,6 +59,18 @@ describe("scene box", () => {
     expect(weatherOf("Heavy snow")).toBe("snow");
     expect(weatherOf("indoors (snowing outside)")).toBeNull();
     expect(weatherOf("Thunderstorm")).toBe("storm");
+  });
+
+  it("knows which backgrounds already show their time of day", () => {
+    expect(paintedTime("forest_night")).toBe("night");
+    expect(paintedTime("my_room_night")).toBe("night");
+    expect(paintedTime("statue_shore_sunset")).toBe("dusk");
+    expect(paintedTime("forest_evening")).toBe("dusk");
+    expect(paintedTime("snowfield_dawn")).toBe("dawn");
+    expect(paintedTime("beach_day")).toBe("day");
+    expect(paintedTime("control_room")).toBeNull();
+    expect(paintedTime("nightmare_hall")).toBeNull();
+    expect(paintedTime(null)).toBeNull();
   });
 });
 

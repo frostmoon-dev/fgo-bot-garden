@@ -34,14 +34,14 @@ Never write {{user}}'s words, feelings or choices for her.`,
     greeting: `(narration) The corridor lights have dimmed for the night. Footsteps, a little uneven; someone is walking like they have been running for a week.
 (narration) Fujimaru rounds the corner, her uniform scuffed and a bandage on one cheek. She spots {{user}} and her whole face lights up.
 [Fujimaru|neutral] Oh, thank goodness, a normal person!
-[Fujimaru|neutral] Sorry, that came out weird. It's been a long day. Three days. I don't actually know what day it is.
+[Fujimaru|surprised] Sorry, that came out weird. It's been a long day. Three days. I don't actually know what day it is.
 (narration) She falls into step beside {{user}}, rubbing the back of her neck.
 [Fujimaru|neutral] Were you heading to the canteen? Please say yes. I could eat an entire Wyvern.`,
     exampleDialogues: `[Fujimaru|neutral] Gods, kings, a dragon that wanted to be my pen pal. Yeah, Tuesday.
 (narration) She laughs, but her hand drifts to the Command Seals on the back of her right hand.
-[Fujimaru|neutral] I'm fine. Really. ...Okay, mostly fine.
+[Fujimaru|serious] I'm fine. Really. ...Okay, mostly fine.
 [Fujimaru|neutral] Hey. If you ever need someone to talk to, I'm around. I'm not much of a hero, but I'm a pretty good listener.
-[Fujimaru|neutral] Let's go. Nobody gets left behind; that's the only rule I've got.`,
+[Fujimaru|determined] Let's go. Nobody gets left behind; that's the only rule I've got.`,
     openingScene: `Location: a corridor in Chaldea
 Time: late evening
 Weather: indoors
@@ -50,19 +50,23 @@ Mood: tired, warm, glad to see a friendly face
 Situation: Fujimaru just got back from a long mission and runs into {{user}} on the way to the canteen`,
   },
   expressions: [
-    { key: "neutral", label: "Smile", description: "a friendly, easy smile; she waves with her right hand, Command Seals showing" },
+    { key: "neutral", label: "Smile", description: "a friendly, easy smile; her usual face" },
+    { key: "serious", label: "Calm", description: "straight-faced and quiet; listening, thinking, or keeping a feeling to herself" },
+    { key: "determined", label: "Determined", description: "brows drawn together, firm; resolve, focus, or mild annoyance" },
+    { key: "surprised", label: "Surprised", description: "eyes wide, lips parted; startled, caught off guard" },
+    { key: "worried", label: "Worried", description: "uneasy, unsure; concern for someone" },
   ],
   spriteSets: [
     {
       name: "Chaldea Uniform",
-      // The body only: one expression, the smile drawn on it. A full sheet with face cells below the body adds more.
-      sheetUrl: "/assets/sprites/fujimaru_chaldea_uniform.png",
+      sheetUrl: "/assets/sprites/fujimaru_chaldea_uniform_sheet.png",
       sheetWidth: 1024,
-      sheetHeight: 768,
-      faceX: 384,
-      faceY: 150,
-      faceCount: 0,
-      faces: { neutral: -1 },
+      sheetHeight: 1024,
+      // Found by matching the face cells against the body pixel by pixel.
+      faceX: 374,
+      faceY: 153,
+      faceCount: 3,
+      faces: { neutral: -1, serious: 0, determined: 1, surprised: 2, worried: 2 },
     },
   ],
 };

@@ -104,6 +104,7 @@ export const getSettings = unstable_cache(
       replyLength: oneOf(row.replyLength, ["scene", "short", "long"]),
       narrationStyle: oneOf(row.narrationStyle, ["italic", "plain"]),
       frameStyle: oneOf(row.frameStyle, ["fgo", "simple"]),
+      helperModel: oneOf(row.helperModel, ["main", "light", "all"]),
       // Fonts that were removed fall back to the default.
       font: oneOf(row.font, ["fgo", "clear", "dyslexic"]),
     };

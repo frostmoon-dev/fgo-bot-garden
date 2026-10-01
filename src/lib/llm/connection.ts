@@ -2,6 +2,8 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { TAGS } from "@/lib/data/cache";
+import { getSettings } from "@/lib/data/queries";
+import type { HelperModel } from "@/lib/types";
 import { isProviderId, providerFor, type ProviderId } from "./providers";
 import { decryptSecret, keyHint } from "./secret";
 // Every request the client makes goes through here, so token usage is recorded from here on (Usage page).
@@ -81,6 +83,21 @@ export async function activeConnection(): Promise<LlmConnection> {
   const env = fromEnv();
   if (!env) throw new NotConnectedError();
   return env;
+}
+
+// The small background requests the backup model takes over, by the helperModel setting. Story replies,
+// written scenes and interludes are what the reader sees, so they always go to the main model.
+const HELPER_JOBS: Record<HelperModel, string[]> = {
+  main: [],
+  light: ["scene", "choices"],
+  all: ["scene", "choices", "summary", "memory"],
+};
+
+// The backup model, when the setting sends this kind of request to it and one is saved.
+export async function helperConnection(purpose: string | undefined): Promise<LlmConnection | null> {
+  if (!purpose) return null;
+  const { helperModel } = await getSettings();
+  return HELPER_JOBS[helperModel].includes(purpose) ? backupConnection() : null;
 }
 
 // The backup model, if one is saved.
