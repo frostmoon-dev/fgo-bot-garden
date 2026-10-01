@@ -1,5 +1,5 @@
 import "server-only";
-import { activeConnection, backupConnection, type LlmConnection } from "./connection";
+import { activeConnection, backupConnection, helperConnection, type LlmConnection } from "./connection";
 import { stripReasoning, stripReasoningStream } from "./reasoning";
 import {
   COMPLETE_MS,
@@ -303,7 +303,30 @@ async function completeFrom(options: ChatOptions): Promise<string> {
   return (await once(Math.min(MAX_HELPER_TOKENS, options.maxTokens * THINKING_ROOM))).text;
 }
 
+// A small background request (scene box, choices, summary, memory) the settings send to the backup model.
+async function helperFor(options: ChatOptions): Promise<LlmConnection | null> {
+  if (options.connection) return null;
+  try {
+    return await helperConnection(options.purpose);
+  } catch {
+    return null;
+  }
+}
+
 export async function completeChat(options: ChatOptions): Promise<string> {
+  // Background jobs on the backup model keep the main one free for story replies. If the backup can't do
+  // the job, the main model does it, so nothing is skipped.
+  const helper = await helperFor(options);
+  if (helper) {
+    const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
+    try {
+      return await completeFrom({ ...options, connection: helper, deadline: Date.now() + (deadline - Date.now()) * 0.5 });
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      console.warn(`The backup model failed a ${options.purpose} request; the main model does it: ${error instanceof Error ? error.message : error}`);
+      return completeFrom({ ...options, deadline });
+    }
+  }
   const backup = await backupFor(options);
   if (!backup) return completeFrom(options);
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;

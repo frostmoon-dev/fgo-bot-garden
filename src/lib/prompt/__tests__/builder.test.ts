@@ -129,6 +129,22 @@ describe("buildPrompt", () => {
     expect(sys.at(-2)?.content).toContain("REMINDER");
   });
 
+  it("lists a place with several versions once, with all its keys", () => {
+    const sys = buildPrompt({
+      ...base,
+      backgrounds: [
+        { key: "forest_day", label: "Forest — Day", description: "deep forest of moss and old trees, by day" },
+        { key: "forest_night", label: "Forest — Night", description: "deep forest of moss and old trees, at night" },
+        { key: "control_room", label: "Control Room", description: "Chaldea's control room" },
+        { key: "control_room_alert", label: "Control Room — Alert", description: "control room on alert" },
+        { key: "moon", label: "Moon", description: "the moon cell" },
+      ],
+    }).messages[0].content;
+    expect(sys).toContain("- Forest (deep forest of moss and old trees): forest_day, forest_night\n");
+    expect(sys).toContain("- Control Room (Chaldea's control room): control_room, control_room_alert\n");
+    expect(sys).toContain("- moon — the moon cell");
+  });
+
   it("keeps side characters short in compact mode", () => {
     const sys = buildPrompt({ ...base, options: { profile: "compact" } }).messages[0].content;
     expect(sys).toContain("## Oberon");

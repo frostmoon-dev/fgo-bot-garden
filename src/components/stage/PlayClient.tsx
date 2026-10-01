@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { parseScene, timeOfDay, weatherOf } from "@/lib/scene";
+import { paintedTime, parseScene, timeOfDay, weatherOf } from "@/lib/scene";
 import { TimeTint, WeatherLayer } from "./Ambience";
 import { BackgroundLayer } from "./BackgroundLayer";
 import { BacklogPanel } from "./BacklogPanel";
@@ -141,7 +141,8 @@ function Stage() {
     >
       <div ref={sceneRef} className="absolute inset-0">
         <BackgroundLayer url={bgUrl} />
-        <TimeTint time={time} layer="bg" />
+        {/* A background painted at night or sunset already shows its time: only the light overall tint applies. */}
+        <TimeTint time={paintedTime(stage.backgroundKey) ? null : time} layer="bg" />
         <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} subjectId={subjectId} partnerId={partnerId} />
         <WeatherLayer kind={weather} />
         <TimeTint time={time} layer="all" />
