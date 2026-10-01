@@ -6,22 +6,25 @@ import { ColorDot } from "@/components/ui/ColorDot";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 import { ExpressionEditor } from "./ExpressionEditor";
 import { ManageTab } from "./ManageTab";
+import { BondSection } from "./BondSection";
 import { MemoriesTab } from "./MemoriesTab";
 import { ProfileForm } from "./ProfileForm";
 import { SpritesTab } from "./SpritesTab";
 
-const TABS = ["Profile", "Ascensions", "Expressions", "Memories", "Manage"] as const;
+const TABS = ["Profile", "Ascensions", "Expressions", "Bond & memories", "Manage"] as const;
 type Tab = (typeof TABS)[number];
 
 export function CharacterEditor({
   character,
   backgrounds,
   memories,
+  bond,
   userName,
 }: {
   character: CharacterView;
   backgrounds: BackgroundView[];
   memories: string;
+  bond: number;
   userName: string;
 }) {
   const [tab, setTab] = useState<Tab>("Profile");
@@ -52,7 +55,12 @@ export function CharacterEditor({
         <ExpressionEditor character={character} />
       )}
       {tab === "Ascensions" && <SpritesTab character={character} />}
-      {tab === "Memories" && <MemoriesTab character={character} memories={memories} userName={userName} />}
+      {tab === "Bond & memories" && (
+        <>
+          <BondSection character={character} points={bond} userName={userName} />
+          <MemoriesTab character={character} memories={memories} userName={userName} />
+        </>
+      )}
       {tab === "Manage" && <ManageTab character={character} />}
     </div>
   );

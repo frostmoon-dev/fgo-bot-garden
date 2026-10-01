@@ -12,6 +12,7 @@ import { characterExportSchema, type CharacterExport } from "@/lib/characterExpo
 import type { ExpressionView } from "@/lib/types";
 import { DEFAULT_EXPRESSIONS } from "@/lib/expressions";
 import { MOTION_STYLES, type MotionStyle } from "@/lib/motion";
+import { MAX_BOND_LEVEL, pointsForLevel } from "@/lib/bond";
 
 const NEUTRAL = DEFAULT_EXPRESSIONS[0];
 
@@ -312,6 +313,17 @@ export async function saveCharacterMemories(id: string, memories: string): Promi
   return safe(async () => {
     await requireAuth();
     await db.character.update({ where: { id }, data: { memories: z.string().max(6000).parse(memories).trim() } });
+  });
+}
+
+// Sets the bond to the start of a level: Lv 1 starts over, as if you had just met.
+export async function setBondLevel(id: string, level: number): Promise<ActionResult<number>> {
+  return safe(async () => {
+    await requireAuth();
+    const bond = pointsForLevel(z.number().int().min(1).max(MAX_BOND_LEVEL).parse(level));
+    await db.character.update({ where: { id }, data: { bond } });
+    revalidatePath("/");
+    return bond;
   });
 }
 

@@ -122,6 +122,12 @@ export const listEnabledLore = unstable_cache(
   { tags: [TAGS.lore], revalidate: REFRESH },
 );
 
+// Read fresh: it grows with every reply.
+export async function getBond(characterId: string): Promise<number> {
+  const row = await db.character.findUnique({ where: { id: characterId }, select: { bond: true } });
+  return row?.bond ?? 0;
+}
+
 export async function listBonds(): Promise<Record<string, number>> {
   const rows = await db.character.findMany({ select: { id: true, bond: true } });
   return Object.fromEntries(rows.map((r) => [r.id, r.bond]));
