@@ -247,6 +247,8 @@ model Settings {
   characterMemory  Boolean @default(true)
   // Characters may write private thoughts, shown quietly on the story screen.
   innerThoughts    Boolean @default(false)
+  // Which small background requests the backup model does: "main" (none), "light" or "all" (lib/llm/connection.ts).
+  helperModel      String  @default("main")
   // How many lines a reply should have: short, scene (an FGO-style scene) or long.
   replyLength      String  @default("scene")
 }

@@ -59,6 +59,8 @@ export interface PersonaView {
   role: string;
 }
 
+export type HelperModel = "main" | "light" | "all";
+
 export interface SettingsView {
   temperature: number;
   maxTokens: number;
@@ -70,6 +72,8 @@ export interface SettingsView {
   musicVolume: number;
   // Characters may write private thoughts: (thought:Name) text.
   innerThoughts: boolean;
+  // Which small background requests go to the backup model.
+  helperModel: HelperModel;
   loreScanDepth: number;
   contextBudget: number;
   keepRecent: number;

@@ -289,6 +289,27 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
           </div>
 
           <div>
+            <span className="block text-sm font-medium">Background jobs</span>
+            <span className="mb-2 mt-0.5 block text-sm text-muted">
+              Which model does the small extra requests between replies. Moving them to your{" "}
+              <a href="/connection?model=backup" className="text-accent hover:underline">
+                backup model
+              </a>{" "}
+              keeps the main one free, so replies don&apos;t wait behind them. Story replies, written scenes and interludes always use the main
+              model; if the backup fails a job, the main model does it.
+            </span>
+            <Choice
+              value={form.helperModel}
+              onChange={(helperModel) => update({ helperModel })}
+              options={[
+                ["main", "Main model", "Everything on the main model, as before."],
+                ["light", "Light jobs on the backup", "Scene box and choices. Safe with any backup."],
+                ["all", "All on the backup", "Also story summaries and character memories. Use a good backup: they are how the story remembers."],
+              ]}
+            />
+          </div>
+
+          <div>
             <span className="block text-sm font-medium">Example dialogue</span>
             <span className="mb-2 mt-0.5 block text-sm text-muted">Examples teach a character&apos;s voice but cost tokens on every message.</span>
             <Choice
