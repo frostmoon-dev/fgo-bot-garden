@@ -10,6 +10,7 @@ import { ChoiceList } from "./ChoiceList";
 import { DevOverlay } from "./DevOverlay";
 import { MenuPanel } from "./MenuPanel";
 import { MusicPlayer } from "./MusicPlayer";
+import { narrationSubject } from "./subject";
 import { ReplyBar } from "./ReplyBar";
 import { SavePanel } from "./SavePanel";
 import { SceneBox } from "./SceneBox";
@@ -51,7 +52,15 @@ function Stage() {
   const pending = !!shownBeat && shownBeat.role === "user" && atEnd && s.streaming;
   // On a crowded phone screen only one character shows: the speaker, or during narration the last one who spoke.
   const onStage = (id: string | null) => !!id && Object.values(stage.slots).some((slot) => slot?.characterId === id);
-  let focusId = onStage(speakerId) ? speakerId : null;
+  // Narration about someone on stage ("BB giggles…", or their thought) brings them to the front for that line.
+  const present = Object.values(stage.slots).flatMap((slot) => (slot && s.characters[slot.characterId] ? [s.characters[slot.characterId]] : []));
+  const subjectId =
+    !speakerId && shownBeat?.kind === "narration"
+      ? onStage(shownBeat.thinker?.id ?? null)
+        ? shownBeat.thinker!.id
+        : narrationSubject(shownBeat.text, present)
+      : null;
+  let focusId = onStage(speakerId) ? speakerId : subjectId;
   for (let i = Math.min(s.cursor, beats.length - 1); !focusId && i >= 0; i--) {
     if (beats[i].kind === "dialogue" && onStage(beats[i].speakerId)) focusId = beats[i].speakerId;
   }
@@ -123,7 +132,7 @@ function Stage() {
       <div ref={sceneRef} className="absolute inset-0">
         <BackgroundLayer url={bgUrl} />
         <TimeTint time={time} layer="bg" />
-        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} />
+        <CharacterLayer stage={stage} characters={s.characters} session={s.session} speakerId={speakerId} focusId={focusId} subjectId={subjectId} />
         <WeatherLayer kind={weather} />
         <TimeTint time={time} layer="all" />
       </div>

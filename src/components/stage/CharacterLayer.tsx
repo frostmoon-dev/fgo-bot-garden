@@ -14,6 +14,7 @@ export const CharacterLayer = memo(function CharacterLayer({
   session,
   speakerId,
   focusId,
+  subjectId = null,
 }: {
   stage: StageState;
   characters: Record<string, CharacterView>;
@@ -21,6 +22,8 @@ export const CharacterLayer = memo(function CharacterLayer({
   speakerId: string | null;
   // Who stays visible when a phone screen is too narrow for more than one (see .sprite-slot[data-solo]).
   focusId: string | null;
+  // Who the narration on screen is about: they step to the front while nobody speaks.
+  subjectId?: string | null;
 }) {
   const someoneSpeaks = !!speakerId && POSITIONS.some((p) => stage.slots[p]?.characterId === speakerId);
   const occupied = POSITIONS.filter((p) => stage.slots[p]);
@@ -46,7 +49,7 @@ export const CharacterLayer = memo(function CharacterLayer({
             content={content}
             solo={shared && !!slot && slot.characterId === solo}
             dim={someoneSpeaks && !speaking}
-            front={speaking}
+            front={speaking || (!someoneSpeaks && !!slot && slot.characterId === subjectId)}
             // Moves when they start talking or change expression, not on every line.
             moveKey={speaking ? slot.expression : null}
           />
