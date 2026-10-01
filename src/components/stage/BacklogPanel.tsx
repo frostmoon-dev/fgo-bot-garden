@@ -1,6 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { branchStory } from "@/app/actions/sessions";
+import { unwrap } from "@/lib/actionResult";
 import { activeContent, type MessageView } from "@/lib/types";
 import { ColorDot } from "@/components/ui/ColorDot";
 import { PanelShell } from "./PanelShell";
@@ -11,7 +14,10 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
   const beats = usePlay((s) => s.scene.beats);
   const characters = usePlay((s) => s.characters);
   const streaming = usePlay((s) => s.streaming);
-  const { editMessage, deleteMessage, togglePin, replay } = usePlayApi().getState();
+  const sessionId = usePlay((s) => s.session.id);
+  const { editMessage, deleteMessage, togglePin, replay, showToast } = usePlayApi().getState();
+  const router = useRouter();
+  const [branching, setBranching] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   // Only lines already read: a reply that is still playing isn't spoiled.
@@ -56,7 +62,7 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
           {b.text}
         </p>
       ))}
-      <div className="mt-2 flex items-center gap-1 text-sm text-muted sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-sm text-muted sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
         {message.variants.length > 1 && (
           <span className="mr-2">
             version {message.activeVariant + 1}/{message.variants.length}
@@ -65,7 +71,7 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
         <button
           type="button"
           disabled={streaming}
-          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          className="min-h-10 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
           title="Close the log and play the story again from this message"
           onClick={() => replay(message.id)}
         >
@@ -74,7 +80,7 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
         <button
           type="button"
           disabled={streaming || message.id.startsWith("temp")}
-          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          className="min-h-10 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
           title="Pinned messages stay in the AI's memory, even after the story is summarized."
           onClick={() => togglePin(message.id)}
         >
@@ -82,8 +88,25 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
         </button>
         <button
           type="button"
+          disabled={streaming || branching || message.id.startsWith("temp")}
+          className="min-h-10 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          title="Start a new story from this message: everything up to here is copied, and this story stays as it is"
+          onClick={async () => {
+            setBranching(true);
+            try {
+              router.push(`/play/${unwrap(await branchStory(sessionId, message.id))}`);
+            } catch (e) {
+              showToast(e instanceof Error ? e.message : "Could not branch the story");
+              setBranching(false);
+            }
+          }}
+        >
+          {branching ? <span className="shimmer">Branching…</span> : "Branch"}
+        </button>
+        <button
+          type="button"
           disabled={streaming}
-          className="min-h-9 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
+          className="min-h-10 rounded-lg px-2 hover:bg-raised hover:text-ink disabled:opacity-40"
           onClick={() => {
             setDraft(activeContent(message));
             setEditing(true);
@@ -94,7 +117,7 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
         <button
           type="button"
           disabled={streaming}
-          className="min-h-9 rounded-lg px-2 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+          className="min-h-10 rounded-lg px-2 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
           onClick={async () => {
             const ok = await askConfirm({
               title: "Delete this message?",

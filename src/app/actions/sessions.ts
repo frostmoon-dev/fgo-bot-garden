@@ -198,6 +198,56 @@ export async function createSceneStory(input: SceneStoryInput): Promise<ActionRe
   });
 }
 
+// "Branch from here": a new story with everything up to and including one message, to try another way
+// forward. The original story is left as it is.
+export async function branchStory(sessionId: string, messageId: string): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        cast: true,
+        messages: { orderBy: [{ order: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { position: "asc" } } } },
+      },
+    });
+    const cut = session.messages.findIndex((m) => m.id === z.string().parse(messageId));
+    if (cut < 0) throw new Error("That message is no longer in the story");
+    const kept = session.messages.slice(0, cut + 1);
+    const cutOrder = kept.at(-1)!.order;
+    const atEnd = cut === session.messages.length - 1;
+    // A summary that already covers later messages would tell the AI what hasn't happened in the branch yet.
+    // Then the branch starts without it, and the full history is sent until it is summarized again.
+    const summaryFits = session.summarizedUntil <= cutOrder;
+    const created = await db.session.create({
+      data: {
+        title: `${session.title} (branch)`.slice(0, 120),
+        mainCharacterId: session.mainCharacterId,
+        mode: session.mode,
+        backgroundId: session.backgroundId,
+        premise: session.premise,
+        memory: session.memory,
+        summary: summaryFits ? session.summary : "",
+        summarizedUntil: summaryFits ? session.summarizedUntil : -1,
+        // The characters already remember these messages; don't fold them into their memories twice.
+        rememberedUntil: Math.min(session.rememberedUntil, cutOrder),
+        scene: atEnd ? session.scene : "",
+        cast: { create: session.cast.map(({ characterId, spriteSetId }) => ({ characterId, spriteSetId })) },
+        messages: {
+          create: kept.map((m) => ({
+            order: m.order,
+            role: m.role,
+            activeVariant: m.activeVariant,
+            pinned: m.pinned,
+            variants: { create: m.variants.map(({ position, content }) => ({ position, content })) },
+          })),
+        },
+      },
+    });
+    revalidatePath("/");
+    return created.id;
+  });
+}
+
 export interface AscensionSwitch {
   // The story's first message, now showing the new ascension's greeting. Null if it did not change.
   firstMessage: MessageView | null;
