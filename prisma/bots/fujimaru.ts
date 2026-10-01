@@ -62,7 +62,7 @@ Situation: Fujimaru just got back from a long mission and runs into {{user}} on 
       faceX: 384,
       faceY: 150,
       faceCount: 0,
-      faces: {},
+      faces: { neutral: -1 },
     },
   ],
 };
