@@ -11,6 +11,7 @@ import { resolveCell } from "@/components/sprite/sheet";
 import { ColorDot } from "@/components/ui/ColorDot";
 import { pickAscension } from "@/lib/ascension";
 import { bondLevel } from "@/lib/bond";
+import { storyFileName, storyText } from "./exportStory";
 import { PanelShell } from "./PanelShell";
 import { usePlay } from "./usePlay";
 
@@ -183,6 +184,7 @@ export function MenuPanel() {
   const musicMuted = usePlay((s) => s.musicMuted);
   const toggleMusic = usePlay((s) => s.toggleMusic);
   const keepMoment = usePlay((s) => s.keepMoment);
+  const beats = usePlay((s) => s.scene.beats);
   const hasMusic = usePlay((s) => s.backgrounds.some((b) => b.musicUrl));
   const [title, setTitle] = useState(session.title);
 
@@ -266,6 +268,29 @@ export function MenuPanel() {
               Rename
             </button>
           </div>
+        </section>
+
+        <section>
+          <h3 className="font-title text-xl font-semibold">Keep a copy</h3>
+          <p className="mb-3 mt-1 text-sm text-muted">The whole story as a plain text file, to reread or keep: names, narration and places, without the AI&apos;s tags.</p>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              const name = (key: string) => {
+                const b = backgrounds.find((x) => x.key === key);
+                return b?.label || b?.key || key;
+              };
+              const blob = new Blob([storyText(session.title, beats, name)], { type: "text/plain;charset=utf-8" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = storyFileName(session.title);
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            }}
+          >
+            Download the story
+          </button>
         </section>
 
         <section>
