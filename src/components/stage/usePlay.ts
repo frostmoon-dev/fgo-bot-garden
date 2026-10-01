@@ -30,6 +30,8 @@ export interface PlayData extends SceneData {
   settings: SettingsView;
   // Bond points per character id.
   bonds: Record<string, number>;
+  // Opened from a search result: the Log opens at this message.
+  focusMessageId?: string | null;
 }
 
 export interface Toast {
@@ -259,7 +261,7 @@ export function createPlayStore(data: PlayData): PlayStore {
     skip: false,
     hideUi: false,
     musicMuted: readMusicMuted(),
-    panel: null,
+    panel: data.focusMessageId ? "log" : null,
     error: null,
     toast: null,
     castSuggestion: null,

@@ -20,23 +20,23 @@ const cachedShare = (r: UsageRow) => (r.cacheReported && r.promptTokens ? `${Mat
 function Table({ rows, label, name }: { rows: UsageRow[]; label: string; name: (key: string) => string }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[30rem] text-sm">
+      <table className="w-full min-w-[20rem] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-muted">
-            <th className="py-2 pr-4 font-medium">{label}</th>
-            <th className="py-2 pr-4 text-right font-medium">Requests</th>
-            <th className="py-2 pr-4 text-right font-medium">Sent</th>
-            <th className="py-2 pr-4 text-right font-medium">Cached</th>
+            <th className="py-2 pr-3 font-medium">{label}</th>
+            <th className="py-2 pr-3 text-right font-medium">Requests</th>
+            <th className="py-2 pr-3 text-right font-medium">Sent</th>
+            <th className="py-2 pr-3 text-right font-medium">Cached</th>
             <th className="py-2 text-right font-medium">Written</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.key} className="border-b border-line last:border-b-0">
-              <td className="py-2.5 pr-4">{name(r.key)}</td>
-              <td className="py-2.5 pr-4 text-right tabular-nums">{n(r.requests)}</td>
-              <td className="py-2.5 pr-4 text-right tabular-nums">{r.counted ? n(r.promptTokens) : "—"}</td>
-              <td className="py-2.5 pr-4 text-right tabular-nums">{cachedShare(r)}</td>
+              <td className="py-2.5 pr-3 [overflow-wrap:anywhere]">{name(r.key)}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{n(r.requests)}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{r.counted ? n(r.promptTokens) : "—"}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{cachedShare(r)}</td>
               <td className="py-2.5 text-right tabular-nums">{r.counted ? n(r.completionTokens) : "—"}</td>
             </tr>
           ))}

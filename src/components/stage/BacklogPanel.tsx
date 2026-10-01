@@ -10,7 +10,7 @@ import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
 import { askConfirm } from "@/components/ui/dialogs";
 
-function MessageBlock({ message, seen }: { message: MessageView; seen: Set<string> | null }) {
+function MessageBlock({ message, seen, focused = false }: { message: MessageView; seen: Set<string> | null; focused?: boolean }) {
   const beats = usePlay((s) => s.scene.beats);
   const characters = usePlay((s) => s.characters);
   const streaming = usePlay((s) => s.streaming);
@@ -48,7 +48,10 @@ function MessageBlock({ message, seen }: { message: MessageView; seen: Set<strin
   }
 
   return (
-    <div className={`group border-b border-line py-4 last:border-b-0 ${message.pinned ? "border-l-2 border-l-accent pl-3" : ""}`}>
+    <div
+      data-message-id={message.id}
+      className={`group scroll-mt-4 border-b border-line py-4 last:border-b-0 ${message.pinned ? "border-l-2 border-l-accent pl-3" : ""} ${focused ? "rounded-lg bg-accent-soft px-3" : ""}`}
+    >
       {message.pinned && <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">Pinned</p>}
       {lines.length === 0 && <p className="text-sm italic text-muted">(no visible lines)</p>}
       {lines.map((b) => (
@@ -147,15 +150,18 @@ export function BacklogPanel() {
   const messages = seen && lastRead >= 0 ? allMessages.slice(0, lastRead + 1) : allMessages;
   const endRef = useRef<HTMLDivElement>(null);
   // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect may only return a cleanup.
+  const focusMessageId = usePlay((s) => s.focusMessageId);
   useEffect(() => {
-    endRef.current?.scrollIntoView();
-  }, []);
+    // Opened from a search result: at that message. Otherwise at the end, the latest lines.
+    const target = focusMessageId ? document.querySelector(`[data-message-id="${CSS.escape(focusMessageId)}"]`) : null;
+    (target ?? endRef.current)?.scrollIntoView({ block: target ? "start" : "end" });
+  }, [focusMessageId]);
   return (
     <PanelShell title="Backlog">
       <div>
         {messages.length === 0 && <p className="text-sm text-muted">Nothing yet.</p>}
         {messages.map((m) => (
-          <MessageBlock key={m.id} message={m} seen={seen} />
+          <MessageBlock key={m.id} message={m} seen={seen} focused={m.id === focusMessageId} />
         ))}
         <div ref={endRef} />
       </div>

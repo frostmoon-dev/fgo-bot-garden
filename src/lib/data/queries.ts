@@ -218,6 +218,74 @@ export async function usageSummary(days = 30): Promise<UsageSummary> {
   };
 }
 
+export interface SearchHit {
+  storyId: string;
+  storyTitle: string;
+  characterName: string;
+  messageId: string;
+  role: string;
+  // The line around the match, without the AI's tags.
+  before: string;
+  match: string;
+  after: string;
+  updatedAt: string;
+}
+
+// The AI's tags, so they are neither found nor shown: [Name|face], (narration), (thought:Name), {commands}.
+function plainText(text: string): string {
+  return text
+    .replace(/\[([^\]|]+)\|[^\]]*\]\s*/g, "$1: ")
+    .replace(/\((?:narration|thoughts?\s*:[^)]*)\)\s*/gi, "")
+    .replace(/\{[^{}]*\}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Every story's text, the version of each message the reader is on, newest stories first.
+export async function searchStories(query: string, limit = 60): Promise<SearchHit[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const rows = await db.messageVariant.findMany({
+    where: { content: { contains: q, mode: "insensitive" } },
+    select: {
+      position: true,
+      content: true,
+      message: {
+        select: {
+          id: true,
+          role: true,
+          activeVariant: true,
+          session: { select: { id: true, title: true, updatedAt: true, mainCharacter: { select: { name: true } } } },
+        },
+      },
+    },
+    take: 400,
+  });
+  const needle = q.toLowerCase();
+  const hits: SearchHit[] = [];
+  for (const r of rows) {
+    if (r.position !== r.message.activeVariant) continue;
+    const text = plainText(r.content);
+    const at = text.toLowerCase().indexOf(needle);
+    // Matched only inside a tag ("narration", a face name): not something the reader saw.
+    if (at < 0) continue;
+    const start = Math.max(0, at - 70);
+    const end = Math.min(text.length, at + q.length + 90);
+    hits.push({
+      storyId: r.message.session.id,
+      storyTitle: r.message.session.title,
+      characterName: r.message.session.mainCharacter.name,
+      messageId: r.message.id,
+      role: r.message.role,
+      before: `${start > 0 ? "…" : ""}${text.slice(start, at)}`,
+      match: text.slice(at, at + q.length),
+      after: `${text.slice(at + q.length, end)}${end < text.length ? "…" : ""}`,
+      updatedAt: r.message.session.updatedAt.toISOString(),
+    });
+  }
+  return hits.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
+}
+
 export async function listBonds(): Promise<Record<string, number>> {
   const rows = await db.character.findMany({ select: { id: true, bond: true } });
   return Object.fromEntries(rows.map((r) => [r.id, r.bond]));
