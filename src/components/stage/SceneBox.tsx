@@ -23,7 +23,7 @@ export function SceneBox() {
           e.stopPropagation();
           setPanel("scene");
         }}
-        className="vn-box absolute left-3 top-[4.25rem] z-20 px-3 py-2 text-left text-xs text-muted hover:text-ink sm:left-5"
+        className="vn-box vn-scenebox relative z-20 mx-3 mt-2 min-h-10 shrink-0 self-start px-3 py-1 text-left text-xs text-muted hover:text-ink sm:mx-5"
       >
         {busy ? <span className="shimmer">Reading the scene…</span> : "Set the scene"}
       </button>
@@ -32,7 +32,7 @@ export function SceneBox() {
 
   return (
     <div
-      className="vn-box absolute left-3 top-[4.25rem] z-20 w-[min(22rem,calc(100%-1.5rem))] text-sm sm:left-5"
+      className="vn-box vn-scenebox relative z-20 mx-3 mt-2 w-[min(22rem,calc(100%-1.5rem))] shrink-0 self-start text-sm sm:mx-5"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -42,9 +42,6 @@ export function SceneBox() {
         className="flex w-full items-start gap-2 px-3 py-2 text-left"
         title={open ? "Hide scene details" : "Show scene details"}
       >
-        <span aria-hidden className="mt-0.5 text-accent">
-          ◆
-        </span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate font-medium ${busy ? "shimmer" : ""}`}>{headline || "Scene"}</span>
           {!open && scene.Situation && <span className="block truncate text-xs text-muted">{scene.Situation}</span>}

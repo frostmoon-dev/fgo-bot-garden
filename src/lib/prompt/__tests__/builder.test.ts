@@ -51,6 +51,40 @@ describe("buildPrompt", () => {
     expect(messages.at(-1)).toEqual({ role: "user", content: "Hi" });
   });
 
+  it("sends the user's role over the characters' canon, and what each character remembers", () => {
+    const { messages } = buildPrompt({
+      ...base,
+      persona: { ...base.persona, role: "A Chaldea staff member, not a Master" },
+      cast: [{ ...character("bb", "BB"), memories: "- Ritsuka hates coffee" }, character("ob", "Oberon")],
+    });
+    const sys = messages[0].content;
+    expect(sys).toContain("Role in the story: A Chaldea staff member, not a Master");
+    expect(sys).toContain("even where a character's canon or definition assumes someone else");
+    expect(sys).toContain("What BB remembers about Ritsuka");
+    expect(sys).toContain("- Ritsuka hates coffee");
+    expect(sys).not.toContain("What Oberon remembers");
+  });
+
+  it("repeats the user's pronouns and role right before the latest message", () => {
+    const { messages } = buildPrompt({
+      ...base,
+      persona: { ...base.persona, description: "{{user}} is a 29-year-old woman (she/her).", role: "A Chaldea Staff Member" },
+    });
+    expect(messages[0].content).toContain("Pronouns: she/her");
+    const note = messages.at(-2)!.content;
+    expect(note).toContain("Ritsuka is she/her.");
+    expect(note).toContain(`never "he", "him", "his", "boy" or "man"`);
+    expect(note).toContain(`Ritsuka's role: A Chaldea Staff Member. Ritsuka is not anyone's Master, so no character calls Ritsuka "Master".`);
+  });
+
+  it("leaves Master alone when the role says so, and adds nothing without pronouns or a role", () => {
+    const master = buildPrompt({ ...base, persona: { ...base.persona, description: "He/him.", role: "Master of Chaldea" } }).messages.at(-2)!.content;
+    expect(master).toContain("Ritsuka is he/him.");
+    expect(master).toContain("Ritsuka's role: Master of Chaldea.");
+    expect(master).not.toContain("not anyone's Master");
+    expect(buildPrompt(base).messages.map((m) => m.content).join("\n")).not.toContain("ABOUT Ritsuka");
+  });
+
   it("puts world info and the format reminder right before the latest message", () => {
     const { messages } = buildPrompt(base);
     expect(messages[0].content).not.toContain("# WORLD INFO");
@@ -95,6 +129,22 @@ describe("buildPrompt", () => {
     expect(sys.at(-2)?.content).toContain("REMINDER");
   });
 
+  it("lists a place with several versions once, with all its keys", () => {
+    const sys = buildPrompt({
+      ...base,
+      backgrounds: [
+        { key: "forest_day", label: "Forest — Day", description: "deep forest of moss and old trees, by day" },
+        { key: "forest_night", label: "Forest — Night", description: "deep forest of moss and old trees, at night" },
+        { key: "control_room", label: "Control Room", description: "Chaldea's control room" },
+        { key: "control_room_alert", label: "Control Room — Alert", description: "control room on alert" },
+        { key: "moon", label: "Moon", description: "the moon cell" },
+      ],
+    }).messages[0].content;
+    expect(sys).toContain("- Forest (deep forest of moss and old trees): forest_day, forest_night\n");
+    expect(sys).toContain("- Control Room (Chaldea's control room): control_room, control_room_alert\n");
+    expect(sys).toContain("- moon — the moon cell");
+  });
+
   it("keeps side characters short in compact mode", () => {
     const sys = buildPrompt({ ...base, options: { profile: "compact" } }).messages[0].content;
     expect(sys).toContain("## Oberon");
@@ -133,5 +183,107 @@ describe("buildPrompt", () => {
     expect(small.messages[0].content).toContain("# PINNED MOMENTS");
     const large = buildPrompt({ ...base, history, options: { contextSize: 100000 } });
     expect(large.breakdown.dropped).toBe(0);
+  });
+});
+
+describe("who speaks", () => {
+  const all = (input: PromptInput) => buildPrompt(input).messages.map((m) => m.content).join("\n");
+
+  it("names who is here and who the user just spoke to", () => {
+    const text = all({ ...base, scene: "Location: Moon\nPresent: BB, Oberon, Ritsuka", history: [{ role: "user", content: "Oberon?" }] });
+    expect(text).toContain("# WHO SPEAKS");
+    expect(text).toContain("Here now: BB, Oberon.");
+    expect(text).toContain("Ritsuka just spoke to Oberon. Oberon answers first");
+  });
+
+  it("counts characters the user brings in as here, even before the scene box lists them", () => {
+    const text = all({ ...base, scene: "Present: BB", history: [{ role: "user", content: "Oberon is here." }] });
+    expect(text).toContain("Here now: BB, Oberon.");
+  });
+
+  it("says nothing with one character, or in dialogue mode", () => {
+    expect(all({ ...base, cast: [character("bb", "BB")], history: [{ role: "user", content: "BB?" }] })).not.toContain("# WHO SPEAKS");
+    expect(all({ ...base, mode: "dialogue", history: [{ role: "user", content: "Oberon?" }] })).not.toContain("# WHO SPEAKS");
+  });
+});
+
+describe("cache-friendly prompt start", () => {
+  it("keeps the rules and character cards the same when a bond or memory changes", () => {
+    const withBond = (bond: string, memories: string) =>
+      buildPrompt({ ...base, cast: [{ ...character("bb", "BB"), bond, memories }, character("ob", "Oberon")] }).messages[0].content;
+    const before = withBond("Lv 2: friendly", "- Ritsuka likes tea");
+    const after = withBond("Lv 3: close", "- Ritsuka likes tea\n- Ritsuka hates coffee");
+    const cardsEnd = (text: string) => text.indexOf("# BONDS AND MEMORIES");
+    expect(cardsEnd(before)).toBeGreaterThan(0);
+    expect(before.slice(0, cardsEnd(before))).toBe(after.slice(0, cardsEnd(after)));
+    expect(after).toContain("## BB\nBond with Ritsuka: Lv 3: close");
+  });
+});
+
+describe("direction", () => {
+  it("adds the user's direction near the end, for this reply only", () => {
+    const { messages } = buildPrompt({ ...base, direction: "  Oberon gets jealous.  " });
+    const text = messages.map((m) => m.content).join("\n");
+    expect(text).toContain("# DIRECTION FOR THIS REPLY (from the user, outside the story)\nOberon gets jealous.\nFollow it in this reply.");
+    // Not in the cacheable start of the prompt.
+    expect(messages[0].content).not.toContain("Oberon gets jealous");
+    expect(buildPrompt(base).messages.map((m) => m.content).join("\n")).not.toContain("DIRECTION FOR THIS REPLY");
+  });
+
+  it("sends the scenario as the opening before the user replies, and as how the story began after", () => {
+    const opening = buildPrompt({ ...base, history: [] }).messages[0].content;
+    expect(opening).toContain("# SCENARIO\nMoon Cell, BB waits.");
+    const later = buildPrompt({ ...base, storyStarted: true }).messages[0].content;
+    expect(later).not.toContain("# SCENARIO");
+    expect(later).toContain("# HOW THIS STORY BEGAN\nMoon Cell, BB waits.");
+    expect(later).toContain("The story has moved on since.");
+  });
+
+  it("tells the model a new form is the same character, who remembers the story", () => {
+    const sys = buildPrompt({
+      ...base,
+      cast: [{ ...character("bb", "BB"), form: "Summer", otherForms: ["Moon Cancer"] }, character("ob", "Oberon")],
+    }).messages[0].content;
+    expect(sys).toContain("Current form: Summer (other forms: Moon Cancer).");
+    expect(sys).toContain("It is still the same BB");
+    expect(sys).toContain("They remember everything that has happened in this story");
+  });
+  it("uses a written scene instead of the main character's scenario, and opens the story from it", () => {
+    const premise = "Midnight in the canteen. Oberon sits by the window.";
+    const opening = buildPrompt({ ...base, premise, history: [] });
+    const sys = opening.messages[0].content;
+    expect(sys).toContain(`# SCENARIO\n${premise}`);
+    expect(sys).not.toContain("Moon Cell, BB waits.");
+    expect(opening.messages.at(-1)?.content).toMatch(/^\[Begin the story with the SCENARIO/);
+    expect(opening.messages.at(-1)?.content).toContain("do not write for Ritsuka");
+
+    const later = buildPrompt({ ...base, premise, storyStarted: true }).messages[0].content;
+    expect(later).toContain(`# HOW THIS STORY BEGAN\n${premise}`);
+  });
+
+  it("continues, not begins, a written-scene story that already has messages", () => {
+    const sys = buildPrompt({ ...base, premise: "A scene.", history: [{ role: "assistant", content: "[BB|neutral] Hi." }] });
+    expect(sys.messages.at(-1)?.content).toMatch(/Continue the scene/);
+  });
+  it("drops old messages in steps, so the start of the conversation stays the same between replies", () => {
+    const firstKept = (n: number) => {
+      const { messages } = buildPrompt({ ...base, history: [...turns(n), { role: "user", content: "Now" }], options: { contextSize: 3000 } });
+      return messages.find((m) => m.role !== "system")?.content;
+    };
+    const starts = [60, 61, 62, 63].map(firstKept);
+    // Without steps the first message would move on every reply; with them it moves at most once here.
+    expect(new Set(starts).size).toBeLessThanOrEqual(2);
+    expect(firstKept(60)).not.toBe("Question 0");
+  });
+
+  it("marks where providers may cache: rules, memory, and the settled conversation", () => {
+    const { messages } = buildPrompt({ ...base, history: [...turns(2), { role: "user", content: "Now" }] });
+    const [system] = messages;
+    const [rulesEnd, memoryEnd] = system.cacheAt!;
+    expect(system.content.slice(0, rulesEnd)).toContain("# CHARACTERS");
+    expect(system.content.slice(rulesEnd, memoryEnd)).toContain("# STORY SO FAR");
+    const marked = messages.filter((m) => m.role !== "system" && m.cacheAt);
+    expect(marked.map((m) => m.content)).toEqual(["[BB|neutral] Answer 1"]);
+    expect(messages.at(-1)?.cacheAt).toBeUndefined();
   });
 });

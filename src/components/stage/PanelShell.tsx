@@ -7,7 +7,7 @@ export function PanelShell({ title, children }: { title: string; children: React
   const setPanel = usePlay((s) => s.setPanel);
   return (
     <div
-      className="absolute inset-0 z-40 flex items-end justify-center bg-black/55 sm:items-center sm:p-8"
+      className="fade-in absolute inset-0 z-40 flex items-end justify-center bg-black/55 [--fade:180ms] sm:items-center sm:p-8"
       onClick={(e) => {
         e.stopPropagation();
         setPanel(null);
@@ -17,16 +17,22 @@ export function PanelShell({ title, children }: { title: string; children: React
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="vn-box vn-panel flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line bg-canvas shadow-2xl sm:max-h-full sm:rounded-2xl"
+        className="vn-box vn-panel panel-in flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line bg-canvas shadow-2xl sm:max-h-full sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 pb-2 pt-5">
-          <h2 className="font-title text-lg font-semibold">{title}</h2>
+          <h2 className="font-title text-2xl font-semibold">{title}</h2>
           <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-muted hover:bg-raised hover:text-ink" onClick={() => setPanel(null)}>
             Close
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">{children}</div>
+        {/* On a phone the sheet is tall: a second Close at the bottom, where the thumb is. */}
+        <div className="border-t border-line px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:hidden">
+          <button type="button" className="btn btn-outline w-full" onClick={() => setPanel(null)}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

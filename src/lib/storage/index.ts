@@ -4,7 +4,7 @@ import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
-export type UploadKind = "sprites" | "backgrounds";
+export type UploadKind = "sprites" | "backgrounds" | "music";
 
 const MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -12,6 +12,12 @@ const MIME_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/gif": "gif",
   "image/avif": "avif",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/aac": "aac",
+  "audio/ogg": "ogg",
+  "audio/webm": "weba",
 };
 
 export function extensionFor(mime: string): string | null {

@@ -11,6 +11,7 @@ import { resolveCell } from "@/components/sprite/sheet";
 import { ColorDot } from "@/components/ui/ColorDot";
 import { pickAscension } from "@/lib/ascension";
 import { bondLevel } from "@/lib/bond";
+import { storyFileName, storyText } from "./exportStory";
 import { PanelShell } from "./PanelShell";
 import { usePlay } from "./usePlay";
 
@@ -25,7 +26,7 @@ function AscensionPicker() {
 
   return (
     <section>
-      <h3 className="font-medium">Ascension</h3>
+      <h3 className="font-title text-xl font-semibold">Ascension</h3>
       <p className="mb-3 mt-1 text-sm text-muted">
         {main.name}&apos;s form in this story. Each has its own definition. Before you reply, the first message switches to its greeting; later, the change is written into the story and {main.name} reacts to it in the next reply.
       </p>
@@ -111,7 +112,7 @@ function MemoryField(props: {
   const [draft, setDraft] = useState(props.value);
   return (
     <section>
-      <h3 className="font-medium">{props.title}</h3>
+      <h3 className="font-title text-xl font-semibold">{props.title}</h3>
       <p className="mb-3 mt-1 text-sm text-muted">{props.hint}</p>
       <textarea
         className="field min-h-28 text-sm"
@@ -157,7 +158,7 @@ function NewStory() {
 
   return (
     <section>
-      <h3 className="font-medium">New story</h3>
+      <h3 className="font-title text-xl font-semibold">New story</h3>
       <p className="mb-3 mt-1 text-sm text-muted">
         Start over with {main?.name ?? "this character"}
         {form && main && main.spriteSets.length > 1 ? ` (${form.name})` : ""}, the same cast and mode, from the greeting. This story stays on the home page.
@@ -179,11 +180,59 @@ export function MenuPanel() {
   const backgrounds = usePlay((s) => s.backgrounds);
   const patchSession = usePlay((s) => s.patchSession);
   const setPanel = usePlay((s) => s.setPanel);
+  const setHideUi = usePlay((s) => s.setHideUi);
+  const musicMuted = usePlay((s) => s.musicMuted);
+  const toggleMusic = usePlay((s) => s.toggleMusic);
+  const keepMoment = usePlay((s) => s.keepMoment);
+  const beats = usePlay((s) => s.scene.beats);
+  const hasMusic = usePlay((s) => s.backgrounds.some((b) => b.musicUrl));
   const [title, setTitle] = useState(session.title);
 
   return (
     <PanelShell title="Menu">
       <div className="divide-y divide-line [&>section]:py-6 [&>section:first-child]:pt-2">
+        {/* The story screen's other controls. With FGO frames the top bar shows only Auto, Skip and Menu. */}
+        <section className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("scene")}>
+            Scene
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("log")}>
+            Log
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("saves")}>
+            Save or load
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              setPanel(null);
+              setHideUi(true);
+            }}
+          >
+            Hide the interface
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("help")}>
+            Controls
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            title="Keep the line on screen as a card on the Moments page (K)"
+            onClick={() => {
+              setPanel(null);
+              void keepMoment();
+            }}
+          >
+            Keep this moment
+          </button>
+                    {hasMusic && (
+            <button type="button" className="btn btn-outline" aria-pressed={!musicMuted} onClick={toggleMusic} title="V">
+              {musicMuted ? "Music on" : "Music off"}
+            </button>
+          )}
+        </section>
+
         <AscensionPicker />
 
         <NewStory />
@@ -200,14 +249,14 @@ export function MenuPanel() {
 
         {session.mode === "narrative" && (
           <section>
-            <h3 className="font-medium">Cast</h3>
+            <h3 className="font-title text-xl font-semibold">Cast</h3>
             <p className="mb-2 mt-1 text-sm text-muted">Characters the AI may bring on stage. Their definitions are sent with every message.</p>
             <CastManager />
           </section>
         )}
 
         <section>
-          <h3 className="mb-3 font-medium">Title</h3>
+          <h3 className="mb-3 font-title text-xl font-semibold">Title</h3>
           <div className="flex gap-2">
             <input className="field" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
             <button
@@ -222,7 +271,30 @@ export function MenuPanel() {
         </section>
 
         <section>
-          <h3 className="mb-3 font-medium">Mode</h3>
+          <h3 className="font-title text-xl font-semibold">Keep a copy</h3>
+          <p className="mb-3 mt-1 text-sm text-muted">The whole story as a plain text file, to reread or keep: names, narration and places, without the AI&apos;s tags.</p>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              const name = (key: string) => {
+                const b = backgrounds.find((x) => x.key === key);
+                return b?.label || b?.key || key;
+              };
+              const blob = new Blob([storyText(session.title, beats, name)], { type: "text/plain;charset=utf-8" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = storyFileName(session.title);
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            }}
+          >
+            Download the story
+          </button>
+        </section>
+
+        <section>
+          <h3 className="mb-3 font-title text-xl font-semibold">Mode</h3>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -244,7 +316,7 @@ export function MenuPanel() {
         </section>
 
         <section>
-          <h3 className="mb-3 font-medium">Starting background</h3>
+          <h3 className="mb-3 font-title text-xl font-semibold">Starting background</h3>
           <select
             className="field"
             value={session.backgroundId ?? ""}
@@ -270,18 +342,9 @@ export function MenuPanel() {
         />
 
         <section className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <Link href={`/characters/${session.mainCharacterId}`} className="underline underline-offset-4">
+          <Link href={`/characters/${session.mainCharacterId}`} className="inline-flex min-h-10 items-center underline underline-offset-4">
             Edit the main character
           </Link>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("scene")}>
-            Edit the scene
-          </button>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("help")}>
-            Controls and shortcuts
-          </button>
-          <button type="button" className="underline underline-offset-4" onClick={() => setPanel("saves")}>
-            Save or load
-          </button>
         </section>
       </div>
     </PanelShell>

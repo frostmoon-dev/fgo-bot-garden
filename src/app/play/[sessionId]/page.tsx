@@ -4,8 +4,9 @@ import { getPersona, getSession, getSettings, listBackgrounds, listBonds, listCh
 
 export const dynamic = "force-dynamic";
 
-export default async function PlayPage({ params }: PageProps<"/play/[sessionId]">) {
+export default async function PlayPage({ params, searchParams }: PageProps<"/play/[sessionId]">) {
   const { sessionId } = await params;
+  const { at } = await searchParams;
   const [session, characters, backgrounds, persona, settings, bonds] = await Promise.all([
     getSession(sessionId),
     listCharacters(),
@@ -25,6 +26,7 @@ export default async function PlayPage({ params }: PageProps<"/play/[sessionId]"
         persona,
         settings,
         bonds,
+        focusMessageId: typeof at === "string" && session.messages.some((m) => m.id === at) ? at : null,
       }}
     />
   );

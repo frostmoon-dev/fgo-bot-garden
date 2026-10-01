@@ -43,6 +43,17 @@ export function timeOfDay(time: string | undefined): TimeOfDay | null {
   return null;
 }
 
+// The time of day a background already shows, read from its key ("forest_night", "beach_sunset"). The stage
+// doesn't tint those again: a painted night under the night tint turns almost black.
+export function paintedTime(backgroundKey: string | null | undefined): TimeOfDay | null {
+  const k = `_${(backgroundKey ?? "").toLowerCase()}_`;
+  if (k.includes("_night_")) return "night";
+  if (/_(sunset|dusk|evening)_/.test(k)) return "dusk";
+  if (/_(dawn|sunrise)_/.test(k)) return "dawn";
+  if (/_(day|morning)_/.test(k)) return "day";
+  return null;
+}
+
 export type Weather = "rain" | "storm" | "snow" | "fog" | "petals";
 
 // Weather is only drawn outdoors; "indoors" or "outside the window" leaves the stage clear.
@@ -55,4 +66,33 @@ export function weatherOf(weather: string | undefined): Weather | null {
   if (/fog|mist|haze/.test(w)) return "fog";
   if (/petal|blossom|sakura/.test(w)) return "petals";
   return null;
+}
+
+// Small words stay lower case inside a title: "An Empty Meeting Room in Chaldea, Lit by Candles".
+const MINOR_WORDS = new Set([
+  "a", "an", "the", "and", "but", "or", "nor", "so", "yet",
+  "as", "at", "by", "for", "from", "in", "into", "of", "off", "on", "onto", "out", "over", "to", "up", "via", "with",
+]);
+
+// Title Case for the place card. Capitals the model wrote (BB, Chaldea) are kept; small words are lowered,
+// except the first and last word and the first word after a colon or dash.
+export function titleCase(text: string): string {
+  const parts = text.trim().split(/(\s+)/);
+  const words = parts.filter((p) => p && !/^\s+$/.test(p));
+  let index = 0;
+  let afterBreak = true;
+  return parts
+    .map((part) => {
+      if (!part || /^\s+$/.test(part)) return part;
+      const first = index === 0 || afterBreak;
+      const last = index === words.length - 1;
+      index++;
+      afterBreak = /[:—–]$/.test(part) || part === "-";
+      // Only the letters decide: "(in" and "in," are still "in".
+      const core = part.match(/[\p{L}'’-]+/u)?.[0] ?? "";
+      if (!first && !last && MINOR_WORDS.has(core.toLowerCase())) return part.replace(core, core.toLowerCase());
+      // Capitalise each piece of a hyphenated word ("well-lit" → "Well-Lit"), leaving the rest as written.
+      return part.replace(/(^|[-(\/"“])(\p{Ll})/gu, (_, lead: string, letter: string) => lead + letter.toUpperCase());
+    })
+    .join("");
 }

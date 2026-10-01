@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ColorDot } from "@/components/ui/ColorDot";
 import type { Beat } from "@/lib/stage";
 
@@ -25,6 +26,21 @@ function Dots() {
   );
 }
 
+// After a while with no reply, say what is going on, so a slow model doesn't look like a frozen screen.
+function SlowNote() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 15_000);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!slow) return null;
+  return (
+    <span className="mt-2 block text-[0.85em] not-italic text-muted">
+      Still waiting for the model. If it&apos;s busy or times out, it&apos;s asked again on its own.
+    </span>
+  );
+}
+
 export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: Props) {
   const name = beat?.kind === "dialogue" || beat?.kind === "user" ? beat.speakerName : null;
   const text = beat ? beat.text.slice(0, Math.floor(typed)) : "";
@@ -34,8 +50,10 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
   return (
     <div className="vn-lane relative mx-auto w-full max-w-[52rem]">
       {name && !waiting && (
+        // Keyed by name, so the tab slides in again when the speaker changes.
         <div
-          className={`vn-box vn-name absolute -top-4 z-10 flex items-center gap-2 rounded-lg px-4 py-1.5 font-name text-[1em] font-bold ${mine ? "vn-name-mine right-4 sm:right-6" : "left-4 sm:left-6"}`}
+          key={`${mine ? "me" : "them"}:${name}`}
+          className={`vn-box vn-name name-in absolute -top-4 z-10 flex items-center gap-2 rounded-lg px-4 py-1.5 font-name text-[1em] font-bold ${mine ? "vn-name-mine right-4 sm:right-6" : "left-4 sm:left-6"}`}
         >
           <ColorDot className="vn-dot" color={mine ? "var(--accent)" : (color ?? "var(--muted)")} />
           {name}
@@ -45,11 +63,14 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
         {waiting ? (
           <p className="pt-1 text-muted">
             <Dots />
+            <SlowNote />
           </p>
         ) : (
-          <p className={`whitespace-pre-wrap ${narration ? "vn-narration" : ""}`}>
+          <p className={`whitespace-pre-wrap ${beat?.thinker ? "vn-thought" : narration ? "vn-narration" : ""}`}>
+            {beat?.thinker && <span className="vn-thinker">{beat.thinker.name} · thinking</span>}
             {text}
             {pending && <Dots />}
+            {pending && <SlowNote />}
           </p>
         )}
         {onLog && (
@@ -62,7 +83,7 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
             }}
             title="Log (L)"
           >
-            <span aria-hidden className="text-[0.55rem] leading-none">▲</span>
+            <span aria-hidden className="vn-log-arch" />
             LOG
           </button>
         )}

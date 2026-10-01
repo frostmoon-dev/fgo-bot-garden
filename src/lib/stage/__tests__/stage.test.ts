@@ -102,3 +102,46 @@ describe("leaving the stage", () => {
     expect(finalStage.slots.left?.characterId).toBe("oberon");
   });
 });
+
+describe("arrivals", () => {
+  it("puts an arriving character in a free spot, and leaves one already on stage alone", () => {
+    let s = applyLine(initialStage(null, "bb"), { type: "arrive", characterId: "oberon" }, narrative);
+    expect(s.slots.left).toEqual({ characterId: "oberon", expression: "neutral" });
+    s = applyLine(s, { type: "arrive", characterId: "bb" }, narrative);
+    expect(s.slots.center?.characterId).toBe("bb");
+  });
+
+  it("brings in a character from the user's own actions, even when the scene box doesn't list them yet", () => {
+    const { ctx } = makeCtx();
+    const { beats } = buildBeats(
+      [
+        { id: "a1", role: "assistant", content: "[BB|smirk] Hi." },
+        { id: "u1", role: "user", content: "*Oberon manages to come in.*" },
+        { id: "a2", role: "assistant", content: "(BB glares.)" },
+      ],
+      ctx,
+      narrative,
+      initialStage(null, "bb"),
+      { user: "Ritsuka", char: "BB" },
+      "Ritsuka",
+      new Set(["bb"]),
+    );
+    expect(Object.values(beats.at(-1)!.stage.slots).map((s) => s?.characterId)).toContain("oberon");
+  });
+
+  it("brings in characters the user says are here", () => {
+    const { ctx } = makeCtx();
+    const { beats } = buildBeats(
+      [
+        { id: "u1", role: "user", content: "BB and Oberon is here." },
+        { id: "a1", role: "assistant", content: "(The room falls quiet.)" },
+      ],
+      ctx,
+      narrative,
+      initialStage(null, "bb"),
+      { user: "Ritsuka", char: "BB" },
+      "Ritsuka",
+    );
+    expect(Object.values(beats.at(-1)!.stage.slots).map((s) => s?.characterId)).toEqual(expect.arrayContaining(["bb", "oberon"]));
+  });
+});

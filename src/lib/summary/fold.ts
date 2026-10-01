@@ -3,13 +3,14 @@ import { db } from "@/lib/db";
 import { canonicalize, toTranscript } from "@/lib/parser/transcript";
 import type { ParserContext } from "@/lib/parser/types";
 import { selectForSummary, type HistoryItem } from "./select";
+import type { PersonaInfo } from "@/lib/prompt/rules";
 import { summarize } from "./summarize";
 
 // Folds old messages into the session summary once the history outgrows its budget.
 // Runs after a reply has been sent, so the user never waits for it.
 export async function foldHistory(
   sessionId: string,
-  opts: { budget: number; keepRecent: number; ctx: ParserContext },
+  opts: { budget: number; keepRecent: number; ctx: ParserContext; persona: PersonaInfo },
 ): Promise<void> {
   const session = await db.session.findUnique({
     where: { id: sessionId },
@@ -39,7 +40,7 @@ export async function foldHistory(
     const m = byOrder.get(item.order);
     return item.role === "assistant" && m ? { ...item, content: toTranscript(raw(m), opts.ctx) } : item;
   });
-  const summary = await summarize(session.summary, transcript, { user: opts.ctx.userName });
+  const summary = await summarize(session.summary, transcript, opts.persona);
 
   // Only apply if nothing else folded this session in the meantime.
   await db.session.updateMany({

@@ -21,8 +21,9 @@ const backgroundSchema = z.object({
   label: z.string().max(120),
   imageUrl: z.string().trim().min(1).max(2000),
   description: z.string().max(1000),
+  musicUrl: z.string().trim().max(2000).default(""),
 });
-export type BackgroundInput = z.infer<typeof backgroundSchema>;
+export type BackgroundInput = z.input<typeof backgroundSchema>;
 
 export async function saveBackground(id: string | null, input: BackgroundInput): Promise<ActionResult<void>> {
   return safe(async () => {
@@ -50,6 +51,7 @@ const personaSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().max(5000),
   addressAs: z.string().max(80),
+  role: z.string().max(300),
 });
 
 export async function savePersona(input: z.infer<typeof personaSchema>): Promise<ActionResult<void>> {
@@ -105,6 +107,8 @@ const settingsSchema = z.object({
   textSpeed: z.number().int().min(5).max(500),
   autoSpeed: z.number().int().min(200).max(10000),
   uiScale: z.number().min(0.7).max(1.6),
+  windowOpacity: z.number().min(0.3).max(1),
+  musicVolume: z.number().min(0).max(1),
   loreScanDepth: z.number().int().min(1).max(20),
   contextBudget: z.number().int().min(1000).max(100000),
   keepRecent: z.number().int().min(2).max(100),
@@ -126,6 +130,9 @@ const settingsSchema = z.object({
   customPrompt: z.string().max(8000),
   sceneTracker: z.boolean(),
   autoChoices: z.boolean(),
+  characterMemory: z.boolean(),
+  innerThoughts: z.boolean(),
+  helperModel: z.enum(["main", "light", "all"]),
   replyLength: z.enum(["short", "scene", "long"]),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;

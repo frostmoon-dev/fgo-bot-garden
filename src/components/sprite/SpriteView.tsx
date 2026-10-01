@@ -12,17 +12,23 @@ interface Props {
   fade?: boolean;
 }
 
-function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; sheetUrl: string; cell: number; opacity?: number; className?: string }) {
+// The face cell's outer pixels match the body under it, so a few are left off: when the browser scales the
+// sheet, the cells around this one bleed into its edge and would draw a faint box around the face.
+const INSET = 4;
+
+export function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; sheetUrl: string; cell: number; opacity?: number; className?: string }) {
   const o = cellOrigin(grid, cell);
+  const size = grid.cellSize - 2 * INSET;
   return (
     <svg
-      x={grid.faceX}
-      y={grid.faceY}
-      width={grid.cellSize}
-      height={grid.cellSize}
-      viewBox={`${o.x} ${o.y} ${grid.cellSize} ${grid.cellSize}`}
+      x={grid.faceX + INSET}
+      y={grid.faceY + INSET}
+      width={size}
+      height={size}
+      viewBox={`${o.x + INSET} ${o.y + INSET} ${size} ${size}`}
       opacity={opacity}
       className={className}
+      style={{ ["--fade" as string]: `${FACE_FADE}ms` }}
     >
       <image href={displaySheetUrl(sheetUrl, grid)} width={grid.sheetWidth} height={grid.sheetHeight} />
     </svg>
@@ -30,8 +36,13 @@ function Face({ grid, sheetUrl, cell, opacity, className }: { grid: SheetGrid; s
 }
 
 // Draws the body part of an FGO sheet with one face cell on top. The SVG viewBox does the cropping.
+// A new face fades in over the old one, which stays fully drawn underneath until the fade is done
+// (so the body's own face never shows through halfway). Back to the body's face, the old one fades out.
+const FACE_FADE = 180;
+
 export function SpriteView({ grid, sheetUrl, cell, className = "", faceOpacity, fade = true }: Props) {
-  const faces = useFadeLayers(cell >= 0 ? cell : null, cell >= 0 ? String(cell) : null, 220);
+  const faces = useFadeLayers(cell >= 0 ? cell : null, cell >= 0 ? String(cell) : null, FACE_FADE + 80);
+  const hasCurrent = faces.some((f) => !f.leaving);
   return (
     <svg
       viewBox={`0 0 ${grid.sheetWidth} ${grid.bodyHeight}`}
@@ -48,7 +59,7 @@ export function SpriteView({ grid, sheetUrl, cell, className = "", faceOpacity, 
               sheetUrl={sheetUrl}
               cell={f.value}
               opacity={faceOpacity}
-              className={f.leaving ? undefined : "fade-in"}
+              className={f.leaving ? (hasCurrent ? undefined : "fade-out") : "fade-in"}
             />
           ))
         : cell >= 0 && <Face grid={grid} sheetUrl={sheetUrl} cell={cell} opacity={faceOpacity} />}

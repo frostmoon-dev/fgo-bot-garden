@@ -48,13 +48,18 @@ export interface BackgroundView {
   label: string;
   imageUrl: string;
   description: string;
+  // A looping track for this background, or "".
+  musicUrl: string;
 }
 
 export interface PersonaView {
   name: string;
   description: string;
   addressAs: string;
+  role: string;
 }
+
+export type HelperModel = "main" | "light" | "all";
 
 export interface SettingsView {
   temperature: number;
@@ -62,6 +67,13 @@ export interface SettingsView {
   textSpeed: number;
   autoSpeed: number;
   uiScale: number;
+  windowOpacity: number;
+  // Background music loudness, 0 to 1 (0 is off).
+  musicVolume: number;
+  // Characters may write private thoughts: (thought:Name) text.
+  innerThoughts: boolean;
+  // Which small background requests go to the backup model.
+  helperModel: HelperModel;
   loreScanDepth: number;
   contextBudget: number;
   keepRecent: number;
@@ -83,6 +95,7 @@ export interface SettingsView {
   customPrompt: string;
   sceneTracker: boolean;
   autoChoices: boolean;
+  characterMemory: boolean;
   replyLength: ReplyLength;
 }
 
@@ -111,6 +124,8 @@ export interface SessionView {
   summarizedUntil: number;
   memory: string;
   scene: string;
+  // The scene the user wrote for this story, if it was started from Write a scene.
+  premise: string;
   cast: { characterId: string; spriteSetId: string | null }[];
   messages: MessageView[];
   saves: SaveSlotView[];

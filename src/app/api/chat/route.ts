@@ -4,7 +4,8 @@ import { isAuthed } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { getPersona, getSettings, listBackgrounds } from "@/lib/data/queries";
 import { streamChat } from "@/lib/llm/client";
-import { STREAM_ERROR_MARKER } from "@/lib/llm/protocol";
+import { STREAM_ERROR_MARKER, STREAM_USAGE_MARKER } from "@/lib/llm/protocol";
+import type { ChatUsage } from "@/lib/llm/types";
 import { getTriggeredLore } from "@/lib/lorebook";
 import { localLoreProvider } from "@/lib/lorebook/localProvider";
 import { availableExpressions, pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
@@ -14,15 +15,24 @@ import { canonicalize } from "@/lib/parser/transcript";
 import { userTextForPrompt } from "@/lib/userInput";
 import type { Mode, ParserContext } from "@/lib/parser/types";
 import { buildPrompt } from "@/lib/prompt/builder";
-import { formChangeNote, pendingFormChanges } from "@/lib/story/formChange";
+import { formChangeNote, pendingFormChanges, readFormChange } from "@/lib/story/formChange";
+import { formerCast } from "@/lib/story/formerCast";
+import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
 
-export const maxDuration = 60;
+// Vercel's limit on every plan with fluid compute (the default). Slow models and retries need the room.
+export const maxDuration = 300;
+// Retries of a failed or stuck request may start until this long after the request came in, leaving the
+// rest of maxDuration for the reply itself to be written.
+const RETRY_WINDOW_MS = 200_000;
 
 const bodySchema = z.object({
   sessionId: z.string().min(1),
   action: z.enum(["reply", "regenerate"]),
   text: z.string().max(20000).optional(),
+  // The user's note on where this one reply should go ("BB gets jealous", "make it shorter"). Out of the
+  // story: it goes into the prompt for this reply only and is never saved.
+  direction: z.string().max(1000).optional(),
 });
 
 function jsonError(status: number, error: string) {
@@ -30,13 +40,14 @@ function jsonError(status: number, error: string) {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!(await isAuthed())) return jsonError(401, "Not signed in");
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "Invalid request");
   const { sessionId, action } = parsed.data;
 
   // All reads at once. Persona, settings and backgrounds usually come from the cache.
-  const [session, persona, settings, backgrounds] = await Promise.all([
+  const [session, persona, settings, backgrounds, everyone] = await Promise.all([
     db.session.findUnique({
       where: { id: sessionId },
       include: {
@@ -59,6 +70,7 @@ export async function POST(request: Request) {
     getPersona(),
     getSettings(),
     listBackgrounds(),
+    db.character.findMany({ select: { id: true, name: true, aliases: true } }),
   ]);
   if (!session) return jsonError(404, "Session not found");
 
@@ -127,7 +139,15 @@ export async function POST(request: Request) {
 
   // A form switched since the characters last spoke gets a one-time note, so they react to it.
   const past = target.kind === "variant" ? session.messages.slice(0, -1) : session.messages;
+  // Characters taken out of the cast who still have lines in the history: the model is told they are gone.
+  const absent = formerCast(session.messages.map(content), everyone, new Set(cast.map(({ character: c }) => c.id))).map((c) => c.name);
   const events = pendingFormChanges(past.map((m) => ({ role: m.role, content: content(m) }))).map(formChangeNote);
+  // Once the user has replied, a scenario only says how the story began. If the main character has changed
+  // form since, their current form's scenario never happened in this story, so it is left out: sending it
+  // made the model jump to that form's opening scene and act as if nothing had happened before.
+  const storyStarted = session.messages.some((m) => m.role === "user") || !!userText;
+  const mainName = cast.find(({ character: c }) => c.id === session.mainCharacterId)?.character.name;
+  const mainChangedForm = session.messages.some((m) => readFormChange(content(m))?.name === mainName);
 
   const scanTexts = history.slice(-settings.loreScanDepth).map((m) => m.content);
   const lore = await getTriggeredLore(localLoreProvider, scanTexts);
@@ -144,10 +164,11 @@ export async function POST(request: Request) {
       speechStyle: profile.speechStyle,
       lore: profile.lore,
       relationship: profile.relationship,
-      scenario: profile.scenario,
+      scenario: c.id === session.mainCharacterId && mainChangedForm ? "" : profile.scenario,
       exampleDialogues: profile.exampleDialogues,
       expressions: expressions.map(({ key, label, description }) => ({ key, label, description })),
       bond: bondPrompt(c.bond),
+      memories: settings.characterMemory ? c.memories : "",
       ...forms,
     })),
     backgrounds,
@@ -157,17 +178,22 @@ export async function POST(request: Request) {
     memory: session.memory,
     scene: session.scene,
     events,
+    absent,
+    storyStarted,
+    premise: session.premise,
     // Pins that were folded into the summary still go in word for word.
     pinned: history.filter((m) => m.pinned && m.order <= session.summarizedUntil).map((m) => m.content),
     history: history
       .filter((m) => m.order > session.summarizedUntil && m.content.trim())
       .map(({ role, content, pinned }) => ({ role, content, pinned })),
     continueScene: action === "reply" && !userText,
+    direction: parsed.data.direction?.trim() || undefined,
     options: {
       profile: settings.promptProfile,
       exampleMode: settings.exampleMode,
       memoryPlacement: settings.memoryPlacement,
       formatReminder: settings.formatReminder,
+      innerThoughts: settings.innerThoughts,
       customPrompt: settings.customPrompt,
       replyLength: settings.replyLength,
       contextSize: settings.contextSize,
@@ -179,6 +205,9 @@ export async function POST(request: Request) {
   request.signal.addEventListener("abort", () => abort.abort());
 
   const user = persona.name;
+  let usage: ChatUsage | null = null;
+  // Set before the first text arrives, so it can go in the response headers.
+  let usedBackup = false as boolean;
   const iterator = streamChat({
     messages: prompt.messages,
     temperature: settings.temperature,
@@ -189,6 +218,15 @@ export async function POST(request: Request) {
     // Stop the model before it starts a line for the user's character.
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,
+    cacheKey: `bond-garden:${sessionId}`,
+    purpose: "reply",
+    deadline: startedAt + RETRY_WINDOW_MS,
+    onFallback: () => {
+      usedBackup = true;
+    },
+    onUsage: (u) => {
+      usage = u;
+    },
   })[Symbol.asyncIterator]();
 
   // Wait for the first chunk so a failed request can still return a proper error status.
@@ -272,6 +310,7 @@ export async function POST(request: Request) {
         console.error("Could not save reply", error);
         send(STREAM_ERROR_MARKER + "Reply could not be saved");
       }
+      if (usage) send(STREAM_USAGE_MARKER + JSON.stringify(usage));
       try {
         controller.close();
       } catch {
@@ -292,9 +331,18 @@ export async function POST(request: Request) {
         budget: Math.max(500, Math.min(settings.contextBudget, historyRoom)),
         keepRecent: settings.keepRecent,
         ctx: parserCtx,
+        persona,
       });
     } catch (error) {
       console.error("Summary failed; the next reply sends the full history instead", error);
+    }
+    // Every few exchanges, the characters who spoke remember what they learned about the user.
+    if (settings.characterMemory) {
+      try {
+        await updateCharacterMemories(sessionId, { ctx: parserCtx, persona });
+      } catch (error) {
+        console.error("Character memory update failed", error);
+      }
     }
   });
 
@@ -306,6 +354,7 @@ export async function POST(request: Request) {
       "X-User-Message-Id": userMessageId ?? "",
       "X-Prompt-Tokens": String(prompt.tokens),
       "X-Prompt-Breakdown": JSON.stringify(breakdown),
+      ...(usedBackup && { "X-Backup-Model": "1" }),
     },
   });
 }

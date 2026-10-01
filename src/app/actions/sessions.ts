@@ -7,10 +7,15 @@ import { requireAuth } from "@/lib/auth/server";
 import { safe } from "@/lib/safeAction";
 import { db } from "@/lib/db";
 import { pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
-import { normalizeScene } from "@/lib/scene";
+import { cleanScene, normalizeScene, parseScene } from "@/lib/scene";
+import { completeChat } from "@/lib/llm/client";
+import { aboutUser, scenePrompt } from "@/lib/prompt/rules";
+import { bondLevel } from "@/lib/bond";
+import { interludeFor, interludePrompt, parseInterlude } from "@/lib/interlude";
 import { applyMacros } from "@/lib/stage/beats";
 import { getPersona } from "@/lib/data/queries";
 import { formChangeLine, readFormChange } from "@/lib/story/formChange";
+import { withoutPresent } from "@/lib/story/formerCast";
 import type { MessageView } from "@/lib/types";
 
 const snapshotSchema = z.object({
@@ -50,8 +55,25 @@ async function ascensionProfile(characterId: string, spriteSetId: string | null)
 async function startStory(
   characterId: string,
   spriteSetId: string | null,
-  setup?: { cast: { characterId: string; spriteSetId: string | null }[]; mode: string; backgroundId: string | null },
+  setup?: {
+    cast: { characterId: string; spriteSetId: string | null }[];
+    mode: string;
+    backgroundId: string | null;
+    premise?: string;
+    title?: string;
+    interlude?: number | null;
+  },
 ): Promise<string> {
+  // A story that began from a written scene starts from that scene again, without a greeting.
+  if (setup?.premise) {
+    return createPremiseStory({
+      ...setup,
+      premise: setup.premise,
+      mainCharacterId: characterId,
+      // An interlude played again keeps its name; other written scenes get a fresh title.
+      title: setup.interlude ? setup.title : undefined,
+    });
+  }
   const { character, set, profile, openingScene } = await ascensionProfile(characterId, spriteSetId);
   const titleName = set && character.spriteSets.length > 1 ? `${character.name} (${set.name})` : character.name;
   const others = (setup?.cast ?? []).filter((c) => c.characterId !== character.id);
@@ -87,10 +109,221 @@ export async function restartStory(sessionId: string): Promise<ActionResult<stri
     await requireAuth();
     const session = await db.session.findUniqueOrThrow({
       where: { id: sessionId },
-      select: { mainCharacterId: true, mode: true, backgroundId: true, cast: { select: { characterId: true, spriteSetId: true } } },
+      select: {
+        mainCharacterId: true,
+        mode: true,
+        backgroundId: true,
+        premise: true,
+        title: true,
+        interlude: true,
+        cast: { select: { characterId: true, spriteSetId: true } },
+      },
     });
     const main = session.cast.find((c) => c.characterId === session.mainCharacterId);
     return startStory(session.mainCharacterId, main?.spriteSetId ?? null, session);
+  });
+}
+
+async function createPremiseStory(input: {
+  premise: string;
+  cast: { characterId: string; spriteSetId: string | null }[];
+  mainCharacterId: string;
+  mode: string;
+  backgroundId: string | null;
+  title?: string;
+  interlude?: number | null;
+}): Promise<string> {
+  const characters = await db.character.findMany({
+    where: { id: { in: input.cast.map((c) => c.characterId) } },
+    select: { id: true, name: true },
+  });
+  const names = input.cast.flatMap((c) => characters.find((ch) => ch.id === c.characterId)?.name ?? []);
+  const scene = await sceneBoxFor(input.premise, names);
+  const place = parseScene(scene).Location;
+  const session = await db.session.create({
+    data: {
+      title: (input.title || `${names.join(", ")} — ${place && place.length <= 40 ? place : new Date().toLocaleDateString("en-GB")}`).slice(0, 120),
+      interlude: input.interlude ?? null,
+      mainCharacterId: input.mainCharacterId,
+      mode: input.mode,
+      backgroundId: input.backgroundId,
+      premise: input.premise,
+      scene,
+      // Characters deleted since a restart's story began are left out.
+      cast: { create: input.cast.filter((c) => characters.some((ch) => ch.id === c.characterId)) },
+    },
+  });
+  revalidatePath("/");
+  return session.id;
+}
+
+const sceneStorySchema = z.object({
+  premise: z.string().trim().min(1, "Write the scene first").max(6000),
+  cast: z
+    .array(z.object({ characterId: z.string(), spriteSetId: z.string().nullable() }))
+    .min(1, "Choose at least one character")
+    .max(12),
+  mainCharacterId: z.string(),
+  mode: z.enum(["narrative", "dialogue"]),
+  backgroundId: z.string().nullable(),
+});
+export type SceneStoryInput = z.infer<typeof sceneStorySchema>;
+
+// The scene box for a written scene. One short model call; if it fails, the scene text itself is the Situation.
+async function sceneBoxFor(premise: string, names: string[]): Promise<string> {
+  const persona = await getPersona();
+  try {
+    const text = await completeChat({
+      messages: [
+        { role: "system", content: scenePrompt(persona.name) },
+        {
+          role: "user",
+          content: `${aboutUser(persona, 400)}\n\nCharacters in the story: ${names.join(", ")}.\n\nCurrent scene:\n(not set yet)\n\nHow the story begins:\n${premise}`,
+        },
+      ],
+      temperature: 0.2,
+      maxTokens: 220,
+      // The story is waiting to start; without an answer soon, the scene text itself is used.
+      deadline: Date.now() + 20_000,
+      purpose: "scene",
+    });
+    const scene = cleanScene(text);
+    if (scene) return scene;
+  } catch {
+    // The story still starts; the scene box fills in after the first reply.
+  }
+  return normalizeScene(premise.length > 300 ? `${premise.slice(0, 300)}…` : premise);
+}
+
+// "Write a scene": a story that starts from the player's own scene and cast, instead of a character's greeting.
+export async function createSceneStory(input: SceneStoryInput): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const data = sceneStorySchema.parse(input);
+    if (!data.cast.some((c) => c.characterId === data.mainCharacterId)) {
+      throw new Error("The main character must be in the scene");
+    }
+    const characters = await db.character.findMany({
+      where: { id: { in: data.cast.map((c) => c.characterId) } },
+      select: { id: true, defaultBackgroundId: true },
+    });
+    if (characters.length !== data.cast.length) throw new Error("One of the characters no longer exists");
+    // No background chosen: the main character's own.
+    const backgroundId = data.backgroundId ?? characters.find((c) => c.id === data.mainCharacterId)?.defaultBackgroundId ?? null;
+    // The main character goes first, so they stand at the center of the cast list.
+    const cast = [...data.cast].sort((a, b) => Number(b.characterId === data.mainCharacterId) - Number(a.characterId === data.mainCharacterId));
+    return createPremiseStory({ ...data, cast, backgroundId });
+  });
+}
+
+// "Branch from here": a new story with everything up to and including one message, to try another way
+// forward. The original story is left as it is.
+export async function branchStory(sessionId: string, messageId: string): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        cast: true,
+        messages: { orderBy: [{ order: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { position: "asc" } } } },
+      },
+    });
+    const cut = session.messages.findIndex((m) => m.id === z.string().parse(messageId));
+    if (cut < 0) throw new Error("That message is no longer in the story");
+    const kept = session.messages.slice(0, cut + 1);
+    const cutOrder = kept.at(-1)!.order;
+    const atEnd = cut === session.messages.length - 1;
+    // A summary that already covers later messages would tell the AI what hasn't happened in the branch yet.
+    // Then the branch starts without it, and the full history is sent until it is summarized again.
+    const summaryFits = session.summarizedUntil <= cutOrder;
+    const created = await db.session.create({
+      data: {
+        title: `${session.title} (branch)`.slice(0, 120),
+        mainCharacterId: session.mainCharacterId,
+        mode: session.mode,
+        backgroundId: session.backgroundId,
+        premise: session.premise,
+        memory: session.memory,
+        summary: summaryFits ? session.summary : "",
+        summarizedUntil: summaryFits ? session.summarizedUntil : -1,
+        // The characters already remember these messages; don't fold them into their memories twice.
+        rememberedUntil: Math.min(session.rememberedUntil, cutOrder),
+        scene: atEnd ? session.scene : "",
+        cast: { create: session.cast.map(({ characterId, spriteSetId }) => ({ characterId, spriteSetId })) },
+        messages: {
+          create: kept.map((m) => ({
+            order: m.order,
+            role: m.role,
+            activeVariant: m.activeVariant,
+            pinned: m.pinned,
+            variants: { create: m.variants.map(({ position, content }) => ({ position, content })) },
+          })),
+        },
+      },
+    });
+    revalidatePath("/");
+    return created.id;
+  });
+}
+
+// Starts an interlude: the AI writes its opening scene from the character's definition and memories,
+// then it plays like a written scene. Each costs one small extra request.
+export async function startInterlude(characterId: string, n: number): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const interlude = interludeFor(z.number().int().parse(n));
+    if (!interlude) throw new Error("No such interlude");
+    const [character, persona] = await Promise.all([
+      db.character.findUniqueOrThrow({ where: { id: characterId }, include: { spriteSets: true } }),
+      getPersona(),
+    ]);
+    if (bondLevel(character.bond) < interlude.level) {
+      throw new Error(`Interlude ${interlude.n} unlocks at bond Lv ${interlude.level}.`);
+    }
+    const set = pickAscension(character, null);
+    const profile = resolveProfile(pickProfile(character), set);
+    const macros = { user: persona.name, char: character.name };
+    const definition = [
+      profile.description && `Description: ${profile.description}`,
+      profile.personality && `Personality: ${profile.personality}`,
+      profile.relationship && `Relationship with ${persona.name}: ${profile.relationship}`,
+      profile.lore && `Background: ${profile.lore.slice(0, 1500)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const reply = await completeChat({
+      messages: [
+        { role: "system", content: interludePrompt(character.name, persona.name, interlude.theme) },
+        {
+          role: "user",
+          content: applyMacros(
+            [
+              aboutUser(persona, 400),
+              `About ${character.name}:\n${definition || "(no definition written)"}`,
+              character.memories.trim() && `What ${character.name} remembers of ${persona.name}:\n${character.memories.trim()}`,
+              `---\nWrite Interlude ${interlude.n} now: the Title line, then the Scene.`,
+            ]
+              .filter(Boolean)
+              .join("\n\n"),
+            macros,
+          ),
+        },
+      ],
+      temperature: 0.9,
+      maxTokens: 450,
+      purpose: "interlude",
+    });
+    const { title, scene } = parseInterlude(reply);
+    if (!scene) throw new Error("The model sent back no scene. Try again, or try another model.");
+    return createPremiseStory({
+      premise: applyMacros(scene, macros),
+      cast: [{ characterId, spriteSetId: set?.id ?? null }],
+      mainCharacterId: characterId,
+      mode: "narrative",
+      backgroundId: character.defaultBackgroundId,
+      title: `${character.name} — Interlude ${interlude.n}${title ? `: ${title}` : ""}`,
+      interlude: interlude.n,
+    });
   });
 }
 
@@ -227,19 +460,27 @@ export async function updateSession(id: string, patch: SessionPatch): Promise<Ac
 export async function setCast(
   sessionId: string,
   cast: { characterId: string; spriteSetId: string | null }[],
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<string>> {
   return safe(async () => {
     await requireAuth();
-    const session = await db.session.findUniqueOrThrow({ where: { id: sessionId } });
+    const session = await db.session.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: { cast: { include: { character: { select: { id: true, name: true, aliases: true } } } } },
+    });
     const list = z.array(z.object({ characterId: z.string(), spriteSetId: z.string().nullable() })).max(12).parse(cast);
     if (!list.some((c) => c.characterId === session.mainCharacterId)) {
       throw new Error("The main character must stay in the cast");
     }
+    // Whoever leaves the cast leaves the scene box too, so the next reply doesn't bring them back.
+    const kept = new Set(list.map((c) => c.characterId));
+    const scene = withoutPresent(session.scene, session.cast.filter((c) => !kept.has(c.characterId)).map((c) => c.character));
     await db.$transaction([
       db.sessionCast.deleteMany({ where: { sessionId } }),
       db.sessionCast.createMany({ data: list.map((c) => ({ ...c, sessionId })) }),
+      db.session.update({ where: { id: sessionId }, data: { scene } }),
     ]);
     revalidatePath(`/play/${sessionId}`);
+    return scene;
   });
 }
 
@@ -335,6 +576,10 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
         (c) => c.id,
       ),
     );
+    // The characters' memories already hold the restored messages (or some of them). Messages written
+    // after loading reuse later positions, so the memory mark must not stay past the restored story.
+    const { rememberedUntil } = await db.session.findUniqueOrThrow({ where: { id: sessionId }, select: { rememberedUntil: true } });
+    const lastOrder = Math.max(-1, ...snap.messages.map((m) => m.order));
     await db.$transaction(async (tx) => {
       await tx.message.deleteMany({ where: { sessionId } });
       await tx.sessionCast.deleteMany({ where: { sessionId } });
@@ -347,6 +592,7 @@ export async function loadSlot(sessionId: string, slot: number): Promise<ActionR
           summarizedUntil: snap.summarizedUntil,
           memory: snap.memory,
           scene: snap.scene,
+          rememberedUntil: Math.min(rememberedUntil, lastOrder),
         },
       });
       await tx.sessionCast.createMany({

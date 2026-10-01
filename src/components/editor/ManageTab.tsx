@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
 import type { CharacterView } from "@/lib/types";
+import { askConfirm } from "@/components/ui/dialogs";
 
 export function ManageTab({ character }: { character: CharacterView }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
   return (
     <div className="max-w-2xl divide-y divide-line">
       <section className="space-y-3 pb-8">
-        <h2 className="text-lg font-semibold">Export</h2>
+        <h2 className="tab-heading">Export</h2>
         <p className="text-sm text-muted">
           Saves the profile, expressions and ascensions (definitions and sheet settings) as JSON. Sprite images are linked by URL, not copied into the file.
         </p>
@@ -35,7 +36,7 @@ export function ManageTab({ character }: { character: CharacterView }) {
         </Button>
       </section>
       <section className="space-y-3 py-8">
-        <h2 className="text-lg font-semibold">Duplicate</h2>
+        <h2 className="tab-heading">Duplicate</h2>
         <p className="text-sm text-muted">Copies the profile, expressions and ascensions into a new bot.</p>
         <Button
           disabled={pending}
@@ -50,14 +51,20 @@ export function ManageTab({ character }: { character: CharacterView }) {
         </Button>
       </section>
       <section className="space-y-3 pt-8">
-        <h2 className="text-lg font-semibold">Delete</h2>
+        <h2 className="tab-heading">Delete</h2>
         <p className="text-sm text-muted">Also deletes every story where this bot is the main character.</p>
         <Button
           variant="danger"
           className="border border-danger/40"
           disabled={pending}
-          onClick={() => {
-            if (!confirm(`Delete ${character.name} and their sessions? This cannot be undone.`)) return;
+          onClick={async () => {
+            const ok = await askConfirm({
+              title: `Delete ${character.name}?`,
+              body: `${character.name}, their ascensions and sprites, and every story where they are the main character will be deleted. Other stories keep going without them. This cannot be undone.`,
+              confirmLabel: `Delete ${character.name}`,
+              danger: true,
+            });
+            if (!ok) return;
             run(async () => {
               unwrap(await deleteCharacter(character.id));
               router.push("/characters");

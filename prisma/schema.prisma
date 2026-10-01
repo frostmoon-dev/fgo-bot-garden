@@ -25,6 +25,9 @@ model Character {
   openingScene        String   @default("")
   // FGO-style bond points with the user. Grows with every exchange.
   bond                Int      @default(0)
+  // What this character remembers about the user from all their stories together. Written in the
+  // background as stories go on (src/lib/memory), editable in the character editor.
+  memories            String   @default("")
   // How the sprite moves as it talks: expressive, bouncy, calm or still (see src/lib/motion.ts).
   motion              String   @default("expressive")
   defaultSpriteSetId  String?
@@ -104,6 +107,8 @@ model Background {
   label       String @default("")
   imageUrl    String
   description String @default("")
+  // A looping track that plays while this background is on screen. Empty for silence.
+  musicUrl    String @default("")
 }
 
 model Persona {
@@ -111,6 +116,8 @@ model Persona {
   name        String @default("Master")
   description String @default("")
   addressAs   String @default("Master")
+  // Who the user is in the world (a Master, Chaldea staff, a visitor…). Overrides what characters assume from canon.
+  role        String @default("")
 }
 
 model LorebookEntry {
@@ -134,6 +141,12 @@ model Session {
   memory          String   @default("")
   // The scene box: Location, Time, Weather, Present, Mood, Situation. Kept up to date after replies.
   scene           String   @default("")
+  // The scene the user wrote for this story (Write a scene). It replaces the main character's scenario.
+  premise         String   @default("")
+  // Which interlude this story is (1 to 3, unlocked by bond level). Null for ordinary stories.
+  interlude       Int?
+  // The last message already folded into the characters' memories.
+  rememberedUntil Int      @default(-1)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -202,6 +215,10 @@ model Settings {
   textSpeed     Int     @default(45)
   autoSpeed     Int     @default(1600)
   uiScale       Float   @default(1)
+  // How opaque the story screen's message window is (FGO frames): 1 is solid.
+  windowOpacity Float   @default(0.8)
+  // How loud background music plays, 0 to 1. 0 turns it off.
+  musicVolume   Float   @default(0.5)
   loreScanDepth Int     @default(4)
   contextBudget Int     @default(6000)
   keepRecent    Int     @default(12)
@@ -226,6 +243,12 @@ model Settings {
   customPrompt     String  @default("")
   sceneTracker     Boolean @default(true)
   autoChoices      Boolean @default(false)
+  // Characters remember the user across stories (Character.memories).
+  characterMemory  Boolean @default(true)
+  // Characters may write private thoughts, shown quietly on the story screen.
+  innerThoughts    Boolean @default(false)
+  // Which small background requests the backup model does: "main" (none), "light" or "all" (lib/llm/connection.ts).
+  helperModel      String  @default("main")
   // How many lines a reply should have: short, scene (an FGO-style scene) or long.
   replyLength      String  @default("scene")
 }
@@ -240,4 +263,37 @@ model Connection {
   // Encrypted with a key derived from AUTH_SECRET. Never sent to the browser.
   apiKey    String   @default("")
   updatedAt DateTime @updatedAt
+}
+
+// A moment kept from a story: a snapshot of the screen, so the card still shows after the story,
+// character or background changes. sessionId only links back; the card stays when the story is deleted.
+model Moment {
+  id         String   @id @default(cuid())
+  sessionId  String?
+  storyTitle String   @default("")
+  // The background picture.
+  imageUrl   String   @default("")
+  // The character on screen: { sheetUrl, grid, cell } (see lib/moment.ts). Null for none.
+  sprite     Json?
+  speaker    String   @default("")
+  color      String   @default("")
+  text       String
+  narration  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Token counts of one AI request, for the Usage page. Null counts: the provider didn't report them.
+model Usage {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  // What the request was for: reply, scene, choices, summary, memory, write, interlude, test.
+  purpose          String
+  model            String
+  promptTokens     Int?
+  cachedTokens     Int?
+  completionTokens Int?
+
+  @@index([createdAt])
 }

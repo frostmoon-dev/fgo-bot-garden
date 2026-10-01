@@ -17,15 +17,10 @@ export const THEMES = {
 
 export type ThemeId = keyof typeof THEMES | "custom";
 
+// The one font the whole app uses: text, titles and names. "fgo" is the default id, kept so saved settings still match.
 export const FONTS = {
-  fgo: {
-    label: "FGO",
-    family: "M PLUS 1 · Zen Old Mincho",
-    hint: "Like the game: a clear gothic for the story text (as FGO's Skip) and a mincho serif for titles.",
-  },
+  fgo: { label: "Figtree", family: "Figtree", hint: "Clear and warm. The default." },
   clear: { label: "Clear", family: "Atkinson Hyperlegible Next", hint: "Made by the Braille Institute. Every letter is easy to tell apart." },
-  plain: { label: "Plain", family: "Inter", hint: "A neutral, compact interface font." },
-  rounded: { label: "Rounded", family: "Nunito", hint: "Soft, rounded letter ends." },
   dyslexic: { label: "Dyslexic", family: "OpenDyslexic", hint: "Heavy letter bottoms and wider spacing." },
 } as const;
 

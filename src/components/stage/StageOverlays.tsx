@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseScene } from "@/lib/scene";
+import { parseScene, titleCase } from "@/lib/scene";
 import { activeContent } from "@/lib/types";
 import { SHORTCUTS } from "./usePlaybackEffects";
 import { PanelShell } from "./PanelShell";
-import { usePlay } from "./usePlay";
+import { listNames, usePlay } from "./usePlay";
 
 function PlaceCardInner({ location, time }: { location: string; time?: string }) {
   const [visible, setVisible] = useState(true);
@@ -15,12 +15,15 @@ function PlaceCardInner({ location, time }: { location: string; time?: string })
   }, []);
   if (!visible) return null;
   return (
-    <div className="place-card pointer-events-none absolute inset-x-0 top-[11%] z-20 flex justify-center px-6" aria-live="polite">
-      <div className="vn-banner text-center text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.8)]">
-        <div className="vn-rule mx-auto mb-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        <p className="font-title text-2xl font-semibold tracking-wide sm:text-3xl">{location}</p>
-        {time && <p className="vn-banner-sub mt-1 text-sm uppercase tracking-[0.25em] text-white/80">{time}</p>}
-        <div className="vn-rule mx-auto mt-2 h-px w-48 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+    // A small label under the top bar, top-left, so it never covers a face. Title Case, whatever case the
+    // model wrote: the place in bold, the time smaller and muted below it.
+    <div
+      className="place-card pointer-events-none absolute left-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.75rem)] z-20 max-w-[min(20rem,calc(100%-1.5rem))] sm:left-5 sm:top-24"
+      aria-live="polite"
+    >
+      <div className="vn-banner rounded-md border-l-[3px] border-accent bg-canvas/85 py-2.5 pl-3.5 pr-4 shadow-md ring-1 ring-ink/10">
+        <p className="text-[0.95rem] font-bold leading-snug text-balance sm:text-base">{titleCase(location)}</p>
+        {time && <p className="vn-banner-sub mt-0.5 text-sm font-medium leading-snug text-muted">{titleCase(time)}</p>}
       </div>
     </div>
   );
@@ -44,10 +47,41 @@ export function StageToast() {
   }, [toast]);
   if (!toast || hidden === toast.id) return null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-40 flex justify-center px-4">
-      <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
-        {toast.text}
+    <p key={toast.id} role="status" className="toast-in vn-box px-4 py-2 text-sm font-medium">
+      {toast.text}
+    </p>
+  );
+}
+
+// A character the story named isn't in the cast, so they can't appear: offer to add them. It stays until
+// answered, since it asks for a choice. It sits above the message window, never over the characters.
+export function CastSuggestionCard({ className = "" }: { className?: string }) {
+  const suggestion = usePlay((s) => s.castSuggestion);
+  const characters = usePlay((s) => s.characters);
+  const accept = usePlay((s) => s.acceptCastSuggestion);
+  const decline = usePlay((s) => s.declineCastSuggestion);
+  if (!suggestion) return null;
+  const names = suggestion.characterIds.map((id) => characters[id]?.name ?? "Someone");
+  return (
+    <div
+      key={suggestion.id}
+      role="status"
+      className={`toast-in vn-box pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="min-w-0 flex-1 basis-60">
+        <span className="font-semibold">{listNames(names)}</span> {names.length > 1 ? "aren't" : "isn't"} in this
+        story&apos;s cast, so they can&apos;t appear. Add them?{" "}
+        <span className="text-muted">Cast definitions are sent with every message.</span>
       </p>
+      <div className="ml-auto flex shrink-0 gap-2">
+        <button type="button" className="btn btn-quiet min-h-10" onClick={decline}>
+          Not now
+        </button>
+        <button type="button" className="btn btn-outline min-h-10" onClick={accept}>
+          Add to cast
+        </button>
+      </div>
     </div>
   );
 }
@@ -58,6 +92,18 @@ export function RecapCard() {
   const messages = usePlay((s) => s.messages);
   const beats = usePlay((s) => s.scene.stageBeats);
   const [open, setOpen] = useState(() => messages.length >= 4);
+  // Esc (or Enter) closes it, like the story screen's panels. Captured first, so the key does nothing else.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" && e.key !== "Enter") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open]);
   if (!open) return null;
   const scene = parseScene(session.scene);
   const summary = session.summary
@@ -101,7 +147,7 @@ export function RecapCard() {
           </div>
         )}
         {scene.Situation && <p className="mt-4 text-sm italic text-muted">{scene.Situation}</p>}
-        <button type="button" className="mt-6 min-h-11 w-full rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent" onClick={() => setOpen(false)}>
+        <button type="button" className="btn btn-primary mt-6 w-full" onClick={() => setOpen(false)}>
           Continue the story ▸
         </button>
         <p className="mt-2 text-center text-xs text-muted">{messages.filter((m) => activeContent(m).trim()).length} messages so far</p>
@@ -132,6 +178,11 @@ export function HelpPanel() {
         </li>
         <li>
           <span className="text-ink">Continue</span> (send with an empty box) lets the story go on without you.
+        </li>
+        <li>
+          <span className="text-ink">Direct</span> adds a note on where the next reply should go (&ldquo;BB gets jealous&rdquo;). It
+          isn&apos;t part of the story and isn&apos;t saved. <span className="text-ink">Steer</span> does the same when you regenerate a
+          reply; the new version is kept next to the old ones.
         </li>
         <li>The scene box (top left) tracks where you are. Click it for details or to edit it.</li>
         <li>Pin important moments in the Log so the AI never forgets them. Write your own notes in Menu → Story memory.</li>

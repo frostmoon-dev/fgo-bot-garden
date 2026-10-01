@@ -1,4 +1,4 @@
-# Bot Garden
+# Bond Garden
 
 A personal Fate/Grand Order style visual novel chat. You type your own replies; AI characters answer with dialogue, narration and sprite expression changes.
 
@@ -48,12 +48,12 @@ Checks: `npm test` (parser, lorebook, prompt, summary, SSE), `npm run typecheck`
    | Variable | What to put |
    |---|---|
    | `DATABASE_URL`, `DIRECT_URL` | The two Supabase connection strings from step 1. |
-   | `DATABASE_CA_CERT` | The *text* of Supabase's CA certificate (open the downloaded `.crt` and paste all of it). The `certs/` folder is not in the repository. |
+   | `DATABASE_CA_CERT` | Optional. `certs/supabase-ca.crt` is committed and shipped with the server code. Set this (the certificate's text) only if your database uses a different certificate. |
    | `APP_PASSWORD` | The password you and your friend sign in with. |
    | `AUTH_SECRET` | 32+ random characters (`openssl rand -hex 32`). It also encrypts the saved API key, so don't change it afterwards, or the key has to be entered again. |
    | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET` | Needed on Vercel: its disk is read-only, so uploads go to Supabase Storage. |
    | `LLM_*` | Optional. Leave them out and connect a model in the app instead. |
-4. Make sure the sprite and background images are deployed. Files in `public/assets/` are only on Vercel if they are committed (keep the repository private for FGO art); anything uploaded through the editor goes to Supabase Storage instead.
+4. Sprites, backgrounds and UI textures live in `public/assets/` and are committed, so they deploy with the app (keep the repository private for FGO art). `public/uploads/` is only for local development and is not committed: on Vercel, uploads through the editor go to Supabase Storage.
 5. Deploy, sign in, and open **Connection** to connect a model. On the first upload, the app creates a public Storage bucket named `SUPABASE_BUCKET` (default `assets`).
 
 Sharing with a friend: everyone who knows `APP_PASSWORD` shares one account (the same characters, stories and connection), and every reply is billed to the API key saved on the Connection page. If your friend should pay for their own replies, let them paste their key there, or give them their own deployment with its own database.

@@ -1,53 +1,66 @@
 @import "tailwindcss";
 
 /*
-  Colors come from four variables set on <html> (see src/lib/appearance.ts).
-  Everything else is mixed from them, so any background the user picks stays consistent.
+  Design system. Colors come from four variables set on <html> (src/lib/appearance.ts); everything else
+  is mixed from them. One type family, Figtree, as in FGO's own UI; titles and names differ by weight and
+  size. One spacing scale (Tailwind's), 16px page gutters on phones. The FGO textures in
+  public/assets/ui/fgo give surfaces their character: the chat window's navy diamonds for the nav bar
+  and cards, the blue name tab for section headings, the same pieces the story screen uses.
 */
 :root {
-  --bg: #16181d;
-  --fg: #e3e0d9;
-  --accent: #d2b273;
-  --danger: #ec8b7c;
+  --bg: #0f1724;
+  --fg: #edf1f4;
+  --accent: #d7b06a;
+  --danger: #e17c67;
 
   --surface: color-mix(in oklab, var(--bg) 93%, var(--fg));
   --raised: color-mix(in oklab, var(--bg) 88%, var(--fg));
-  --line: color-mix(in oklab, var(--fg) 12%, transparent);
-  --muted: color-mix(in oklab, var(--fg) 74%, var(--bg));
+  --line: color-mix(in oklab, var(--fg) 13%, transparent);
+  --muted: color-mix(in oklab, var(--fg) 72%, var(--bg));
   --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--bg));
   --on-accent: color-mix(in oklab, var(--bg) 92%, black);
-  --shadow-soft: 0 18px 40px rgb(0 0 0 / 0.22);
-  --shadow-card: 0 8px 18px rgb(0 0 0 / 0.18);
 
-  --font-ui: var(--font-atkinson);
-  /* Character names are in a flowing script. Titles use the text font, except in FGO, which pairs a serif. */
-  --face-name: var(--font-script);
+  --font-ui: var(--font-figtree);
+  /* One family for everything, as in FGO's own UI: titles and names differ by weight and size, not by face. */
   --face-title: var(--font-ui);
+  --face-name: var(--font-ui);
   --tracking: 0;
   --word-spacing: normal;
 }
 
-/* FGO: gothic story text (Skip in the game) and old-style mincho titles (Tsukushi). */
-:root[data-font="fgo"] {
-  --font-ui: var(--font-mplus);
-  --face-title: var(--font-zen-old);
-}
-
-:root[data-font="plain"] {
-  --font-ui: var(--font-inter);
-}
-
-:root[data-font="rounded"] {
-  --font-ui: var(--font-nunito);
+:root[data-font="clear"] {
+  --font-ui: var(--font-atkinson);
 }
 
 :root[data-font="dyslexic"] {
   --font-ui: "OpenDyslexic";
-  /* A script is hard to read with dyslexia, so names use the text font here. */
-  --face-name: var(--font-ui);
   /* Extra spacing is the part of "dyslexia fonts" that research supports best. */
-  --tracking: 0;
   --word-spacing: 0.1em;
+}
+
+/* FGO's navy surface (chat window, cards, nav bar, panels), drawn as vectors so it stays sharp at any
+   size and the diamonds keep their shape: faint scanlines, a faint diamond lattice, and the cluster of
+   brighter diamonds in the bottom-right corner. Layer them over a navy fill. */
+:root {
+  /* The FGO palette, defined once. Every navy, edge and on-navy text colour on the site comes from here, so
+     the nav bar, cards, section tabs, message window, panels and buttons match. Channels (r g b) so any
+     alpha can be applied: rgb(var(--navy-800) / 0.8). One navy hue, stepped by lightness. */
+  --navy-950: 8 20 50; /* the darkest: button backs over the scene */
+  --navy-900: 10 27 66; /* bottom of surfaces */
+  --navy-800: 15 38 88; /* top of surfaces */
+  --navy-700: 23 63 136; /* name tab, bottom */
+  --navy-600: 27 75 158; /* name tab, middle */
+  --navy-500: 45 106 200; /* name tab, top */
+  --sky-300: 111 178 240; /* name tab's light edge, place card stripe */
+  --sky-200: 169 220 255; /* name tab's light edge, top */
+  --edge: 150 185 240; /* the thin light line round every navy surface */
+  --on-navy: #f1f4f9; /* text on navy: off-white, never pure white */
+  --on-navy-2: #cdd6e8; /* secondary text on navy */
+  --on-navy-muted: #b6c1d6; /* muted text on navy, 8:1 on navy-800 */
+  --success: #7fc98f; /* "it works" (connection test) */
+  --fgo-scan: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.16) 0 1px, transparent 1px 3px);
+  --fgo-cluster: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 160'%3E%3Cg fill='%235a8fe6'%3E%3Cpath fill-opacity='.2' d='M200 62 248 110 200 158 152 110Z'/%3E%3Cpath fill-opacity='.3' d='M262 30 296 64 262 98 228 64Z'/%3E%3Cpath fill-opacity='.24' d='M294 102 322 130 294 158 266 130Z'/%3E%3Cpath fill-opacity='.14' d='M126 122 152 148 126 174 100 148Z'/%3E%3C/g%3E%3C/svg%3E");
+  --fgo-lattice: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 144'%3E%3Cg fill='%235a8fe6' fill-opacity='.05'%3E%3Cpath d='M72 22 122 72 72 122 22 72Z'/%3E%3Cpath d='M0 -50 50 0 0 50 -50 0Z'/%3E%3Cpath d='M144 -50 194 0 144 50 94 0Z'/%3E%3Cpath d='M0 94 50 144 0 194 -50 144Z'/%3E%3Cpath d='M144 94 194 144 144 194 94 144Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 @theme inline {
@@ -62,8 +75,8 @@
   --color-on-accent: var(--on-accent);
   --color-danger: var(--danger);
   --font-sans: var(--font-ui), system-ui, sans-serif;
-  --font-name: var(--face-name), serif;
-  --font-title: var(--face-title), serif;
+  --font-name: var(--face-name), system-ui, sans-serif;
+  --font-title: var(--face-title), system-ui, sans-serif;
 }
 
 @layer base {
@@ -77,21 +90,18 @@
     letter-spacing: var(--tracking);
     word-spacing: var(--word-spacing);
     line-height: 1.6;
-    background:
-      radial-gradient(circle at top, color-mix(in oklab, var(--accent) 12%, transparent), transparent 30%),
-      linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, black), var(--bg));
-    color: var(--fg);
-    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
 
   p,
-  li,
-  button,
-  input,
-  select,
-  textarea {
+  li {
     text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 
   ::selection {
@@ -102,50 +112,44 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+}
 
-  main,
-  section,
-  header,
-  footer {
-    position: relative;
+/* Phones zoom the whole page into any text box smaller than 16px when it's tapped. Unlayered, so it wins
+   over text-sm and friends on touch screens only. */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
   }
 }
 
 @layer components {
-
-  /* A card: calm, slightly elevated surfaces with restrained shadows and subtle gradients. */
+  /* A card: a calm surface one step lighter than the page. */
   .card {
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--raised) 95%, transparent), var(--surface));
+    background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 1rem;
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, var(--fg) 5%, transparent),
-      var(--shadow-card);
+    border-radius: 0.875rem;
   }
 
   .field {
     width: 100%;
-    min-height: 2.85rem;
-    border-radius: 0.8rem;
+    min-height: 2.75rem;
+    border-radius: 0.625rem;
     border: 1px solid var(--line);
-    background: color-mix(in oklab, var(--bg) 87%, black);
-    padding: 0.7rem 0.85rem;
+    background: color-mix(in oklab, var(--bg) 85%, black);
+    padding: 0.625rem 0.875rem;
     color: var(--fg);
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2);
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    transition: border-color 150ms ease;
   }
 
   .field::placeholder {
-    color: color-mix(in oklab, var(--muted) 82%, var(--bg));
+    color: color-mix(in oklab, var(--muted) 80%, var(--bg));
   }
 
   .field:focus {
     outline: none;
-    border-color: color-mix(in oklab, var(--accent) 72%, transparent);
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent),
-      inset 0 1px 2px rgb(0 0 0 / 0.15);
+    border-color: var(--accent);
   }
 
   /* Dropdowns draw their own chevron, a comfortable distance from the edge and in the theme's color. */
@@ -162,6 +166,158 @@
     background-repeat: no-repeat;
     cursor: pointer;
   }
+
+  /* Buttons. Gold is kept for the one main action; the rest are outlined, like the story screen's buttons. */
+  .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:not(:disabled):hover {
+    background: color-mix(in oklab, var(--accent) 88%, white);
+  }
+  .btn-outline {
+    border: 1.5px solid color-mix(in oklab, var(--fg) 45%, transparent);
+    color: var(--fg);
+  }
+  .btn-outline:not(:disabled):hover {
+    border-color: var(--fg);
+    background: color-mix(in oklab, var(--fg) 7%, transparent);
+  }
+  .btn-quiet {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .btn-quiet:not(:disabled):hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+  .btn-danger {
+    color: var(--danger);
+    font-weight: 500;
+  }
+  .btn-danger:not(:disabled):hover {
+    background: color-mix(in oklab, var(--danger) 12%, transparent);
+  }
+  /* The confirm button of a destructive dialog: filled, so the one action in the dialog is clear. */
+  .btn-danger-solid {
+    background: var(--danger);
+    color: var(--on-accent);
+  }
+  .btn-danger-solid:not(:disabled):hover {
+    background: color-mix(in oklab, var(--danger) 88%, white);
+  }
+
+  /* Page titles: the text font, heavy and a little tight, so size and weight carry the hierarchy. */
+  .page-title {
+    font-family: var(--face-title), system-ui, sans-serif;
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 640px) {
+    .page-title {
+      font-size: 2.25rem;
+    }
+  }
+
+  /* The app's name, next to the Chaldea emblem. */
+  .wordmark {
+    font-family: var(--face-title), system-ui, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .wordmark-lg {
+    font-size: 1.875rem;
+  }
+
+  /* Section headings sit on FGO's blue name tab, the same tab that carries names on the story screen. */
+  .tab-heading {
+    position: relative;
+    isolation: isolate;
+    display: inline-block;
+    padding: 0.35em 2.75em 0.4em 1.15em;
+    font-family: var(--face-title), system-ui, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--on-navy);
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  }
+}
+
+/* Dark themes with FGO frames: the nav bar and cards take the chat window's navy diamond surface. */
+:root[data-frames="fgo"][data-scheme="dark"] :is(.site-nav, .card:not(.vn-panel *)) {
+  background:
+    var(--fgo-scan),
+    var(--fgo-cluster) right bottom / auto min(100%, 10rem) no-repeat,
+    var(--fgo-lattice) 0 0 / 9rem 9rem,
+    linear-gradient(rgb(var(--navy-800)), rgb(var(--navy-900)));
+}
+:root[data-frames="fgo"][data-scheme="dark"] .site-nav {
+  background-size: auto, auto 100%, 9rem 9rem, auto;
+}
+
+/* The blue name tab (section headings, and names on the story screen with FGO frames): pointed on the left
+   with a light edge, fading out on the right. Two layers: the light edge behind, the blue fill inside it. */
+:is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::before,
+:is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(0.7em 0, 100% 0, calc(100% - 0.8em) 100%, 0.7em 100%, 0 50%);
+  mask-image: linear-gradient(to right, #000 70%, transparent);
+}
+:is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::after {
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(to right, rgb(var(--sky-200)), rgb(var(--sky-300)));
+}
+:is(.tab-heading, :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *))::before {
+  inset: 2px 0 2px 2.5px;
+  background: linear-gradient(rgb(var(--navy-500)), rgb(var(--navy-600)) 55%, rgb(var(--navy-700)));
+}
+:root[data-frames="fgo"][data-scheme="dark"] .card:not(.vn-panel *) {
+  --muted: var(--on-navy-muted);
+  --line: rgb(var(--edge) / 0.25);
+  --raised: rgb(255 255 255 / 0.07);
+  border-color: rgb(var(--edge) / 0.25);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 8px 20px rgb(0 0 0 / 0.25);
+}
+:root[data-frames="fgo"][data-scheme="dark"] :is(a, button).card:not(.vn-panel *):hover {
+  border-color: rgb(var(--edge) / 0.5);
+}
+:root[data-frames="fgo"][data-scheme="dark"] .site-nav {
+  border-bottom-color: rgb(var(--edge) / 0.25);
+}
+
+/* Character names: semibold, like the names on FGO's name tabs. */
+.font-name {
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 @keyframes fade-in {
@@ -216,15 +372,20 @@
   container-type: size;
 }
 
+/* The whole sprite is always on screen: sized to the stage's height (scaled down, never cropped) and
+   standing on the bottom edge, so no part of the body is cut off at the bottom. The message window covers
+   the lower body, translucent, as in the game. Very wide sprites may run off the sides. */
 .sprite-slot {
+  --sprite-h: 100cqh;
   position: absolute;
   bottom: 0;
-  width: min(calc(96cqh * var(--ar)), 100cqw);
+  width: min(calc(var(--sprite-h) * var(--ar)), 150cqw);
   aspect-ratio: var(--ar);
   transform: translateX(-50%);
   transition:
     left 450ms ease,
-    filter 300ms ease;
+    filter 300ms ease,
+    scale 300ms ease;
 }
 
 .sprite-slot[data-pos="left"] {
@@ -239,15 +400,98 @@
   left: 78%;
 }
 
+/* Alone on stage, a character stands in the middle, whichever slot the story put them in: at a side slot
+   they'd stand off to one side of an empty stage (on a phone, with their face at the edge). */
+[data-count="1"] > .sprite-slot[data-pos] {
+  left: 50%;
+}
+
+/* Wide screens: sized as in FGO's story screen. The sprite is drawn larger than the screen is tall, and
+   placed by its face: the face sits at about a third of the way down, and the lower body goes behind the
+   message window and past the bottom edge. A sprite whose face is drawn low on its sheet would leave a gap
+   under it that way, so it never rises above the bottom edge. */
+@container (aspect-ratio > 1/1) {
+  .sprite-slot {
+    --sprite-h: min(130cqh, calc(150cqw / var(--ar)));
+    width: calc(var(--sprite-h) * var(--ar));
+    bottom: auto;
+    top: max(calc(100cqh - var(--sprite-h)), calc(32cqh - var(--face-y, 0.3) * var(--sprite-h)));
+  }
+}
+
+/* Wide screens with two or three on stage: a little smaller, so they overlap less (FGO's own wide sprites,
+   wings and all, would otherwise cover each other). Whoever speaks, or whom the narration is about, is in front. */
+@container (aspect-ratio > 1/1) {
+  [data-count="2"] > .sprite-slot {
+    --sprite-h: min(115cqh, calc(110cqw / var(--ar)));
+  }
+
+  [data-count="3"] > .sprite-slot {
+    --sprite-h: min(105cqh, calc(90cqw / var(--ar)));
+  }
+}
+
+/* Wide screens: two share it half and half (CharacterLayer puts them in left and right). */
+@container (aspect-ratio > 1/1) {
+  [data-count="2"] > .sprite-slot[data-pos="left"] {
+    left: 25%;
+  }
+
+  [data-count="2"] > .sprite-slot[data-pos="right"] {
+    left: 75%;
+  }
+}
+
+/* In the scene but not on screen (three on stage: two are shown). It fades out, and back in when it returns. */
+.sprite-slot[data-offstage="true"] {
+  visibility: hidden;
+  transition: visibility 0s 300ms;
+}
+
+.sprite-slot[data-offstage="true"] .sprite-body {
+  opacity: 0;
+}
+
 .sprite-slot[data-dim="true"] {
   filter: brightness(0.6) saturate(0.85);
 }
 
-/* Portrait phones: bigger sprites, lifted above the textbox. */
+.sprite-slot[data-front="true"] {
+  z-index: 1;
+}
+
+/* Portrait phones: the same, with a width cap so very wide sprites don't grow far past the screen. */
 @container (max-aspect-ratio: 1/1) {
   .sprite-slot {
-    width: min(calc(66cqh * var(--ar)), 190cqw);
-    bottom: 22cqh;
+    --sprite-h: 100cqh;
+    width: min(calc(var(--sprite-h) * var(--ar)), 270cqw);
+  }
+
+  /* Two or three don't fit on a narrow screen at this size (their faces end up at the edges): only the
+     speaker shows, in the middle (see CharacterLayer). The others fade out, so a new speaker cross-fades in.
+     The body carries the fade, since the slot's own opacity belongs to the enter/exit animation. */
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot[data-pos] {
+    left: 50%;
+    transition: filter 300ms ease;
+  }
+
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot:not([data-solo="true"]) {
+    visibility: hidden;
+    transition: visibility 0s 300ms;
+  }
+
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot:not([data-solo="true"]) .sprite-body {
+    opacity: 0;
+  }
+
+  :is([data-count="2"], [data-count="3"]) > .sprite-slot[data-solo="true"] {
+    filter: none;
+  }
+
+  /* One character in the middle of a phone: centre their face, not the image. Many sheets are drawn off
+     centre (Ishtar's boat fills the right half), which would push the face towards the edge. */
+  :is([data-count="1"], [data-count="2"], [data-count="3"]) > .sprite-slot {
+    transform: translateX(calc(-50% + (0.5 - var(--face-x, 0.5)) * 100%));
   }
 
   .sprite-slot[data-pos="left"] {
@@ -283,43 +527,27 @@
   :root[data-narration="plain"] :is(.vn-narration, .vn-action) {
     color: color-mix(in oklab, var(--fg) 80%, var(--bg));
   }
+
+  /* A character's private thought: quieter than speech, always slanted, whatever the narration style. */
+  .vn-thought {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .vn-thinker {
+    display: block;
+    margin-bottom: 0.25em;
+    font-size: 0.8em;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--muted);
+  }
 }
 
-/* FGO's text box: slightly heavy text with a soft shadow, and a gold rule under the name. */
-:root[data-font="fgo"] .vn-text {
+/* The story text: slightly heavy, with a soft shadow over busy art. */
+.vn-text {
   font-weight: 500;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-}
-
-:root[data-font="fgo"] .vn-name {
-  border: 1px solid color-mix(in oklab, var(--accent) 48%, transparent);
-  background: linear-gradient(180deg, rgba(18, 22, 29, 0.94), rgba(10, 13, 19, 0.9));
-  box-shadow:
-    inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent),
-    0 10px 24px rgb(0 0 0 / 0.28),
-    0 0 0 1px rgba(255, 255, 255, 0.02);
-  letter-spacing: 0.06em;
-}
-
-.vn-name {
-  font-family: var(--font-script), cursive;
-  line-height: 1;
-  padding-top: 0.6rem;
-  padding-bottom: 0.55rem;
-  transform: translateY(-2px);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(180deg, rgba(28, 30, 38, 0.96), rgba(18, 20, 26, 0.88));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom-color: color-mix(in oklab, var(--accent) 65%, transparent);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
-}
-
-.vn-name .vn-dot {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
-}
-
-.vn-name-mine {
-  transform: translateY(-3px) skewX(-4deg);
 }
 
 /* ---------- A living stage: light, weather, effects ---------- */
@@ -336,6 +564,7 @@
   height: 100%;
   transform-origin: 50% 100%;
   animation: breathe 5.5s ease-in-out infinite;
+  transition: opacity 300ms ease;
 }
 
 /* Time of day: a tint over the background (strong) and over everything (light). */
@@ -510,6 +739,107 @@
   animation: choice-in 300ms ease-out both;
 }
 
+/* ---------- Stage motion: short and calm; everything below is switched off for reduced motion ---------- */
+
+/* A character steps in toward their spot as they fade in (from the left, from the right, or rising in the
+   middle), and steps back out when leaving. `translate` is its own property, so the slot's centring
+   transform is untouched. */
+@keyframes sprite-enter {
+  from {
+    opacity: 0;
+    translate: var(--step-x, 0) var(--step-y, 1.5cqh);
+  }
+}
+
+@keyframes sprite-leave {
+  to {
+    opacity: 0;
+    translate: var(--step-x, 0) var(--step-y, 1.5cqh);
+  }
+}
+
+.sprite-enter {
+  animation: sprite-enter 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.sprite-leave {
+  animation: sprite-leave 350ms ease-in both;
+}
+
+.sprite-slot[data-pos="left"] {
+  --step-x: -3cqw;
+  --step-y: 0;
+}
+
+.sprite-slot[data-pos="right"] {
+  --step-x: 3cqw;
+  --step-y: 0;
+}
+
+/* The speaker comes forward a touch; the others ease back (they are also dimmed). */
+.sprite-slot {
+  transform-origin: 50% 100%;
+}
+
+.sprite-slot[data-front="true"] {
+  scale: 1.015;
+}
+
+/* The name tab slides in when the speaker changes: from the left, or from the right for the user's own tab. */
+@keyframes name-in {
+  from {
+    opacity: 0;
+    translate: -0.75rem 0;
+  }
+}
+
+.name-in {
+  animation: name-in 240ms ease-out both;
+}
+
+.vn-name-mine.name-in {
+  animation-name: name-in-mine;
+}
+
+@keyframes name-in-mine {
+  from {
+    opacity: 0;
+    translate: 0.75rem 0;
+  }
+}
+
+/* A new background settles in: a slow, slight zoom-out while it fades in. */
+@keyframes bg-settle {
+  from {
+    scale: 1.04;
+  }
+}
+
+.bg-enter {
+  animation:
+    fade-in 600ms ease-out both,
+    bg-settle 1.8s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+}
+
+/* Panels rise in over a fading backdrop; on a phone they come up from the bottom like a sheet. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    translate: 0 1rem;
+  }
+}
+
+.panel-in {
+  animation: panel-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* The next-line diamond bobs gently while it waits, as in FGO. */
+@keyframes next-bob {
+  50% {
+    translate: 0 3px;
+  }
+}
+
 @keyframes shimmer {
   50% {
     opacity: 0.45;
@@ -527,8 +857,24 @@
   .place-card,
   .toast-in,
   .choice-in,
-  .shimmer {
+  .shimmer,
+  .name-in,
+  .panel-in {
     animation: none !important;
+  }
+
+  /* Characters and backgrounds still fade, without moving. */
+  .sprite-enter,
+  .bg-enter {
+    animation: fade-in 1ms both !important;
+  }
+
+  .sprite-leave {
+    animation: fade-out 1ms both !important;
+  }
+
+  .sprite-slot[data-front="true"] {
+    scale: none;
   }
 
   .weather {
@@ -549,55 +895,78 @@
 
 /* The message window: text box, reply bar, choices, scene box, toasts. Always dark, so its text is light. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-box:not([data-frames-preview="simple"] *, .vn-panel) {
-  --fg: #f3f5f9;
-  --muted: #b9c4da;
-  --bg: #0e1b3a;
-  --line: rgb(255 255 255 / 0.2);
+  --fg: var(--on-navy);
+  --muted: var(--on-navy-muted);
+  --bg: rgb(var(--navy-900));
+  --line: rgb(var(--edge) / 0.25);
   --raised: rgb(255 255 255 / 0.08);
   color: var(--fg);
-  border: 0;
-  border-top: 1px solid rgb(150 185 255 / 0.6);
-  border-bottom: 1px solid rgb(150 185 255 / 0.28);
-  border-radius: 3px;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
-  backdrop-filter: blur(2px);
+  /* The transparent border keeps the window's inner spacing; the surface runs under it. */
+  border: 14px solid transparent;
+  border-radius: 6px;
+  /* Settings > Reading > Window opacity sets --window-alpha; the scene shows through, as in the game. */
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'%3E%3Cg fill='%2390b8ff' fill-opacity='0.06'%3E%3Cpath d='M70 40 110 80 70 120 30 80Z'/%3E%3Cpath d='M140 10 195 65 140 120 85 65Z'/%3E%3Cpath d='M210 55 240 85 210 115 180 85Z'/%3E%3C/g%3E%3C/svg%3E") right 2.5rem bottom -1px / auto 80% no-repeat,
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 3px),
-    linear-gradient(90deg, rgb(9 24 60 / 0.9), rgb(17 42 96 / 0.86) 55%, rgb(9 24 60 / 0.9));
+    var(--fgo-scan),
+    var(--fgo-cluster) right bottom / auto 100% no-repeat,
+    var(--fgo-lattice) 0 0 / 9rem 9rem,
+    linear-gradient(rgb(var(--navy-800) / var(--window-alpha, 0.8)), rgb(var(--navy-900) / var(--window-alpha, 0.8)));
+  background-origin: border-box;
+  background-clip: border-box;
+  box-shadow:
+    0 0 0 1px rgb(var(--edge) / 0.45),
+    0 10px 28px rgb(0 0 0 / 0.3);
+  backdrop-filter: none;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) button.vn-box:not([data-frames-preview="simple"] *):is(:hover, :focus-visible) {
-  border-top-color: rgb(200 222 255 / 0.95);
   box-shadow:
-    0 0 0 1px rgb(150 190 255 / 0.55),
-    0 0 18px rgb(70 130 255 / 0.35);
+    0 0 0 1px rgb(var(--edge) / 0.8),
+    0 10px 28px rgb(0 0 0 / 0.3);
 }
 
-/* The speaker's name: a blue tab with a pointed end, on the window's top edge, in the story font. */
+/* The reply bar holds controls, so it gets the window's navy without the diamonds: nothing drawn behind the
+   buttons, and a thinner edge so the input and buttons aren't lost in padding. */
+:root[data-frames="fgo"] .vn-box.vn-reply {
+  border-width: 6px;
+  background:
+    var(--fgo-scan),
+    linear-gradient(rgb(var(--navy-800) / var(--window-alpha, 0.8)), rgb(var(--navy-900) / var(--window-alpha, 0.8)));
+  background-origin: border-box;
+}
+
+/* The speaker's name: a blue tab with a pointed end, sitting on the window's top edge with its point just
+   past the left side, in the same plain type and size as the story text, as in the game. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *) {
-  top: -1.05em;
-  left: 0.6rem;
-  min-width: 9em;
-  padding: 0.28em 2.4em 0.3em 1.35em;
+  top: -1.5em;
+  left: -0.45em;
+  min-width: 11em;
+  padding: 0.3em 3em 0.32em 1.3em;
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--fgo-text, 1em);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   border: 0;
+  border-image: none;
   border-radius: 0;
   box-shadow: none;
   backdrop-filter: none;
-  color: #fff;
+  color: var(--on-navy);
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
-  clip-path: polygon(0.8em 0, 100% 0, 100% 100%, 0.8em 100%, 0 50%);
-  background:
-    linear-gradient(to bottom, rgb(255 255 255 / 0.45), transparent 1.5px),
-    linear-gradient(90deg, transparent 70%, rgb(255 255 255 / 0.12)),
-    linear-gradient(to bottom, #4379d4, #2150a3 55%, #183d82);
+  background: none;
+  isolation: isolate;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *) {
   left: auto;
-  right: 0.6rem;
-  padding: 0.28em 1.35em 0.3em 2.4em;
-  clip-path: polygon(0 0, calc(100% - 0.8em) 0, 100% 50%, calc(100% - 0.8em) 100%, 0 100%);
+  right: -0.45em;
+  padding: 0.3em 1.3em 0.32em 3em;
+}
+/* Your own lines: the tab faces the other way. */
+:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *)::before,
+:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name.vn-name-mine:not([data-frames-preview="simple"] *)::after {
+  transform: scaleX(-1);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-name:not([data-frames-preview="simple"] *) .vn-dot {
@@ -609,9 +978,21 @@
   max-width: min(80rem, 100%);
 }
 
+/* FGO's text is large and scales with the screen: about 4% of its height, capped by its width on phones.
+   The window holds two lines, with the text well inside it. */
+:root[data-frames="fgo"] .stage {
+  --fgo-text: clamp(1.02em, calc(min(4cqh, 2.3cqw) * var(--ui-scale, 1)), 2.1em);
+}
+
 :root[data-frames="fgo"] .vn-text {
-  padding-inline: clamp(1.5rem, 4vw, 3.5rem);
-  font-size: 1.18em;
+  font-size: var(--fgo-text, 1.18em);
+  line-height: 1.75;
+  min-height: 5.2em;
+  padding: 1.05em clamp(0.75rem, 4.4cqw, 2.2em) 0.95em;
+}
+/* The window is wide, but a line reads best at 45-80 characters. */
+.vn-text > p {
+  max-width: 72ch;
 }
 
 /* LOG, at the window's top right, as in the game. */
@@ -621,6 +1002,24 @@
 
 :root[data-frames="fgo"] .vn-log-tab {
   display: flex;
+  gap: 0.2em;
+  font-size: max(0.65rem, 0.42em);
+  letter-spacing: 0.08em;
+  color: var(--on-navy-2);
+}
+
+/* The flat arch above LOG. */
+.vn-log-arch {
+  display: block;
+  width: 2.1em;
+  height: 0.6em;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: currentColor;
+}
+
+/* Keep the first line clear of the LOG tab. */
+:root[data-frames="fgo"] .vn-text > p {
+  padding-right: max(2.25rem, 1.4em);
 }
 
 /* The next-line marker: a down arrow, or FGO's Chaldea diamond. */
@@ -628,25 +1027,70 @@
   content: "▼";
 }
 
+:root[data-frames="fgo"] .vn-next {
+  font-size: inherit;
+  right: clamp(1rem, 2.6cqw, 2.4rem);
+  bottom: 0.7em;
+  /* The diamond bobs instead of blinking. */
+  animation: none;
+}
+
+:root[data-frames="fgo"] .vn-next::before {
+  animation: next-bob 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-frames="fgo"] .vn-next::before {
+    animation: none;
+  }
+}
+
 :root[data-frames="fgo"] .vn-next::before {
   content: "";
   display: block;
-  width: 0.9rem;
-  height: 1.35rem;
+  width: 0.72em;
+  height: 1.1em;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 36'%3E%3Cg fill='none' stroke='%23cfe0ff' stroke-width='2'%3E%3Cpath d='M12 2 22 13 12 24 2 13Z'/%3E%3Cpath d='M12 12 22 23 12 34 2 23Z'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 /* Stage buttons: white outline buttons, like FGO's SKIP. Filled white while switched on. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill:not([data-frames-preview="simple"] *) {
-  color: #fff;
+  color: var(--on-navy);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
-  background: rgb(8 14 32 / 0.45);
-  border: 2px solid rgb(255 255 255 / 0.92);
-  border-radius: 0.8rem;
+  background: rgb(var(--navy-950) / 0.45);
+  border: 2.5px solid var(--on-navy);
+  border-radius: 999px;
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.4);
   backdrop-filter: blur(2px);
+}
+
+/* The top bar: big capitalised pills like the game's SKIP ▶, sized with the screen. Only Auto, Skip and
+   Menu (and the way home); Log sits on the window, the rest are in the Menu. No scene box: the place
+   banner announces where the story is, and the scene opens from the Menu. */
+:root[data-frames="fgo"] .stage .vn-topbar .vn-pill {
+  min-height: clamp(2.5rem, min(7.2cqh, 9cqw), 3.5rem);
+  /* Narrower sides on a phone, so Back, Stop, Auto, Skip and Menu fit in one row at 360px. */
+  padding-inline: clamp(0.55em, 2.4cqw, 1em);
+  font-size: clamp(0.8125rem, calc(min(2.9cqh, 3.6cqw) * var(--ui-scale, 1)), 1.4rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+:root[data-frames="fgo"] .stage .vn-topbar [data-fgo-hide],
+:root[data-frames="fgo"] .stage .vn-scenebox {
+  display: none;
+}
+
+:root[data-frames="fgo"] .stage .vn-topbar [data-fgo-skip] {
+  display: inline-flex;
+}
+
+:root[data-frames="fgo"] .stage .vn-topbar [data-fgo-skip]::after {
+  content: "▶";
+  margin-left: 0.35em;
+  font-size: 0.8em;
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill:not([data-frames-preview="simple"] *):not(:disabled):hover {
@@ -654,46 +1098,33 @@
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-pill[aria-pressed="true"]:not([data-frames-preview="simple"] *) {
-  background: #fff;
-  color: #1c2a4e;
+  background: var(--on-navy);
+  color: rgb(var(--navy-900));
   text-shadow: none;
 }
 
-/* The place card: the white marble banner with the Chaldea laurel, cut from the game's UI. */
+/* The place card: the message window's navy, flat and small, with the same thin light edge, and the name
+   tab's light blue edge down its left side. */
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) {
-  min-width: min(26rem, 88vw);
-  padding: 0.9rem 5.5rem 0.9rem 1.75rem;
-  color: #1c2a4e;
-  text-align: left;
-  text-shadow: none;
-  filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.45));
-}
-
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *)::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-style: solid;
-  border-color: transparent;
-  border-width: 10px 12px;
-  border-image: url("/assets/ui/fgo/banner.png") 20 24 fill / 10px 12px stretch;
-}
-
-:is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-rule {
-  display: none;
+  color: var(--on-navy);
+  background: rgb(var(--navy-900) / 0.9);
+  border-left-color: rgb(var(--sky-300));
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgb(var(--edge) / 0.45),
+    0 6px 16px rgb(0 0 0 / 0.25);
 }
 
 :is(:root[data-frames="fgo"], [data-frames-preview="fgo"]) .vn-banner:not([data-frames-preview="simple"] *) .vn-banner-sub {
-  color: #3c5a8c;
+  color: var(--on-navy-muted);
 }
 
 /* Panels on the story screen (Menu, Log, Save) use the game's dialog window. Light text, like the window. */
 :root[data-frames="fgo"] .vn-panel {
-  --fg: #f3f5f9;
-  --muted: #b9c4da;
-  --bg: #0e1b3a;
-  --line: rgb(255 255 255 / 0.2);
+  --fg: var(--on-navy);
+  --muted: var(--on-navy-muted);
+  --bg: rgb(var(--navy-900));
+  --line: rgb(var(--edge) / 0.25);
   --raised: rgb(255 255 255 / 0.08);
   color: var(--fg);
   border: 0;
@@ -708,19 +1139,69 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  border-style: solid;
-  border-color: transparent;
-  border-width: 14px;
-  border-image: url("/assets/ui/fgo/window.png") 28 fill / 14px stretch;
+  border-radius: inherit;
+  background:
+    var(--fgo-scan),
+    var(--fgo-cluster) right bottom / auto 10rem no-repeat,
+    var(--fgo-lattice) 0 0 / 9rem 9rem,
+    linear-gradient(rgb(var(--navy-800)), rgb(var(--navy-900)));
+  box-shadow: 0 0 0 1px rgb(var(--edge) / 0.45);
 }
 
-/* Character names: the script runs small and thin, so it is set larger, with a hair of extra stroke
-   instead of a synthetic bold. */
-:root:not([data-font="dyslexic"]) .font-name {
-  font-size: 1.45em;
-  font-weight: 400;
-  font-synthesis-weight: none;
-  line-height: 1.15;
-  letter-spacing: 0.01em;
-  -webkit-text-stroke: 0.35px currentColor;
+
+
+/* Dialogs (askConfirm, askText): the title sits on the blue name tab across the window's top edge, like
+   the speaker's name on the story screen. Nearly solid, since there is no scene to see through. */
+.vn-dialog {
+  --window-alpha: 0.96;
+}
+
+.vn-dialog-title {
+  position: absolute;
+  top: -1.2em;
+  left: 0.75rem;
+}
+
+:root[data-frames="fgo"] .vn-dialog-title {
+  top: calc(-14px - 1.1em);
+  left: calc(-14px - 0.35em);
+}
+
+/* ---------- FGO frames: letterbox and Log ---------- */
+
+/* The story screen sits in a 16:9 frame, as in the game, on plain bands a step darker than the theme
+   (no texture). Portrait phones use the whole screen: a 16:9 frame would leave the scene tiny. */
+.vn-frame {
+  display: flex;
+  height: 100dvh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--bg) 80%, black);
+}
+
+:root[data-frames="fgo"] .vn-frame > .stage {
+  width: min(100vw, calc(100dvh * 16 / 9));
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  :root[data-frames="fgo"] .vn-frame > .stage {
+    width: 100%;
+    height: 100dvh;
+    aspect-ratio: auto;
+  }
+}
+
+/* The Log as in the game: the name on its own line, the text indented below it. */
+:root[data-frames="fgo"] .vn-panel .vn-log-line {
+  padding-left: 1.5em;
+}
+
+:root[data-frames="fgo"] .vn-panel .vn-log-name {
+  display: flex;
+  margin-left: -1.5em;
+  margin-right: 0;
 }

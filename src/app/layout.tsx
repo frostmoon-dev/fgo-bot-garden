@@ -1,18 +1,15 @@
 import "@fontsource/opendyslexic/400.css";
+import { DialogHost } from "@/components/ui/DialogHost";
 import "@fontsource/opendyslexic/700.css";
 import type { Metadata, Viewport } from "next";
-import { Allura, Atkinson_Hyperlegible_Next, Inter, M_PLUS_1, Nunito, Zen_Old_Mincho } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, Figtree } from "next/font/google";
 import { schemeOf, themeColors, themeStyle } from "@/lib/appearance";
 import { getSettings } from "@/lib/data/queries";
 import "./globals.css";
 
-// FGO's own fonts (Fontworks Skip, Tsukushi Mincho) are commercial, so the default "FGO" style uses the
-// closest free fonts: a clear gothic for text and an old-style mincho for chapter and place titles.
-// Character names are in a flowing script with every font. Only the Latin subset is downloaded.
-const mplus = M_PLUS_1({ variable: "--font-mplus", subsets: ["latin"] });
-const zenOld = Zen_Old_Mincho({ variable: "--font-zen-old", subsets: ["latin"], weight: ["600"], preload: false });
-const script = Allura({ variable: "--font-script", subsets: ["latin"], weight: "400" });
-
+// One family, used everywhere, as in FGO's own UI: Figtree, a clear humanist sans. Titles and names differ
+// by weight and size. Atkinson Hyperlegible replaces it for the "Clear" font setting, OpenDyslexic for "Dyslexic".
+const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
 // Next.js has no size metrics for this newer font, so it can't build a size-matched fallback
 // (and warns on every compile). Use plain system fallbacks instead.
 const atkinson = Atkinson_Hyperlegible_Next({
@@ -22,23 +19,26 @@ const atkinson = Atkinson_Hyperlegible_Next({
   fallback: ["system-ui", "Segoe UI", "Arial", "sans-serif"],
   preload: false,
 });
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], preload: false });
-const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"], preload: false });
 
-const fontVariables = [mplus, zenOld, script, atkinson, inter, nunito].map((f) => f.variable).join(" ");
+const fontVariables = [figtree, atkinson].map((f) => f.variable).join(" ");
 
 // Appearance settings live in the database, so every page renders per request.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Bot Garden",
+  title: "Bond Garden",
   description: "A personal Fate/Grand Order style visual novel chat",
+  // Opened from the home screen, the page runs full screen under a see-through status bar (see the safe-area padding).
+  appleWebApp: { capable: true, title: "Bond Garden", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#0f1724",
+  // The on-screen keyboard shrinks the page instead of covering it, so the reply box stays in view (Android).
+  interactiveWidget: "resizes-content",
 };
 
 async function appearance() {
@@ -55,8 +55,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { theme, customBg, font, narration, frames } = await appearance();
   const colors = themeColors(theme, customBg);
   return (
-    <html lang="en" data-font={font} data-narration={narration} data-frames={frames} data-scheme={schemeOf(colors)} style={themeStyle(colors)} className={`${fontVariables} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+    <html
+      lang="en"
+      data-font={font}
+      data-narration={narration}
+      data-frames={frames}
+      data-scheme={schemeOf(colors)}
+      style={themeStyle(colors)}
+      className={`${fontVariables} h-full antialiased`}
+    >
+      <body className="min-h-full">
+        {children}
+        <DialogHost />
+      </body>
     </html>
   );
 }

@@ -16,12 +16,15 @@ interface Item {
 
 const PAGES: [string, string, string][] = [
   ["/", "Home", "stories characters start"],
+  ["/scene", "Write a scene", "new story premise scenario setting cast"],
   ["/characters", "Characters", "bots edit create import"],
+  ["/moments", "Moments", "cards gallery kept lines screenshots"],
   ["/backgrounds", "Backgrounds", "scenes images"],
   ["/lorebook", "Lorebook", "world info lore"],
   ["/persona", "Persona", "you name"],
   ["/connection", "Connection", "ai model api key provider deepseek openrouter openai gemini claude"],
   ["/settings", "Settings", "prompt theme font memory reply length"],
+  ["/usage", "Usage", "tokens cost cache requests spending"],
 ];
 
 // Ctrl+K (or ⌘K): jump to any page, story or character, or start a story, by typing.
@@ -98,7 +101,15 @@ export function CommandPalette() {
     }
     const q = query.trim().toLowerCase();
     if (!q) return list.filter((i) => i.group !== "Edit").slice(0, 14);
-    return list.filter((i) => `${i.group} ${i.label} ${i.hint ?? ""}`.toLowerCase().includes(q)).slice(0, 20);
+    const found = list.filter((i) => `${i.group} ${i.label} ${i.hint ?? ""}`.toLowerCase().includes(q)).slice(0, 19);
+    // Always offer to look inside the stories themselves, after the pages and names that match.
+    const inStories: Item = {
+      id: "search",
+      group: "Search",
+      label: `Search stories for “${query.trim()}”`,
+      run: go(`/search?q=${encodeURIComponent(query.trim())}`),
+    };
+    return q.length >= 2 ? [...found, inStories] : found;
     // go/close only change with router, which is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, query]);

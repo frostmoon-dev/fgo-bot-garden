@@ -18,6 +18,11 @@ const TIERS = [
   "unbreakable: {{user}} is irreplaceable to them",
 ];
 
+// The points a level starts at, for setting the bond by hand.
+export function pointsForLevel(level: number): number {
+  return THRESHOLDS[Math.min(Math.max(Math.round(level), 1), MAX_BOND_LEVEL) - 1];
+}
+
 export function bondLevel(points: number): number {
   return THRESHOLDS.filter((t) => points >= t).length;
 }

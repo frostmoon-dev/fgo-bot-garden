@@ -8,6 +8,7 @@ import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextArea, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
 import type { LoreEntry } from "@/lib/lorebook";
+import { askConfirm } from "@/components/ui/dialogs";
 
 function LoreForm({ entry, onDone }: { entry: LoreEntry | null; onDone: () => void }) {
   const [title, setTitle] = useState(entry?.title ?? "");
@@ -98,8 +99,14 @@ export function LoreManager({ entries }: { entries: LoreEntry[] }) {
                 <Button
                   variant="danger"
                   disabled={pending}
-                  onClick={() => {
-                    if (confirm("Delete this entry?")) run(async () => unwrap(await deleteLore(e.id)));
+                  onClick={async () => {
+                    const ok = await askConfirm({
+                      title: "Delete lorebook entry?",
+                      body: `"${e.title}" will be removed from the lorebook and no longer added to prompts. This cannot be undone.`,
+                      confirmLabel: "Delete entry",
+                      danger: true,
+                    });
+                    if (ok) run(async () => unwrap(await deleteLore(e.id)));
                   }}
                 >
                   Delete

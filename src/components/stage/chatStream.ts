@@ -1,4 +1,5 @@
-import { STREAM_ERROR_MARKER } from "@/lib/llm/protocol";
+import { STREAM_ERROR_MARKER, STREAM_USAGE_MARKER } from "@/lib/llm/protocol";
+import type { ChatUsage } from "@/lib/llm/types";
 import { LineBuffer } from "@/lib/parser/lineBuffer";
 
 export interface PromptBreakdown {
@@ -15,8 +16,12 @@ export interface StreamHandlers {
     userMessageId: string | null;
     promptTokens: number;
     breakdown: PromptBreakdown | null;
+    // The main model failed and the backup model wrote this reply.
+    backup: boolean;
   }) => void;
   onLine: (line: string) => void;
+  // The provider's token counts, when it reports them, after the last line.
+  onUsage?: (usage: ChatUsage) => void;
 }
 
 function parseBreakdown(header: string | null): PromptBreakdown | null {
@@ -29,7 +34,7 @@ function parseBreakdown(header: string | null): PromptBreakdown | null {
 
 // Calls /api/chat and hands back complete lines as they arrive.
 export async function runChat(
-  body: { sessionId: string; action: "reply" | "regenerate"; text?: string },
+  body: { sessionId: string; action: "reply" | "regenerate"; text?: string; direction?: string },
   handlers: StreamHandlers,
   signal: AbortSignal,
 ): Promise<void> {
@@ -48,6 +53,7 @@ export async function runChat(
     userMessageId: res.headers.get("X-User-Message-Id") || null,
     promptTokens: Number(res.headers.get("X-Prompt-Tokens") ?? 0),
     breakdown: parseBreakdown(res.headers.get("X-Prompt-Breakdown")),
+    backup: res.headers.get("X-Backup-Model") === "1",
   });
 
   const reader = res.body.getReader();
@@ -55,24 +61,26 @@ export async function runChat(
   const lines = new LineBuffer();
   const emit = (text: string) => lines.push(text).forEach(handlers.onLine);
   // Hold back a few characters so a marker split across chunks is still found.
-  const holdBack = STREAM_ERROR_MARKER.length - 1;
+  const holdBack = Math.max(STREAM_ERROR_MARKER.length, STREAM_USAGE_MARKER.length) - 1;
   let pending = "";
-  let errorText: string | null = null;
+  // Everything from the first marker on: an error, the token counts, or both. Never story text.
+  let tail: string | null = null;
 
   try {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
       const text = decoder.decode(value, { stream: true });
-      if (errorText !== null) {
-        errorText += text;
+      if (tail !== null) {
+        tail += text;
         continue;
       }
       pending += text;
-      const at = pending.indexOf(STREAM_ERROR_MARKER);
-      if (at >= 0) {
+      const found = [pending.indexOf(STREAM_ERROR_MARKER), pending.indexOf(STREAM_USAGE_MARKER)].filter((i) => i >= 0);
+      if (found.length) {
+        const at = Math.min(...found);
         emit(pending.slice(0, at));
-        errorText = pending.slice(at + STREAM_ERROR_MARKER.length);
+        tail = pending.slice(at);
         pending = "";
         continue;
       }
@@ -88,5 +96,16 @@ export async function runChat(
 
   emit(pending);
   lines.flush().forEach(handlers.onLine);
-  if (errorText !== null) throw new Error(errorText.trim() || "Generation failed");
+  if (tail === null) return;
+  const [before, usageJson] = tail.split(STREAM_USAGE_MARKER);
+  if (usageJson !== undefined) {
+    try {
+      handlers.onUsage?.(JSON.parse(usageJson) as ChatUsage);
+    } catch {
+      // Token counts are only shown in the developer overlay; a broken one is skipped.
+    }
+  }
+  if (before.startsWith(STREAM_ERROR_MARKER)) {
+    throw new Error(before.slice(STREAM_ERROR_MARKER.length).trim() || "Generation failed");
+  }
 }

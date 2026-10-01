@@ -4,6 +4,8 @@ import { TimeGreeting } from "@/components/home/TimeGreeting";
 import { resolveCell } from "@/components/sprite/sheet";
 import { SectionTitle } from "@/components/ui/PageHeader";
 import { pickAscension } from "@/lib/ascension";
+import { bondLevel } from "@/lib/bond";
+import { INTERLUDES } from "@/lib/interlude";
 import Link from "next/link";
 import { getPersona, listBonds, listCharacters, listSessions } from "@/lib/data/queries";
 import { connectionView } from "@/lib/llm/connection";
@@ -46,6 +48,14 @@ export default async function HomePage() {
     connectionView(),
   ]);
   const byId = new Map(characters.map((c) => [c.id, c]));
+  // The first interlude each character has unlocked but not started yet, for a "ready" hint on their card.
+  const interludeReady = Object.fromEntries(
+    characters.flatMap((c) => {
+      const started = new Set(sessions.filter((s) => s.mainCharacterId === c.id && s.interlude).map((s) => s.interlude));
+      const next = INTERLUDES.find((i) => bondLevel(bonds[c.id] ?? 0) >= i.level && !started.has(i.n));
+      return next ? [[c.id, next.n]] : [];
+    }),
+  );
 
   const rows: SessionRow[] = sessions.map((s) => {
     const main = byId.get(s.mainCharacterId);
@@ -82,11 +92,11 @@ export default async function HomePage() {
 
   return (
     <>
-      <header className="mb-10">
-        <h1 className="font-title text-3xl font-semibold">
+      <header className="mb-10 sm:mb-12">
+        <h1 className="page-title">
           <TimeGreeting name={persona.name} />
         </h1>
-        <p className="mt-2 text-muted">
+        <p className="mt-3 text-muted">
           {rows.length ? "Pick up where you left off, or call on someone new." : "Choose someone to begin your first story."}
         </p>
       </header>
@@ -96,14 +106,14 @@ export default async function HomePage() {
           <p className="text-sm">
             <strong>Connect an AI model first.</strong> The characters need one to answer: pick a provider and paste an API key.
           </p>
-          <Link href="/connection" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent">
+          <Link href="/connection" className="btn btn-primary">
             Connect a model
           </Link>
         </div>
       )}
 
       {rows.length > 0 && (
-        <section className="mb-16">
+        <section className="mb-12 sm:mb-16">
           <SectionTitle>Continue a story</SectionTitle>
           <SessionList sessions={rows.slice(0, 6)} highlightFirst />
           {rows.length > 6 && (
@@ -121,7 +131,15 @@ export default async function HomePage() {
 
       <section>
         <SectionTitle hint="Start a new story. Characters with several ascensions let you pick a form first.">Characters</SectionTitle>
-        <CharacterGallery characters={characters} bonds={bonds} />
+        {characters.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/scene" className="btn btn-outline">
+              Write a scene
+            </Link>
+            <span className="text-sm text-muted">Or set up your own opening and choose who is in it.</span>
+          </div>
+        )}
+        <CharacterGallery characters={characters} bonds={bonds} interludeReady={interludeReady} />
       </section>
     </>
   );

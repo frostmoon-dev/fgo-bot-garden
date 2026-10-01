@@ -9,8 +9,20 @@ import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextInput } from "@/components/ui/Field";
 import { useAsync } from "@/components/ui/useAsync";
 import type { BackgroundView } from "@/lib/types";
+import { askConfirm } from "@/components/ui/dialogs";
 
-const EMPTY: BackgroundInput = { key: "", label: "", imageUrl: "", description: "" };
+const EMPTY: BackgroundInput = { key: "", label: "", imageUrl: "", description: "", musicUrl: "" };
+
+// Sound files go up as they are: unlike images, they can't be shrunk in the browser.
+async function uploadMusic(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("kind", "music");
+  const res = await fetch("/api/uploads", { method: "POST", body: form });
+  const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!res.ok || !json.url) throw new Error(json.error ?? `Upload failed (${res.status})`);
+  return json.url;
+}
 
 function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id: string | null; onDone: () => void }) {
   const [form, setForm] = useState(initial);
@@ -53,6 +65,30 @@ function BackgroundForm({ initial, id, onDone }: { initial: BackgroundInput; id:
       {form.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- user-supplied URLs of any size
         <img src={form.imageUrl} alt="" className="aspect-video w-full max-w-md rounded-lg object-cover" />
+      )}
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Label title="Music (optional)" hint="Loops while this background is on screen. A direct link to an MP3 or M4A file.">
+          <TextInput value={form.musicUrl ?? ""} onChange={(e) => set({ musicUrl: e.target.value })} placeholder="https://…/night-theme.mp3" />
+        </Label>
+        <Label title="…or upload" hint="MP3 or M4A, up to 4 MB. OGG doesn't play on iPhones.">
+          <input
+            type="file"
+            accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg"
+            className="block w-full text-sm file:mr-4 file:min-h-10 file:rounded-lg file:border-0 file:bg-raised file:px-4 file:text-ink"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) run(async () => set({ musicUrl: await uploadMusic(file) }));
+            }}
+          />
+        </Label>
+      </div>
+      {form.musicUrl && (
+        <div className="flex flex-wrap items-center gap-3">
+          <audio controls preload="none" src={form.musicUrl} className="h-10 max-w-full" />
+          <Button variant="quiet" onClick={() => set({ musicUrl: "" })}>
+            Remove music
+          </Button>
+        </div>
       )}
       <div className="flex items-center gap-3 border-t border-line pt-6">
         <Button
@@ -99,16 +135,23 @@ export function BackgroundManager({ backgrounds }: { backgrounds: BackgroundView
               {/* eslint-disable-next-line @next/next/no-img-element -- user-supplied URLs */}
               <img src={b.imageUrl} alt="" className="aspect-video w-full object-cover" />
               <div className="p-4">
-                <p className="font-medium">{b.label || b.key}</p>
+                <p className="font-title text-xl font-semibold leading-tight">{b.label || b.key}</p>
                 <p className="mt-0.5 font-mono text-sm text-muted">{b.key}</p>
                 <p className="mt-2 line-clamp-2 text-sm text-muted">{b.description}</p>
+                {b.musicUrl && <p className="mt-1 text-sm text-muted">♪ Has music</p>}
                 <div className="mt-4 flex gap-2">
                   <Button onClick={() => setEditing(b.id)}>Edit</Button>
                   <Button
                     variant="danger"
                     disabled={pending}
-                    onClick={() => {
-                      if (confirm(`Delete background ${b.key}?`)) run(async () => unwrap(await deleteBackground(b.id)));
+                    onClick={async () => {
+                      const ok = await askConfirm({
+                        title: "Delete background?",
+                        body: `"${b.label || b.key}" will be removed from your backgrounds. This cannot be undone.`,
+                        confirmLabel: "Delete background",
+                        danger: true,
+                      });
+                      if (ok) run(async () => unwrap(await deleteBackground(b.id)));
                     }}
                   >
                     Delete

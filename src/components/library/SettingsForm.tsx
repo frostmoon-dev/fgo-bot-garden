@@ -21,6 +21,8 @@ type NumKey =
   | "textSpeed"
   | "autoSpeed"
   | "uiScale"
+  | "windowOpacity"
+  | "musicVolume"
   | "loreScanDepth"
   | "contextBudget"
   | "keepRecent";
@@ -33,12 +35,32 @@ interface Slider {
   max: number;
   step: number;
   unit?: string;
+  // Shown as a percentage (0.8 -> 80%).
+  percent?: boolean;
 }
 
 const READING: Slider[] = [
   { key: "textSpeed", title: "Text speed", hint: "How fast lines type out.", min: 10, max: 200, step: 5, unit: " chars/s" },
   { key: "autoSpeed", title: "Auto-advance delay", hint: "Pause after each line in Auto mode.", min: 300, max: 6000, step: 100, unit: " ms" },
   { key: "uiScale", title: "Stage text size", hint: "Size of the text on the story screen.", min: 0.8, max: 1.4, step: 0.05, unit: "×" },
+  {
+    key: "windowOpacity",
+    title: "Window opacity",
+    hint: "How solid the message window is (FGO frames). Lower lets the scene show through, as in the game; the text keeps a shadow so it stays readable.",
+    min: 0.4,
+    max: 1,
+    step: 0.05,
+    percent: true,
+  },
+  {
+    key: "musicVolume",
+    title: "Music volume",
+    hint: "Background music set on the Backgrounds page. 0% turns it off; V mutes it in a story.",
+    min: 0,
+    max: 1,
+    step: 0.05,
+    percent: true,
+  },
 ];
 
 const SAMPLING: Slider[] = [
@@ -171,7 +193,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
           <span className="flex items-baseline justify-between gap-4">
             <span className="text-sm font-medium">{s.title}</span>
             <span className="text-sm tabular-nums text-muted">
-              {form[s.key]}
+              {s.percent ? `${Math.round(form[s.key] * 100)}%` : form[s.key]}
               {s.unit ?? ""}
             </span>
           </span>
@@ -267,6 +289,27 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
           </div>
 
           <div>
+            <span className="block text-sm font-medium">Background jobs</span>
+            <span className="mb-2 mt-0.5 block text-sm text-muted">
+              Which model does the small extra requests between replies. Moving them to your{" "}
+              <a href="/connection?model=backup" className="text-accent hover:underline">
+                backup model
+              </a>{" "}
+              keeps the main one free, so replies don&apos;t wait behind them. Story replies, written scenes and interludes always use the main
+              model; if the backup fails a job, the main model does it.
+            </span>
+            <Choice
+              value={form.helperModel}
+              onChange={(helperModel) => update({ helperModel })}
+              options={[
+                ["main", "Main model", "Everything on the main model, as before."],
+                ["light", "Light jobs on the backup", "Scene box and choices. Safe with any backup."],
+                ["all", "All on the backup", "Also story summaries and character memories. Use a good backup: they are how the story remembers."],
+              ]}
+            />
+          </div>
+
+          <div>
             <span className="block text-sm font-medium">Example dialogue</span>
             <span className="mb-2 mt-0.5 block text-sm text-muted">Examples teach a character&apos;s voice but cost tokens on every message.</span>
             <Choice
@@ -288,7 +331,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
               onChange={(memoryPlacement) => update({ memoryPlacement })}
               options={[
                 ["end", "Near the latest message", "Followed best, and the rest of the prompt can be cached by the provider (cheaper, faster)."],
-                ["top", "In the system prompt", "For APIs that reject system messages mid-chat."],
+                ["top", "In the system prompt", "For APIs that reject system messages mid-chat. Changes the start of the prompt every reply, so the provider can't reuse its cache."],
               ]}
             />
           </div>
@@ -313,6 +356,12 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
               onChange={(autoChoices) => update({ autoChoices })}
             />
             <Toggle
+              title="Inner thoughts"
+              hint="Characters may now and then show what they privately think but don't say, in a quieter style, marked with their name. Nobody in the story hears it. Some models overuse it; turn it off if they do."
+              checked={form.innerThoughts}
+              onChange={(innerThoughts) => update({ innerThoughts })}
+            />
+            <Toggle
               title="Stop at my name"
               hint="Stops the reply when the AI starts writing a line for your persona."
               checked={form.stopAtUser}
@@ -330,11 +379,26 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
 
       <section className="mt-14 border-t border-line pt-10">
         <SectionTitle hint="Pin messages in the Log and write Story memory in the story Menu. Both stay in every prompt.">Memory</SectionTitle>
+        <div className="mb-8">
+          <Toggle
+            title="Characters remember you across stories"
+            hint="Every six exchanges, each character who spoke notes what they learned about you, and brings it into every later story. One small extra request per character, every six exchanges. See or edit it in each character's Memories tab."
+            checked={form.characterMemory}
+            onChange={(characterMemory) => update({ characterMemory })}
+          />
+        </div>
         {sliders(MEMORY)}
       </section>
 
       <section className="mt-14 border-t border-line pt-10">
         <SectionTitle>Developer</SectionTitle>
+        <p className="mb-4 text-sm text-muted">
+          How many tokens your stories use, and how much the provider served from its cache:{" "}
+          <a href="/usage" className="text-accent hover:underline">
+            Usage
+          </a>
+          .
+        </p>
         <Toggle
           title="Dev mode"
           hint="Shows prompt tokens (system, memory, history, notes) and parser repairs on the story screen."
@@ -351,7 +415,7 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
         </p>
       </section>
 
-      <div className="sticky bottom-0 mt-12 flex items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 mt-12 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button
           variant="primary"
           disabled={pending}

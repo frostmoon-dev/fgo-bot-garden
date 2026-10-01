@@ -13,12 +13,16 @@ import {
   type SessionPatch,
 } from "@/app/actions/sessions";
 import { refreshScene as refreshSceneAction, suggestChoices as suggestChoicesAction } from "@/app/actions/story";
+import { saveMoment as saveMomentAction } from "@/app/actions/moments";
 import { unwrap } from "@/lib/actionResult";
 import { bondLevel } from "@/lib/bond";
+import { namedOutsideCast } from "@/lib/story/formerCast";
 import type { Choice } from "@/lib/story/choices";
-import type { MessageView, SessionView, SettingsView } from "@/lib/types";
+import { activeContent, type MessageView, type SessionView, type SettingsView } from "@/lib/types";
 import { buildScene, type Scene, type SceneData } from "./buildScene";
+import type { ChatUsage } from "@/lib/llm/types";
 import { runChat, type PromptBreakdown } from "./chatStream";
+import { momentFromBeat } from "./moment";
 
 export type Panel = null | "log" | "saves" | "menu" | "help" | "scene";
 
@@ -26,6 +30,8 @@ export interface PlayData extends SceneData {
   settings: SettingsView;
   // Bond points per character id.
   bonds: Record<string, number>;
+  // Opened from a search result: the Log opens at this message.
+  focusMessageId?: string | null;
 }
 
 export interface Toast {
@@ -33,29 +39,48 @@ export interface Toast {
   text: string;
 }
 
+// Library characters the story named who aren't in its cast, offered with an Add button.
+export interface CastSuggestion {
+  id: number;
+  characterIds: string[];
+}
+
 interface PlayState extends PlayData {
   messages: MessageView[];
   scene: Scene;
   cursor: number;
+  // The furthest line read in the newest content. The Log shows lines up to here, so it never spoils a reply
+  // that is still being read. Replaying older lines leaves it where it is; new content resets it.
+  readUpTo: number;
   typed: number;
   streaming: boolean;
   abort: AbortController | null;
   auto: boolean;
   skip: boolean;
   hideUi: boolean;
+  // Background music switched off with V (or the Menu). Remembered in this browser.
+  musicMuted: boolean;
   panel: Panel;
   error: string | null;
   toast: Toast | null;
+  castSuggestion: CastSuggestion | null;
+  // Characters the user said "Not now" to in this visit, so the offer doesn't repeat.
+  declinedCast: string[];
   promptTokens: number | null;
   promptBreakdown: PromptBreakdown | null;
+  // What the provider reported for the last reply, including tokens served from its prompt cache.
+  lastUsage: ChatUsage | null;
   sceneBusy: boolean;
   choices: Choice[] | null;
   choicesBusy: boolean;
 
   advance: () => void;
   setTyped: (n: number) => void;
-  send: (text: string) => Promise<void>;
-  regenerate: () => Promise<void>;
+  // direction: the user's note for this reply only, from outside the story (never saved).
+  send: (text: string, direction?: string) => Promise<void>;
+  regenerate: (direction?: string) => Promise<void>;
+  // Plays a message again from its first line (the latest reply when none is given). Nothing changes in the story.
+  replay: (messageId?: string) => void;
   stop: () => void;
   swipe: (messageId: string, dir: -1 | 1) => void;
   editMessage: (messageId: string, content: string) => void;
@@ -72,8 +97,28 @@ interface PlayState extends PlayData {
   setAuto: (on: boolean) => void;
   setSkip: (on: boolean) => void;
   setHideUi: (on: boolean) => void;
+  toggleMusic: () => void;
+  // Keeps the line on screen as a moment card (the Moments page).
+  keepMoment: () => Promise<void>;
   setError: (error: string | null) => void;
   showToast: (text: string) => void;
+  acceptCastSuggestion: () => void;
+  declineCastSuggestion: () => void;
+}
+
+const MUSIC_MUTED_KEY = "music-muted";
+
+function readMusicMuted(): boolean {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(MUSIC_MUTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+// "BB", "BB and Meltryllis", "BB, Meltryllis and Kiara".
+export function listNames(names: string[]): string {
+  return names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
 // The whole history is re-parsed on every change, so only log each warning once.
@@ -91,7 +136,7 @@ export type PlayStore = StoreApi<PlayState>;
 
 // One store per play page, created with its data. Never shared between requests on the server.
 export function createPlayStore(data: PlayData): PlayStore {
-  return createStore<PlayState>()((set, get) => {
+  const store = createStore<PlayState>()((set, get) => {
   // Rebuild beats after any change to messages or session.
   const commit = (patch: Partial<PlayState>) => {
     const s = { ...get(), ...patch };
@@ -102,7 +147,8 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   const showEnd = (scene: Scene) => {
     const last = scene.stageBeats.at(-1);
-    set({ cursor: Math.max(0, scene.stageBeats.length - 1), typed: last?.text.length ?? 0 });
+    const end = Math.max(0, scene.stageBeats.length - 1);
+    set({ cursor: end, typed: last?.text.length ?? 0, readUpTo: end });
   };
 
   const firstBeatOf = (scene: Scene, messages: MessageView[], messageId: string) => {
@@ -125,9 +171,23 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   const showToast = (text: string) => set({ toast: { id: Date.now(), text } });
 
+  // Offers to add library characters the text names who aren't in the cast: they can't appear until they join.
+  const suggestCast = (text: string) => {
+    const s = get();
+    if (s.session.mode !== "narrative") return;
+    const castIds = new Set(s.session.cast.map((c) => c.characterId));
+    const skip = new Set([...s.declinedCast, ...(s.castSuggestion?.characterIds ?? [])]);
+    const found = namedOutsideCast(text, Object.values(s.characters), castIds).filter((c) => !skip.has(c.id));
+    if (!found.length) return;
+    const characterIds = [...(s.castSuggestion?.characterIds ?? []), ...found.map((c) => c.id)];
+    set({ castSuggestion: { id: Date.now(), characterIds } });
+  };
+
   // After a reply: bond for everyone who spoke (the server counts the same), then the scene box and choices.
   const afterReply = (messageId: string, answered: boolean) => {
     const s = get();
+    const reply = s.messages.find((m) => m.id === messageId);
+    if (reply) suggestCast(activeContent(reply));
     if (answered) {
       const speakers = [
         ...new Set(s.scene.beats.filter((b) => b.messageId === messageId && b.kind === "dialogue" && b.speakerId).map((b) => b.speakerId!)),
@@ -149,7 +209,7 @@ export function createPlayStore(data: PlayData): PlayStore {
 
   // Streams lines into one variant of one message. Returns the message id.
   const stream = async (
-    body: { action: "reply" | "regenerate"; text?: string },
+    body: { action: "reply" | "regenerate"; text?: string; direction?: string },
     target: (info: { messageId: string; userMessageId: string | null }) => { messageIndex: number },
   ) => {
     const abort = new AbortController();
@@ -161,7 +221,8 @@ export function createPlayStore(data: PlayData): PlayStore {
         { sessionId: get().session.id, ...body },
         {
           onStart: (info) => {
-            set({ promptTokens: info.promptTokens, promptBreakdown: info.breakdown });
+            set({ promptTokens: info.promptTokens, promptBreakdown: info.breakdown, lastUsage: null });
+            if (info.backup) showToast("The main model didn't answer, so the backup model wrote this reply.");
             messageId = info.messageId;
             messageIndex = target(info).messageIndex;
           },
@@ -173,6 +234,7 @@ export function createPlayStore(data: PlayData): PlayStore {
             });
             logWarnings(commit({ messages }), get().settings.devMode);
           },
+          onUsage: (lastUsage) => set({ lastUsage }),
         },
         abort.signal,
       );
@@ -191,17 +253,22 @@ export function createPlayStore(data: PlayData): PlayStore {
     messages: data.session.messages,
     scene,
     cursor: Math.max(0, scene.stageBeats.length - 1),
+    readUpTo: Math.max(0, scene.stageBeats.length - 1),
     typed: lastBeat?.text.length ?? 0,
     streaming: false,
     abort: null,
     auto: false,
     skip: false,
     hideUi: false,
-    panel: null,
+    musicMuted: readMusicMuted(),
+    panel: data.focusMessageId ? "log" : null,
     error: null,
     toast: null,
+    castSuggestion: null,
+    declinedCast: [],
     promptTokens: null,
     promptBreakdown: null,
+    lastUsage: null,
     sceneBusy: false,
     choices: null,
     choicesBusy: false,
@@ -216,7 +283,7 @@ export function createPlayStore(data: PlayData): PlayStore {
 
     setTyped: (n) => set({ typed: n }),
 
-    send: async (text) => {
+    send: async (text, direction) => {
       const s = get();
       if (s.streaming) return;
       const trimmed = text.trim();
@@ -228,11 +295,13 @@ export function createPlayStore(data: PlayData): PlayStore {
         : null;
       const withUser = tempUser ? [...before, tempUser] : before;
       const scene = commit({ messages: withUser, choices: null });
+      if (trimmed) suggestCast(trimmed);
       // Your own line shows on stage while the reply is written.
-      set({ cursor: tempUser ? startCursor : scene.stageBeats.length, typed: 0 });
+      const at = tempUser ? startCursor : scene.stageBeats.length;
+      set({ cursor: at, typed: 0, readUpTo: at });
       let started = false;
       try {
-        const messageId = await stream({ action: "reply", text: trimmed }, ({ messageId, userMessageId }) => {
+        const messageId = await stream({ action: "reply", text: trimmed, direction }, ({ messageId, userMessageId }) => {
           started = true;
           const msgs = get().messages.map((m) => (m.id === "temp-user" && userMessageId ? { ...m, id: userMessageId } : m));
           const assistant: MessageView = {
@@ -257,7 +326,17 @@ export function createPlayStore(data: PlayData): PlayStore {
       }
     },
 
-    regenerate: async () => {
+    replay: (messageId) => {
+      const s = get();
+      if (s.streaming) return;
+      const id = messageId ?? s.messages.findLast((m) => m.role === "assistant")?.id;
+      if (!id) return;
+      const cursor = firstBeatOf(s.scene, s.messages, id);
+      if (cursor >= s.scene.stageBeats.length) return;
+      set({ cursor, typed: 0, panel: null, hideUi: false });
+    },
+
+    regenerate: async (direction) => {
       const s = get();
       if (s.streaming) return;
       const index = s.messages.length - 1;
@@ -265,9 +344,9 @@ export function createPlayStore(data: PlayData): PlayStore {
       if (!last) return;
       if (last.role === "user") {
         // No reply yet: generate one.
-        set({ cursor: s.scene.stageBeats.length, typed: 0 });
+        set({ cursor: s.scene.stageBeats.length, typed: 0, readUpTo: s.scene.stageBeats.length });
         try {
-          const messageId = await stream({ action: "regenerate" }, ({ messageId }) => {
+          const messageId = await stream({ action: "regenerate", direction }, ({ messageId }) => {
             const msgs = get().messages;
             commit({
               messages: [
@@ -294,9 +373,10 @@ export function createPlayStore(data: PlayData): PlayStore {
       };
       const messages = [...s.messages.slice(0, index), withVariant];
       const scene = commit({ messages });
-      set({ cursor: firstBeatOf(scene, messages, last.id), typed: 0 });
+      const at = firstBeatOf(scene, messages, last.id);
+      set({ cursor: at, typed: 0, readUpTo: at });
       try {
-        const messageId = await stream({ action: "regenerate" }, () => ({ messageIndex: index }));
+        const messageId = await stream({ action: "regenerate", direction }, () => ({ messageIndex: index }));
         if (!get().messages[index].variants.at(-1)?.content.trim()) throw new Error("The AI returned an empty reply.");
         afterReply(messageId, false);
       } catch (e) {
@@ -321,7 +401,8 @@ export function createPlayStore(data: PlayData): PlayStore {
       if (next < 0 || next >= message.variants.length) return;
       const messages = s.messages.map((m) => (m.id === messageId ? { ...m, activeVariant: next } : m));
       const scene = commit({ messages });
-      set({ cursor: firstBeatOf(scene, messages, messageId), typed: 0 });
+      const at = firstBeatOf(scene, messages, messageId);
+      set({ cursor: at, typed: 0, readUpTo: at });
       setActiveVariant(messageId, next).then(unwrap).catch(reportError);
     },
 
@@ -357,9 +438,26 @@ export function createPlayStore(data: PlayData): PlayStore {
       updateSession(get().session.id, patch).then(unwrap).catch(reportError);
     },
 
+    acceptCastSuggestion: () => {
+      const s = get();
+      const ids = (s.castSuggestion?.characterIds ?? []).filter((id) => !s.session.cast.some((c) => c.characterId === id));
+      set({ castSuggestion: null });
+      if (!ids.length) return;
+      s.setCast([...s.session.cast, ...ids.map((characterId) => ({ characterId, spriteSetId: null }))]);
+      showToast(`Added ${listNames(ids.map((id) => s.characters[id]?.name ?? "them"))} to the cast.`);
+    },
+
+    declineCastSuggestion: () => {
+      const s = get();
+      set({ castSuggestion: null, declinedCast: [...s.declinedCast, ...(s.castSuggestion?.characterIds ?? [])] });
+    },
+
     setCast: (cast) => {
       commit({ session: { ...get().session, cast } });
-      setCastAction(get().session.id, cast).then(unwrap).catch(reportError);
+      setCastAction(get().session.id, cast)
+        .then(unwrap)
+        .then((scene) => commit({ session: { ...get().session, scene } }))
+        .catch(reportError);
     },
 
     switchAscension: async (characterId, spriteSetId) => {
@@ -379,7 +477,7 @@ export function createPlayStore(data: PlayData): PlayStore {
           const messages = exists ? now.messages.map((m) => (m.id === change.id ? change : m)) : [...now.messages, change];
           const scene = commit({ messages, session });
           const at = scene.stageBeats.findIndex((b) => b.messageId === change.id);
-          if (at >= 0) set({ cursor: at, typed: 0 });
+          if (at >= 0) set({ cursor: at, typed: 0, readUpTo: at });
           showToast(`${now.characters[characterId]?.name ?? "They"} will notice the change in the next reply.`);
           return;
         }
@@ -389,7 +487,7 @@ export function createPlayStore(data: PlayData): PlayStore {
         const messages = exists ? now.messages.map((m) => (m.id === first.id ? first : m)) : [first, ...now.messages];
         const scene = commit({ messages, session });
         // A story that has not started replays the new greeting from the top.
-        if (!messages.some((m) => m.role === "user")) set({ cursor: 0, typed: 0 });
+        if (!messages.some((m) => m.role === "user")) set({ cursor: 0, typed: 0, readUpTo: 0 });
         else if (get().cursor >= scene.stageBeats.length) showEnd(scene);
         showToast(`Greeting switched to ${formName}.`);
       } catch (e) {
@@ -430,10 +528,37 @@ export function createPlayStore(data: PlayData): PlayStore {
     setAuto: (on) => set({ auto: on, skip: false }),
     setSkip: (on) => set({ skip: on, auto: false }),
     setHideUi: (on) => set({ hideUi: on, auto: false, skip: false }),
+    keepMoment: async () => {
+      const s = get();
+      const beats = s.scene.stageBeats;
+      const beat = beats[Math.min(s.cursor, beats.length - 1)];
+      if (!beat?.text.trim()) return showToast("There's no line on screen to keep yet.");
+      try {
+        unwrap(await saveMomentAction(momentFromBeat(s, beat)));
+        showToast("Moment kept. Find it under Moments.");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Could not keep this moment");
+      }
+    },
+    toggleMusic: () => {
+      const musicMuted = !get().musicMuted;
+      set({ musicMuted });
+      try {
+        localStorage.setItem(MUSIC_MUTED_KEY, musicMuted ? "1" : "");
+      } catch {
+        // Private windows can block storage; the choice then lasts for this visit.
+      }
+      showToast(musicMuted ? "Music off. Press V to turn it back on." : "Music on.");
+    },
     setError: (error) => set({ error }),
     showToast,
   };
 });
+  // Reading forward moves the mark along, whatever moved the cursor (a click, Auto, Skip, a key).
+  store.subscribe((s) => {
+    if (s.cursor > s.readUpTo) store.setState({ readUpTo: s.cursor });
+  });
+  return store;
 }
 
 const PlayStoreContext = createContext<PlayStore | null>(null);

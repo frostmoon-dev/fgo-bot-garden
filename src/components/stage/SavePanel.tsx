@@ -7,6 +7,7 @@ import type { SaveSlotView } from "@/lib/types";
 import { LocalTime } from "@/components/ui/LocalTime";
 import { PanelShell } from "./PanelShell";
 import { usePlay, usePlayApi } from "./usePlay";
+import { askConfirm, askText } from "@/components/ui/dialogs";
 
 const SLOTS = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -34,8 +35,24 @@ export function SavePanel() {
   const save = (slot: number) =>
     act(slot, async () => {
       const existing = saves.find((s) => s.slot === slot);
-      if (existing && !confirm(`Overwrite slot ${slot}?`)) return;
-      const label = prompt("Name this save (optional)", existing?.label ?? "") ?? "";
+      if (
+        existing &&
+        !(await askConfirm({
+          title: `Overwrite slot ${slot}?`,
+          body: `The save${existing.label ? ` "${existing.label}"` : ""} in this slot will be replaced by the story as it is now.`,
+          confirmLabel: "Overwrite",
+          danger: true,
+        }))
+      )
+        return;
+      const label = await askText({
+        title: `Save to slot ${slot}`,
+        label: "Name this save (optional)",
+        initial: existing?.label ?? "",
+        confirmLabel: "Save",
+        maxLength: 80,
+      });
+      if (label === null) return;
       unwrap(await saveToSlot(sessionId, slot, label));
       const entry = { slot, label, createdAt: new Date().toISOString() };
       setSaves((list) => [...list.filter((s) => s.slot !== slot), entry].sort((a, b) => a.slot - b.slot));
@@ -43,14 +60,26 @@ export function SavePanel() {
 
   const load = (slot: number) =>
     act(slot, async () => {
-      if (!confirm(`Load slot ${slot}? Unsaved progress after it will be replaced.`)) return;
+      const ok = await askConfirm({
+        title: `Load slot ${slot}?`,
+        body: "The story goes back to this save. Anything after it that you haven't saved will be lost.",
+        confirmLabel: "Load save",
+        danger: true,
+      });
+      if (!ok) return;
       unwrap(await loadSlot(sessionId, slot));
       window.location.reload();
     });
 
   const remove = (slot: number) =>
     act(slot, async () => {
-      if (!confirm(`Delete slot ${slot}?`)) return;
+      const ok = await askConfirm({
+        title: `Delete slot ${slot}?`,
+        body: "This save will be deleted. The story itself stays as it is.",
+        confirmLabel: "Delete save",
+        danger: true,
+      });
+      if (!ok) return;
       unwrap(await deleteSlot(sessionId, slot));
       setSaves((list) => list.filter((s) => s.slot !== slot));
     });

@@ -13,6 +13,7 @@ import type { ExpressionView, SpriteSetView } from "@/lib/types";
 import { FaceAssigner } from "./FaceAssigner";
 import { OffsetTool } from "./OffsetTool";
 import { autoAlign, detectFaceCount, loadImage } from "./sheetTools";
+import { askConfirm } from "@/components/ui/dialogs";
 
 const GRID_FIELDS: { key: keyof SheetGrid; title: string }[] = [
   { key: "bodyHeight", title: "Body height" },
@@ -111,7 +112,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
       </details>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Face position</h2>
+        <h2 className="font-title text-2xl font-semibold">Face position</h2>
         <p className="text-sm text-muted">Drag the dashed face until it covers the face on the body. One offset works for every expression.</p>
         <OffsetTool
           grid={grid}
@@ -124,7 +125,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Faces for each expression</h2>
+        <h2 className="font-title text-2xl font-semibold">Faces for each expression</h2>
         <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
           <FaceAssigner
             grid={grid}
@@ -152,15 +153,21 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         </div>
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending || !dirty}>
           {pending ? "Saving…" : dirty ? "Save sheet" : "Saved"}
         </Button>
         <Button
           variant="danger"
           disabled={pending}
-          onClick={() => {
-            if (confirm(`Delete the ascension "${set.name}" and its definition?`)) run(async () => unwrap(await deleteSpriteSet(set.id)));
+          onClick={async () => {
+            const ok = await askConfirm({
+              title: `Delete "${set.name}"?`,
+              body: `This ascension, its sprite sheet and its definition will be deleted. This cannot be undone.`,
+              confirmLabel: "Delete ascension",
+              danger: true,
+            });
+            if (ok) run(async () => unwrap(await deleteSpriteSet(set.id)));
           }}
         >
           Delete ascension

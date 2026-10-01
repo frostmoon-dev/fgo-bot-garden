@@ -42,7 +42,7 @@ const TEXT_FIELDS: TextField[] = [
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-line py-10 first:border-t-0 first:pt-0">
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="tab-heading">{title}</h2>
       {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
       <div className="mt-6 space-y-8">{children}</div>
     </section>
@@ -163,7 +163,7 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
       <Section title="Writing samples" hint="Written in the tag format. They teach the model the voice.">
         {byKey("greeting", "exampleDialogues")}
       </Section>
-      <div className="sticky bottom-0 mt-10 flex items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 mt-10 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending}>
           {pending ? "Saving…" : "Save profile"}
         </Button>

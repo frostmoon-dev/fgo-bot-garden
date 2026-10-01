@@ -1,7 +1,19 @@
 import type { ChatMessage } from "@/lib/llm/types";
+import { mentions, presentIds } from "@/lib/story/formerCast";
 import type { Mode } from "@/lib/parser/types";
 import { applyMacros, type Macros } from "@/lib/stage/beats";
-import { formatExample, formatReminder, lengthRule, MODE_RULES, STRICT_RULES, SYSTEM_RULES, type ReplyLength } from "./rules";
+import {
+  formatExample,
+  formatReminder,
+  lengthRule,
+  MODE_RULES,
+  pronounsOf,
+  STRICT_RULES,
+  SYSTEM_RULES,
+  THOUGHT_RULES,
+  userReminder,
+  type ReplyLength,
+} from "./rules";
 
 export type { ReplyLength } from "./rules";
 import { estimateTokens } from "./tokens";
@@ -26,6 +38,8 @@ export interface PromptOptions {
   // Tokens the model accepts in total, and how many of them are kept free for the reply.
   contextSize: number;
   replyTokens: number;
+  // Characters may write (thought:Name) lines.
+  innerThoughts: boolean;
 }
 
 export const DEFAULT_PROMPT_OPTIONS: PromptOptions = {
@@ -37,6 +51,7 @@ export const DEFAULT_PROMPT_OPTIONS: PromptOptions = {
   replyLength: "scene",
   contextSize: 16384,
   replyTokens: 900,
+  innerThoughts: false,
 };
 
 export interface PromptCharacter {
@@ -54,6 +69,8 @@ export interface PromptCharacter {
   expressions: { key: string; label: string; description: string }[];
   // Bond level with the user, already written out (see lib/bond.ts).
   bond?: string;
+  // What they remember about the user from all their stories together (lib/memory).
+  memories?: string;
   // The ascension in use and the character's other ones, when there are several.
   form?: string;
   otherForms?: string[];
@@ -68,7 +85,7 @@ export interface PromptInput {
   mainCharacterId: string;
   cast: PromptCharacter[];
   backgrounds: { key: string; label: string; description: string }[];
-  persona: { name: string; description: string; addressAs: string };
+  persona: { name: string; description: string; addressAs: string; role?: string };
   lore: { title: string; content: string }[];
   summary: string;
   // The user's own notes for this story. Always sent.
@@ -79,8 +96,16 @@ export interface PromptInput {
   scene?: string;
   // Things that just happened outside the text, such as a form change. Sent with this reply only.
   events?: string[];
+  // Characters with lines in the history who were taken out of the cast.
+  absent?: string[];
   history: PromptHistoryItem[];
+  // True once the user has replied. The scenario then only describes how the story began, not the present.
+  storyStarted?: boolean;
+  // The scene the user wrote for this story (Write a scene). It replaces the main character's scenario.
+  premise?: string;
   continueScene: boolean;
+  // The user's direction for this reply only, from outside the story (see the chat route).
+  direction?: string;
   options?: Partial<PromptOptions>;
 }
 
@@ -103,9 +128,40 @@ const EXAMPLE_REPLIES = 3;
 // Per-message overhead of the chat format, and a safety margin for the rough token estimate.
 const MESSAGE_TOKENS = 4;
 const MARGIN_TOKENS = 64;
+// When old messages must go, they go this many at a time. Dropping one per turn would change the start of
+// the conversation on every reply, and providers only reuse (cache) a prompt up to its first change.
+const TRIM_STEP = 8;
 
 function field(label: string, value: string): string | null {
   return value.trim() ? `${label}: ${value.trim()}` : null;
+}
+
+// What the versions of one place have in common: "forest at dusk" and "forest at night" share "forest".
+// Cut back to the last comma or semicolon, so a half-shared word isn't kept.
+function sharedStart(texts: string[]): string {
+  let prefix = texts[0] ?? "";
+  for (const t of texts) while (!t.startsWith(prefix)) prefix = prefix.slice(0, -1);
+  if (texts.every((t) => t === prefix)) return prefix;
+  const cut = Math.max(prefix.lastIndexOf(","), prefix.lastIndexOf(";"));
+  return cut > 0 ? prefix.slice(0, cut).trim() : "";
+}
+
+// One line per place. Labels read "Place — Version" ("Forest — Night"), so a place with several versions
+// is listed once with all its keys: a large library stays small in the prompt that is sent with every reply.
+function backgroundLines(list: PromptInput["backgrounds"]): string[] {
+  const places = new Map<string, PromptInput["backgrounds"]>();
+  for (const b of list) {
+    const place = b.label.split(" — ")[0].trim() || b.key;
+    places.set(place, [...(places.get(place) ?? []), b]);
+  }
+  return [...places].map(([place, versions]) => {
+    if (versions.length === 1) {
+      const b = versions[0];
+      return `- ${b.key}${b.description || b.label ? ` — ${b.description || b.label}` : ""}`;
+    }
+    const about = sharedStart(versions.map((b) => b.description)) || versions[0].description;
+    return `- ${place}${about ? ` (${about})` : ""}: ${versions.map((b) => b.key).join(", ")}`;
+  });
 }
 
 function characterBlock(
@@ -123,14 +179,13 @@ function characterBlock(
     `## ${c.name}${isMain ? " (main character)" : ""}`,
     `Tag name: ${c.name}${c.aliases.length ? ` (also accepted: ${c.aliases.join(", ")})` : ""}`,
     c.form
-      ? `Current form: ${c.form}${c.otherForms?.length ? ` (other forms: ${c.otherForms.join(", ")})` : ""}. Everything below describes this form.`
+      ? `Current form: ${c.form}${c.otherForms?.length ? ` (other forms: ${c.otherForms.join(", ")})` : ""}. Everything below describes this form. It is still the same ${c.name}: a form changes how they look and act, never what they know. They remember everything that has happened in this story and everything in their memories.`
       : null,
     field("Description", c.description),
     opts.brief ? null : field("Personality", c.personality),
     field("Speech style", c.speechStyle),
     opts.brief ? null : field("Background", c.lore),
     opts.brief ? null : field("Relationship with {{user}}", c.relationship),
-    c.bond ? `Bond with {{user}}: ${c.bond}` : null,
     `Expressions: ${expressions}`,
     opts.examples && c.exampleDialogues.trim() ? `Example dialogue:\n${c.exampleDialogues.trim()}` : null,
   ]
@@ -144,6 +199,28 @@ function tokensOf(messages: ChatMessage[]): number {
 
 function join(parts: (string | null | false | undefined)[]): string {
   return parts.filter(Boolean).join("\n\n");
+}
+
+// Who is here and who the user just spoke to. Weaker models otherwise let the main character do all the
+// talking, even answer for the others ("She doesn't seem to have an answer"), while the rest stand silent.
+function stageNote(input: PromptInput, cast: PromptCharacter[]): string | null {
+  if (cast.length < 2) return null;
+  const lastUser = input.history.findLast((m) => m.role === "user")?.content ?? "";
+  const named = (c: PromptCharacter) => mentions(lastUser, [c.name, ...c.aliases]);
+  const listed = input.scene ? presentIds(input.scene, cast) : null;
+  const present = listed ? cast.filter((c) => listed.has(c.id) || named(c)) : [];
+  const addressed = cast.filter(named);
+  if (present.length < 2 && !addressed.length) return null;
+  const names = (list: PromptCharacter[]) => list.map((c) => c.name).join(", ");
+  return [
+    "# WHO SPEAKS",
+    present.length >= 2 &&
+      `Here now: ${names(present)}. Each of them speaks and acts for themselves, in their own [Name|expression] lines, and reacts to the others. Nobody answers, explains or narrates silence for someone who is here: let that character talk.`,
+    addressed.length > 0 &&
+      `{{user}} just spoke to ${names(addressed)}. ${addressed.length > 1 ? "They answer" : `${addressed[0].name} answers`} first, in their own words, before anyone else reacts. If they are not on stage yet, write {enter:Name:position} first.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function buildPrompt(input: PromptInput): BuiltPrompt {
@@ -160,36 +237,58 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     input.mode === "narrative" && input.backgrounds.length
       ? compact
         ? `# BACKGROUNDS (for {scene:…})\n${input.backgrounds.map((b) => b.key).join(", ")}`
-        : `# BACKGROUNDS (for {scene:…})\n${input.backgrounds
-            .map((b) => `- ${b.key}${b.description || b.label ? ` — ${b.description || b.label}` : ""}`)
-            .join("\n")}`
+        : `# BACKGROUNDS (for {scene:…})\n${backgroundLines(input.backgrounds).join("\n")}`
       : null;
   const persona = [
-    `# {{user}} — the user's character. You never write for them.`,
+    `# {{user}} — the user's character. You never write for them. Keep every detail below consistent, including their pronouns.`,
     `Name: ${input.persona.name}`,
+    field("Pronouns", pronounsOf(input.persona.description) ?? ""),
+    input.persona.role?.trim() &&
+      `Role in the story: ${input.persona.role.trim()}\nThis is who {{user}} is here, even where a character's canon or definition assumes someone else (for example their Master). Every character knows {{user}} in this role and treats them accordingly.`,
     field("Characters address them as", input.persona.addressAs),
     field("About them", input.persona.description),
   ]
     .filter(Boolean)
     .join("\n");
+  const scenario = input.premise?.trim() || main?.scenario.trim();
   const staticPrompt = join([
     SYSTEM_RULES,
     o.profile !== "balanced" && STRICT_RULES,
     MODE_RULES[input.mode],
+    o.innerThoughts && THOUGHT_RULES,
     lengthRule(input.mode, o.replyLength),
     main && formatExample(input.mode, main.name, main.expressions.map((e) => e.key)),
     `# CHARACTERS\n${cast
       .map((c) => characterBlock(c, c.id === main?.id, { brief: compact && c.id !== main?.id, examples, hints: !compact }))
       .join("\n\n")}`,
-    main?.scenario.trim() && `# SCENARIO\n${main.scenario.trim()}`,
+    scenario &&
+      (input.storyStarted
+        ? `# HOW THIS STORY BEGAN\n${scenario}\nThe story has moved on since. What happened in the conversation, the story so far and the current scene are what is true now.`
+        : `# SCENARIO\n${scenario}`),
     backgrounds,
     persona,
     o.customPrompt.trim() && `# EXTRA INSTRUCTIONS\n${o.customPrompt.trim()}`,
   ]);
 
-  // Changes only when the user edits it or old messages are folded into the summary.
+  // Bond and what each character remembers of the user. They change every few replies, so they sit here,
+  // after the character cards: the rules and cards before them stay the same from turn to turn, which is the
+  // part providers can reuse from their prompt cache (OpenAI, DeepSeek, Gemini, local servers alike).
+  const bonds = cast
+    .map((c) => {
+      const lines = [
+        c.bond && `Bond with {{user}}: ${c.bond}`,
+        c.memories?.trim() &&
+          `What ${c.name} remembers about {{user}} from all their time together (true; bring it up naturally when it fits):\n${c.memories.trim()}`,
+      ].filter(Boolean);
+      return lines.length ? `## ${c.name}\n${lines.join("\n")}` : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  // Changes only when the user edits it, old messages are folded into the summary, or a bond or memory grows.
   const memoryText = (pinned: string[]) =>
     join([
+      bonds && `# BONDS AND MEMORIES OF {{user}}\n${bonds}`,
       input.memory?.trim() && `# STORY MEMORY (the user's notes, always true)\n${input.memory.trim()}`,
       input.summary.trim() && `# STORY SO FAR\n${input.summary.trim()}`,
       pinned.length > 0 && `# PINNED MOMENTS (keep these in mind)\n${pinned.join("\n---\n")}`,
@@ -198,15 +297,27 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   // Changes often, so it goes last.
   const notes = join([
     input.scene?.trim() && `# CURRENT SCENE\n${input.scene.trim()}`,
+    input.mode === "narrative" && stageNote(input, cast),
     !!input.events?.length && `# JUST HAPPENED\n${input.events.map((e) => `- ${e}`).join("\n")}`,
+    !!input.absent?.length &&
+      `# NO LONGER IN THIS STORY\n${input.absent.join(", ")}: out of the story from now on. They do not appear, speak or act, and nobody treats them as present; their earlier lines are only history. If it matters, they have gone elsewhere.`,
     input.lore.length > 0 &&
       `# WORLD INFO\n${input.lore.map((l) => (l.title ? `- ${l.title}: ${l.content}` : `- ${l.content}`)).join("\n")}`,
+    userReminder(input.persona),
+    input.direction?.trim() &&
+      `# DIRECTION FOR THIS REPLY (from the user, outside the story)\n${input.direction.trim()}\nFollow it in this reply. It is not something anyone in the story said or did: never quote it or mention it, and still never write {{user}}'s words or actions.`,
     (o.formatReminder || o.profile !== "balanced") && formatReminder(input.mode, o.replyLength),
   ]);
 
   const history: PromptHistoryItem[] = input.history.map((m) => ({ ...m, content: applyMacros(m.content, macros) }));
   const last = history.at(-1);
-  if (input.continueScene || !last || last.role !== "user") {
+  if (!last && input.premise?.trim()) {
+    // A written scene has no greeting: the first reply opens the story.
+    history.push({
+      role: "user",
+      content: `[Begin the story with the SCENARIO: set the scene and let the characters act, then stop when it is ${macros.user}'s turn. Remember: do not write for ${macros.user}.]`,
+    });
+  } else if (input.continueScene || !last || last.role !== "user") {
     history.push({ role: "user", content: `[Continue the scene. Remember: do not write for ${macros.user}.]` });
   }
 
@@ -230,6 +341,8 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     room -= price;
     keepFrom--;
   }
+  // Cut at a multiple of TRIM_STEP, so the first kept message stays the same for several replies.
+  if (keepFrom > 0) keepFrom = Math.min(history.length - 1, Math.ceil(keepFrom / TRIM_STEP) * TRIM_STEP);
   const dropped = history.slice(0, keepFrom);
   const kept = history.slice(keepFrom);
   const pinned = [...(input.pinned ?? []), ...dropped.filter((m) => m.pinned).map((m) => m.content)].map((p) =>
@@ -242,8 +355,15 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
   const top = o.memoryPlacement === "top";
 
   const chat: ChatMessage[] = kept.map(({ role, content }) => ({ role, content }));
+  // Cache marks, for providers that only cache what is marked (see lib/llm/client.ts): the end of the rules
+  // and cards, the end of memory, and the end of the conversation before the newest message. Each part
+  // changes less often than the one after it.
+  const settled = chat.at(-2);
+  if (settled) settled.cacheAt = [settled.content.length];
   if (!top && notesText) chat.splice(chat.length - 1, 0, { role: "system", content: notesText });
-  const messages: ChatMessage[] = [{ role: "system", content: join([system, memory, top && notesText]) }, ...chat];
+  const head = join([system, memory, top && notesText]);
+  const memoryEnd = memory ? join([system, memory]).length : system.length;
+  const messages: ChatMessage[] = [{ role: "system", content: head, cacheAt: [system.length, memoryEnd] }, ...chat];
 
   const breakdown: PromptBreakdown = {
     system: estimateTokens(system),

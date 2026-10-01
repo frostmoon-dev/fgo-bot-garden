@@ -12,6 +12,7 @@ import { characterExportSchema, type CharacterExport } from "@/lib/characterExpo
 import type { ExpressionView } from "@/lib/types";
 import { DEFAULT_EXPRESSIONS } from "@/lib/expressions";
 import { MOTION_STYLES, type MotionStyle } from "@/lib/motion";
+import { MAX_BOND_LEVEL, pointsForLevel } from "@/lib/bond";
 
 const NEUTRAL = DEFAULT_EXPRESSIONS[0];
 
@@ -284,8 +285,10 @@ async function importCharacterData(json: unknown, nameOverride?: string): Promis
         if (set.name === data.defaultSpriteSet || (!defaultSetId && i === 0)) defaultSetId = created.id;
       }
       await tx.character.update({ where: { id: character.id }, data: { defaultSpriteSetId: defaultSetId } });
+      if (data.lorebook.length) await tx.lorebookEntry.createMany({ data: data.lorebook });
       return character.id;
     });
+    if (data.lorebook.length) revalidatePath("/lorebook");
     touch();
     return id;
   }
@@ -302,6 +305,25 @@ export async function importCharacter(json: unknown): Promise<ActionResult<strin
   return safe(async () => {
     await requireAuth();
     return importCharacterData(json);
+  });
+}
+
+// What the character remembers about the user across stories. Kept out of the character cache, so no touch().
+export async function saveCharacterMemories(id: string, memories: string): Promise<ActionResult<void>> {
+  return safe(async () => {
+    await requireAuth();
+    await db.character.update({ where: { id }, data: { memories: z.string().max(6000).parse(memories).trim() } });
+  });
+}
+
+// Sets the bond to the start of a level: Lv 1 starts over, as if you had just met.
+export async function setBondLevel(id: string, level: number): Promise<ActionResult<number>> {
+  return safe(async () => {
+    await requireAuth();
+    const bond = pointsForLevel(z.number().int().min(1).max(MAX_BOND_LEVEL).parse(level));
+    await db.character.update({ where: { id }, data: { bond } });
+    revalidatePath("/");
+    return bond;
   });
 }
 

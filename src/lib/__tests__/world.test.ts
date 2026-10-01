@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { availableExpressions, pickAscension, resolveProfile, type AscensionProfile } from "../ascension";
 import { bondLevel, bondProgress, bondSpeakers } from "../bond";
-import { cleanScene, normalizeScene, parseScene, timeOfDay, weatherOf } from "../scene";
+import { cleanScene, normalizeScene, paintedTime, parseScene, timeOfDay, weatherOf } from "../scene";
 import { parseChoices } from "../story/choices";
 import { asAction, splitUserText, userTextForPrompt } from "../userInput";
 
@@ -60,6 +60,18 @@ describe("scene box", () => {
     expect(weatherOf("indoors (snowing outside)")).toBeNull();
     expect(weatherOf("Thunderstorm")).toBe("storm");
   });
+
+  it("knows which backgrounds already show their time of day", () => {
+    expect(paintedTime("forest_night")).toBe("night");
+    expect(paintedTime("my_room_night")).toBe("night");
+    expect(paintedTime("statue_shore_sunset")).toBe("dusk");
+    expect(paintedTime("forest_evening")).toBe("dusk");
+    expect(paintedTime("snowfield_dawn")).toBe("dawn");
+    expect(paintedTime("beach_day")).toBe("day");
+    expect(paintedTime("control_room")).toBeNull();
+    expect(paintedTime("nightmare_hall")).toBeNull();
+    expect(paintedTime(null)).toBeNull();
+  });
 });
 
 describe("choices", () => {
@@ -74,6 +86,36 @@ describe("choices", () => {
       { kind: "do", text: "Shiru grabs BB's arm, holding on tightly." },
     ]);
     expect(parseChoices("SAY: *smiles* Thanks")).toEqual([{ kind: "say", text: "*smiles* Thanks" }]);
+  });
+
+  it("finds options inside a roleplay model's prose", () => {
+    const reply = [
+      "*giggles and hides behind BB*",
+      "*holds up the monitor like a shield* SAY: Hey now, no need to get so uptight!",
+      "**DO:** Switch the monitors to a loop of cat videos.",
+      "*DO: Turn off the screens, ignoring Jeanne's demands.*",
+      "She says what to do: nothing.",
+    ].join("\n");
+    expect(parseChoices(reply)).toEqual([
+      { kind: "say", text: "Hey now, no need to get so uptight!" },
+      { kind: "do", text: "Switch the monitors to a loop of cat videos." },
+      { kind: "do", text: "Turn off the screens, ignoring Jeanne's demands." },
+    ]);
+  });
+
+  it("keeps spoken choices to the words, dropping long narration in asterisks", () => {
+    expect(parseChoices("SAY: O-okay… *Her voice is barely above a whisper as she meets his eyes.*")).toEqual([
+      { kind: "say", text: "O-okay…" },
+    ]);
+    expect(parseChoices("SAY: *smiles* Thanks")).toEqual([{ kind: "say", text: "*smiles* Thanks" }]);
+  });
+
+  it("splits a line that holds two options", () => {
+    expect(parseChoices("*grins* *SAY: Fine, you win.*")).toEqual([{ kind: "say", text: "Fine, you win." }]);
+    expect(parseChoices("DO: He gently grabs her hand, SAY: What safeguards did you negotiate?")).toEqual([
+      { kind: "do", text: "He gently grabs her hand" },
+      { kind: "say", text: "What safeguards did you negotiate?" },
+    ]);
   });
 });
 

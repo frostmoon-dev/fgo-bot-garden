@@ -75,7 +75,7 @@ export function AscensionForm({ character, set }: { character: CharacterView; se
           </Label>
         );
       })}
-      <div className="sticky bottom-0 flex items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button
           variant="primary"
           disabled={pending}

@@ -6,20 +6,38 @@ import { ColorDot } from "@/components/ui/ColorDot";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 import { ExpressionEditor } from "./ExpressionEditor";
 import { ManageTab } from "./ManageTab";
+import { BondSection, type PlayedInterlude } from "./BondSection";
+import { MemoriesTab } from "./MemoriesTab";
 import { ProfileForm } from "./ProfileForm";
 import { SpritesTab } from "./SpritesTab";
 
-const TABS = ["Profile", "Ascensions", "Expressions", "Manage"] as const;
-type Tab = (typeof TABS)[number];
+const TABS = ["Profile", "Ascensions", "Expressions", "Bond & memories", "Manage"] as const;
+export type Tab = (typeof TABS)[number];
 
-export function CharacterEditor({ character, backgrounds }: { character: CharacterView; backgrounds: BackgroundView[] }) {
-  const [tab, setTab] = useState<Tab>("Profile");
+export function CharacterEditor({
+  character,
+  backgrounds,
+  memories,
+  bond,
+  interludes,
+  userName,
+  initialTab,
+}: {
+  character: CharacterView;
+  backgrounds: BackgroundView[];
+  memories: string;
+  bond: number;
+  interludes: PlayedInterlude[];
+  userName: string;
+  initialTab?: Tab;
+}) {
+  const [tab, setTab] = useState<Tab>(initialTab ?? "Profile");
   return (
     <div>
       <Link href="/characters" className="text-sm text-muted hover:text-ink">
         ← Characters
       </Link>
-      <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight">
+      <h1 className="page-title mt-3 flex items-center gap-3">
         <ColorDot color={character.color} className="size-3.5" />
         {character.name}
       </h1>
@@ -30,7 +48,7 @@ export function CharacterEditor({ character, backgrounds }: { character: Charact
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`-mb-px min-h-11 border-b-2 px-3 text-sm ${tab === t ? "border-accent font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
+            className={`-mb-px min-h-11 shrink-0 whitespace-nowrap border-b-2 px-3 text-sm ${tab === t ? "border-accent font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
           >
             {t}
           </button>
@@ -41,6 +59,12 @@ export function CharacterEditor({ character, backgrounds }: { character: Charact
         <ExpressionEditor character={character} />
       )}
       {tab === "Ascensions" && <SpritesTab character={character} />}
+      {tab === "Bond & memories" && (
+        <>
+          <BondSection character={character} points={bond} interludes={interludes} userName={userName} />
+          <MemoriesTab character={character} memories={memories} userName={userName} />
+        </>
+      )}
       {tab === "Manage" && <ManageTab character={character} />}
     </div>
   );

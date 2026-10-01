@@ -88,6 +88,19 @@ describe("ScriptParser — narration", () => {
     expect(parser.parseLine("(She sighs.)")).toEqual([{ type: "narration", text: "She sighs." }]);
     expect(parser.parseLine("*She sighs.*")).toEqual([{ type: "narration", text: "She sighs." }]);
   });
+
+  it("drops narration where the user's character acts, and what carries on about them", () => {
+    const { ctx } = makeCtx();
+    const parser = new ScriptParser(ctx);
+    expect(
+      parser.parseLine("(Ritsuka looks up from her desk, blinking at Oberon. She sets down her pen and rubs her eyes.)"),
+    ).toEqual([]);
+    expect(parser.parseLine("(With a sigh, you nod.)")).toEqual([]);
+    expect(parser.parseLine("(Ritsuka yawns. BB giggles.)")).toEqual([{ type: "narration", text: "BB giggles." }]);
+    // The user as the object, or something of theirs, is fine.
+    expect(parser.parseLine("(Oberon hands Ritsuka a cup.)")).toEqual([{ type: "narration", text: "Oberon hands Ritsuka a cup." }]);
+    expect(parser.parseLine("(Ritsuka's phone buzzes.)")).toEqual([{ type: "narration", text: "Ritsuka's phone buzzes." }]);
+  });
 });
 
 describe("ScriptParser — commands", () => {
@@ -122,6 +135,23 @@ describe("ScriptParser — commands", () => {
   it("parses exit", () => {
     const { ctx } = makeCtx();
     expect(new ScriptParser(ctx).parseLine("{exit:BB-chan}")).toEqual([{ type: "exit", characterId: "bb" }]);
+  });
+
+  it("reads commands written without braces instead of showing them", () => {
+    const { ctx } = makeCtx({
+      characters: [...makeCtx().ctx.characters, { id: "jalter", name: "Jeanne Alter", aliases: [], expressions: ["neutral"] }],
+    });
+    const parser = new ScriptParser(ctx);
+    expect(parser.parseLine("(JeanneAlter enters:right)")).toEqual([{ type: "enter", characterId: "jalter", position: "right" }]);
+    expect(parser.parseLine("(Enter:Oberon:left)")).toEqual([{ type: "enter", characterId: "oberon", position: "left" }]);
+    // The user's character has no sprite: dropped, never shown as narration.
+    expect(parser.parseLine("(Enter:Ritsuka:center)")).toEqual([]);
+    expect(parser.parseLine("Exit: BB")).toEqual([{ type: "exit", characterId: "bb" }]);
+    // Ordinary narration stays narration (and brings Oberon on stage if he isn't there yet).
+    expect(parser.parseLine("(Oberon enters the room.)")).toEqual([
+      { type: "arrive", characterId: "oberon" },
+      { type: "narration", text: "Oberon enters the room." },
+    ]);
   });
 
   it("ignores enter/exit for an unknown character", () => {

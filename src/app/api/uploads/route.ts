@@ -10,9 +10,14 @@ export async function POST(request: Request) {
   const file = form?.get("file");
   const kind = form?.get("kind");
   if (!(file instanceof File)) return Response.json({ error: "No file" }, { status: 400 });
-  if (kind !== "sprites" && kind !== "backgrounds") return Response.json({ error: "Bad kind" }, { status: 400 });
+  if (kind !== "sprites" && kind !== "backgrounds" && kind !== "music") return Response.json({ error: "Bad kind" }, { status: 400 });
+  // Pictures go to the picture folders and sound to the music folder, nothing else.
+  if ((kind === "music") !== file.type.startsWith("audio/")) return Response.json({ error: `Unsupported type ${file.type}` }, { status: 415 });
   if (!extensionFor(file.type)) return Response.json({ error: `Unsupported type ${file.type}` }, { status: 415 });
-  if (file.size > MAX_BYTES) return Response.json({ error: "File is larger than 4 MB" }, { status: 413 });
+  if (file.size > MAX_BYTES) {
+    const hint = kind === "music" ? " Use a shorter loop or a lower bitrate (128 kbps MP3 is about 1 MB a minute), or paste a link instead." : "";
+    return Response.json({ error: `File is larger than 4 MB.${hint}` }, { status: 413 });
+  }
   try {
     const url = await storeUpload(kind as UploadKind, await file.arrayBuffer(), file.type);
     return Response.json({ url });

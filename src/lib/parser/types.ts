@@ -10,9 +10,13 @@ export type ScriptLine =
   | { type: "effect"; effect: Effect }
   | { type: "dialogue"; characterId: string | null; name: string; expression: string; text: string }
   | { type: "narration"; text: string }
+  // What a character privately thinks: (thought:Name) text. Shown quietly; nobody in the story hears it.
+  | { type: "thought"; characterId: string | null; name: string; text: string }
   | { type: "scene"; backgroundKey: string }
   | { type: "enter"; characterId: string; position: Position }
-  | { type: "exit"; characterId: string };
+  | { type: "exit"; characterId: string }
+  // Narration brought them into the scene: they take a free spot, and stay put if already on stage.
+  | { type: "arrive"; characterId: string };
 
 export interface ParserCharacter {
   id: string;

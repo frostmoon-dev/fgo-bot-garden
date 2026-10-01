@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { momentSpriteSchema, type MomentView } from "@/lib/moment";
 import type {
   BackgroundView,
   CharacterView,
@@ -21,9 +22,10 @@ const characterInclude = {
   },
 };
 
-// Bond changes with every exchange, so it is read separately (listBonds) and kept out of the cache.
+// Bond and memories change as stories go on, so they are read separately (listBonds, getMemories) and
+// kept out of the cache.
 function findCharacterRows() {
-  return db.character.findMany({ include: characterInclude, omit: { bond: true }, orderBy: { name: "asc" } });
+  return db.character.findMany({ include: characterInclude, omit: { bond: true, memories: true }, orderBy: { name: "asc" } });
 }
 
 type CharacterRow = Awaited<ReturnType<typeof findCharacterRows>>[number];
@@ -56,6 +58,12 @@ export async function listCharacters(): Promise<CharacterView[]> {
   return cachedCharacters();
 }
 
+// Read fresh: they change in the background as stories go on.
+export async function getMemories(characterId: string): Promise<string> {
+  const row = await db.character.findUnique({ where: { id: characterId }, select: { memories: true } });
+  return row?.memories ?? "";
+}
+
 export async function getCharacter(id: string): Promise<CharacterView | null> {
   return (await cachedCharacters()).find((c) => c.id === id) ?? null;
 }
@@ -72,7 +80,7 @@ export const getPersona = unstable_cache(
     const row =
       (await db.persona.findUnique({ where: { id: 1 } })) ??
       (await db.persona.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }));
-    return { name: row.name, description: row.description, addressAs: row.addressAs };
+    return { name: row.name, description: row.description, addressAs: row.addressAs, role: row.role };
   },
   ["persona"],
   { tags: [TAGS.persona], revalidate: REFRESH },
@@ -96,6 +104,9 @@ export const getSettings = unstable_cache(
       replyLength: oneOf(row.replyLength, ["scene", "short", "long"]),
       narrationStyle: oneOf(row.narrationStyle, ["italic", "plain"]),
       frameStyle: oneOf(row.frameStyle, ["fgo", "simple"]),
+      helperModel: oneOf(row.helperModel, ["main", "light", "all"]),
+      // Fonts that were removed fall back to the default.
+      font: oneOf(row.font, ["fgo", "clear", "dyslexic"]),
     };
   },
   ["settings"],
@@ -112,6 +123,169 @@ export const listEnabledLore = unstable_cache(
   ["lore-enabled"],
   { tags: [TAGS.lore], revalidate: REFRESH },
 );
+
+// Read fresh: it grows with every reply.
+export async function getBond(characterId: string): Promise<number> {
+  const row = await db.character.findUnique({ where: { id: characterId }, select: { bond: true } });
+  return row?.bond ?? 0;
+}
+
+// The interludes already started with a character, newest first per interlude.
+export async function listInterludes(characterId: string): Promise<{ n: number; storyId: string; title: string }[]> {
+  const rows = await db.session.findMany({
+    where: { mainCharacterId: characterId, interlude: { not: null } },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, title: true, interlude: true },
+  });
+  const seen = new Set<number>();
+  return rows.flatMap((r) => (r.interlude && !seen.has(r.interlude) && seen.add(r.interlude) ? [{ n: r.interlude, storyId: r.id, title: r.title }] : []));
+}
+
+// Kept moments, newest first.
+export async function listMoments(): Promise<MomentView[]> {
+  const rows = await db.moment.findMany({ orderBy: { createdAt: "desc" } });
+  const ids = rows.flatMap((r) => (r.sessionId ? [r.sessionId] : []));
+  const alive = new Set((await db.session.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((s) => s.id));
+  return rows.map((r) => {
+    const sprite = momentSpriteSchema.safeParse(r.sprite);
+    return {
+      id: r.id,
+      sessionId: r.sessionId,
+      storyTitle: r.storyTitle,
+      imageUrl: r.imageUrl,
+      sprite: sprite.success ? sprite.data : null,
+      speaker: r.speaker,
+      color: r.color,
+      text: r.text,
+      narration: r.narration,
+      createdAt: r.createdAt.toISOString(),
+      storyExists: !!r.sessionId && alive.has(r.sessionId),
+    };
+  });
+}
+
+export interface UsageRow {
+  key: string;
+  requests: number;
+  // Requests whose provider reported token counts; the sums below cover only those.
+  counted: number;
+  promptTokens: number;
+  cachedTokens: number;
+  // Requests that said how much came from the cache.
+  cacheReported: number;
+  completionTokens: number;
+}
+
+export interface UsageSummary {
+  days: number;
+  total: UsageRow;
+  byDay: UsageRow[];
+  byPurpose: UsageRow[];
+  byModel: UsageRow[];
+}
+
+// Token usage over the last `days` days, grouped by day (in the server's time zone), purpose and model.
+export async function usageSummary(days = 30): Promise<UsageSummary> {
+  const since = new Date(Date.now() - days * 86_400_000);
+  const rows = await db.usage.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
+  const empty = (key: string): UsageRow => ({ key, requests: 0, counted: 0, promptTokens: 0, cachedTokens: 0, cacheReported: 0, completionTokens: 0 });
+  const add = (row: UsageRow, r: (typeof rows)[number]) => {
+    row.requests++;
+    if (r.promptTokens === null) return;
+    row.counted++;
+    row.promptTokens += r.promptTokens;
+    row.completionTokens += r.completionTokens ?? 0;
+    if (r.cachedTokens !== null) {
+      row.cacheReported++;
+      row.cachedTokens += r.cachedTokens;
+    }
+  };
+  const group = (keyOf: (r: (typeof rows)[number]) => string) => {
+    const map = new Map<string, UsageRow>();
+    for (const r of rows) {
+      const key = keyOf(r);
+      add(map.get(key) ?? map.set(key, empty(key)).get(key)!, r);
+    }
+    return [...map.values()];
+  };
+  const total = empty("total");
+  for (const r of rows) add(total, r);
+  return {
+    days,
+    total,
+    byDay: group((r) => r.createdAt.toISOString().slice(0, 10)),
+    byPurpose: group((r) => r.purpose).sort((a, b) => b.promptTokens + b.completionTokens - (a.promptTokens + a.completionTokens)),
+    byModel: group((r) => r.model).sort((a, b) => b.requests - a.requests),
+  };
+}
+
+export interface SearchHit {
+  storyId: string;
+  storyTitle: string;
+  characterName: string;
+  messageId: string;
+  role: string;
+  // The line around the match, without the AI's tags.
+  before: string;
+  match: string;
+  after: string;
+  updatedAt: string;
+}
+
+// The AI's tags, so they are neither found nor shown: [Name|face], (narration), (thought:Name), {commands}.
+function plainText(text: string): string {
+  return text
+    .replace(/\[([^\]|]+)\|[^\]]*\]\s*/g, "$1: ")
+    .replace(/\((?:narration|thoughts?\s*:[^)]*)\)\s*/gi, "")
+    .replace(/\{[^{}]*\}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Every story's text, the version of each message the reader is on, newest stories first.
+export async function searchStories(query: string, limit = 60): Promise<SearchHit[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const rows = await db.messageVariant.findMany({
+    where: { content: { contains: q, mode: "insensitive" } },
+    select: {
+      position: true,
+      content: true,
+      message: {
+        select: {
+          id: true,
+          role: true,
+          activeVariant: true,
+          session: { select: { id: true, title: true, updatedAt: true, mainCharacter: { select: { name: true } } } },
+        },
+      },
+    },
+    take: 400,
+  });
+  const needle = q.toLowerCase();
+  const hits: SearchHit[] = [];
+  for (const r of rows) {
+    if (r.position !== r.message.activeVariant) continue;
+    const text = plainText(r.content);
+    const at = text.toLowerCase().indexOf(needle);
+    // Matched only inside a tag ("narration", a face name): not something the reader saw.
+    if (at < 0) continue;
+    const start = Math.max(0, at - 70);
+    const end = Math.min(text.length, at + q.length + 90);
+    hits.push({
+      storyId: r.message.session.id,
+      storyTitle: r.message.session.title,
+      characterName: r.message.session.mainCharacter.name,
+      messageId: r.message.id,
+      role: r.message.role,
+      before: `${start > 0 ? "…" : ""}${text.slice(start, at)}`,
+      match: text.slice(at, at + q.length),
+      after: `${text.slice(at + q.length, end)}${end < text.length ? "…" : ""}`,
+      updatedAt: r.message.session.updatedAt.toISOString(),
+    });
+  }
+  return hits.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
+}
 
 export async function listBonds(): Promise<Record<string, number>> {
   const rows = await db.character.findMany({ select: { id: true, bond: true } });
@@ -158,6 +332,7 @@ export async function getSession(id: string): Promise<SessionView | null> {
     summarizedUntil: row.summarizedUntil,
     memory: row.memory,
     scene: row.scene,
+    premise: row.premise,
     cast: row.cast.map((c) => ({ characterId: c.characterId, spriteSetId: c.spriteSetId })),
     messages: row.messages.map(
       (m): MessageView => ({
