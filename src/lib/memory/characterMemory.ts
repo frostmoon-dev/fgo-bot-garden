@@ -69,6 +69,7 @@ export async function updateCharacterMemories(
         ],
         temperature: 0.3,
         maxTokens: 350,
+        purpose: "memory",
       });
       const memories = text.trim();
       // An empty or runaway answer keeps the old memory rather than replacing it.

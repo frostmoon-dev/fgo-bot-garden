@@ -30,6 +30,7 @@ export async function refreshScene(sessionId: string): Promise<ActionResult<stri
       ],
       temperature: 0.2,
       maxTokens: 220,
+      purpose: "scene",
     });
     const scene = cleanScene(text);
     if (!scene) throw new Error("The scene could not be updated: the model sent back no scene lines.");
@@ -66,6 +67,7 @@ export async function suggestChoices(sessionId: string): Promise<ActionResult<Ch
         ],
         temperature: 0.9,
         maxTokens: 220,
+        purpose: "choices",
       });
     // Roleplay models sometimes answer in character instead; one quiet retry usually fixes it.
     let reply = await ask();
@@ -123,6 +125,7 @@ export async function completeScene(input: { text: string; characterIds: string[
       ],
       temperature: 0.8,
       maxTokens: 400,
+      purpose: "write",
     });
     const scene = reply
       .replace(/^\s*(#+\s*|\*\*)?(scene|finished scene)\s*:?\**\s*$/gim, "")

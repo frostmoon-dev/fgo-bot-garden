@@ -30,7 +30,9 @@ export function Nav() {
   const router = useRouter();
 
   // "Write a scene" starts a story, so it belongs under Home.
-  const active = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/scene") : pathname.startsWith(href));
+  // and Usage is part of Settings.
+  const active = (href: string) =>
+    href === "/" ? pathname === "/" || pathname.startsWith("/scene") : pathname.startsWith(href) || (href === "/settings" && pathname.startsWith("/usage"));
 
   return (
     <>

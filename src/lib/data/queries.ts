@@ -163,6 +163,61 @@ export async function listMoments(): Promise<MomentView[]> {
   });
 }
 
+export interface UsageRow {
+  key: string;
+  requests: number;
+  // Requests whose provider reported token counts; the sums below cover only those.
+  counted: number;
+  promptTokens: number;
+  cachedTokens: number;
+  // Requests that said how much came from the cache.
+  cacheReported: number;
+  completionTokens: number;
+}
+
+export interface UsageSummary {
+  days: number;
+  total: UsageRow;
+  byDay: UsageRow[];
+  byPurpose: UsageRow[];
+  byModel: UsageRow[];
+}
+
+// Token usage over the last `days` days, grouped by day (in the server's time zone), purpose and model.
+export async function usageSummary(days = 30): Promise<UsageSummary> {
+  const since = new Date(Date.now() - days * 86_400_000);
+  const rows = await db.usage.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
+  const empty = (key: string): UsageRow => ({ key, requests: 0, counted: 0, promptTokens: 0, cachedTokens: 0, cacheReported: 0, completionTokens: 0 });
+  const add = (row: UsageRow, r: (typeof rows)[number]) => {
+    row.requests++;
+    if (r.promptTokens === null) return;
+    row.counted++;
+    row.promptTokens += r.promptTokens;
+    row.completionTokens += r.completionTokens ?? 0;
+    if (r.cachedTokens !== null) {
+      row.cacheReported++;
+      row.cachedTokens += r.cachedTokens;
+    }
+  };
+  const group = (keyOf: (r: (typeof rows)[number]) => string) => {
+    const map = new Map<string, UsageRow>();
+    for (const r of rows) {
+      const key = keyOf(r);
+      add(map.get(key) ?? map.set(key, empty(key)).get(key)!, r);
+    }
+    return [...map.values()];
+  };
+  const total = empty("total");
+  for (const r of rows) add(total, r);
+  return {
+    days,
+    total,
+    byDay: group((r) => r.createdAt.toISOString().slice(0, 10)),
+    byPurpose: group((r) => r.purpose).sort((a, b) => b.promptTokens + b.completionTokens - (a.promptTokens + a.completionTokens)),
+    byModel: group((r) => r.model).sort((a, b) => b.requests - a.requests),
+  };
+}
+
 export async function listBonds(): Promise<Record<string, number>> {
   const rows = await db.character.findMany({ select: { id: true, bond: true } });
   return Object.fromEntries(rows.map((r) => [r.id, r.bond]));

@@ -24,6 +24,7 @@ const PAGES: [string, string, string][] = [
   ["/persona", "Persona", "you name"],
   ["/connection", "Connection", "ai model api key provider deepseek openrouter openai gemini claude"],
   ["/settings", "Settings", "prompt theme font memory reply length"],
+  ["/usage", "Usage", "tokens cost cache requests spending"],
 ];
 
 // Ctrl+K (or ⌘K): jump to any page, story or character, or start a story, by typing.

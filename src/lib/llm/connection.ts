@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { TAGS } from "@/lib/data/cache";
 import { isProviderId, providerFor, type ProviderId } from "./providers";
 import { decryptSecret, keyHint } from "./secret";
+// Every request the client makes goes through here, so token usage is recorded from here on (Usage page).
+import "@/lib/usage";
 
 // Where replies come from. Saved on the Connection page; until then the LLM_* environment
 // variables are used, so an existing .env keeps working.

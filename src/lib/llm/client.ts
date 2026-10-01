@@ -1,7 +1,6 @@
 import "server-only";
 import { activeConnection, backupConnection, type LlmConnection } from "./connection";
 import { stripReasoning, stripReasoningStream } from "./reasoning";
-import { readSseDeltas } from "./sse";
 import {
   COMPLETE_MS,
   DEFAULT_BUDGET_MS,
@@ -14,7 +13,9 @@ import {
   STREAM_IDLE_MS,
   STREAM_START_MS,
 } from "./retry";
-import type { ChatMessage, ChatOptions } from "./types";
+import { readSseDeltas, readUsage } from "./sse";
+import type { ChatMessage, ChatOptions, ChatUsage } from "./types";
+import { reportUsage } from "./usageReport";
 
 export function endpoint(connection: LlmConnection, path: string): string {
   return `${connection.baseUrl.replace(/\/+$/, "")}${path}`;
@@ -98,7 +99,7 @@ async function postOnce(
   options: ChatOptions,
   stream: boolean,
   timeoutMs: number,
-): Promise<{ res: Response; release: () => void }> {
+): Promise<{ res: Response; release: () => void; model: string }> {
   const connection = options.connection ?? (await activeConnection());
   const url = endpoint(connection, "/chat/completions");
   const attempt = new AbortController();
@@ -150,7 +151,7 @@ async function postOnce(
     }
     // A stream has started: from here the reader watches for it going quiet.
     if (stream) release();
-    return { res, release };
+    return { res, release, model: connection.model };
   } catch (error) {
     release();
     throw asRetryable(error, attempt.signal, options.signal);
@@ -191,11 +192,16 @@ async function* streamFrom(options: ChatOptions): AsyncGenerator<string> {
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   let retriedEmpty = false;
   for (let attempt = 1; ; attempt++) {
-    const { res } = await withRetry(options, deadline, (left) => postOnce(options, true, Math.min(STREAM_START_MS, left)));
+    const { res, model } = await withRetry(options, deadline, (left) => postOnce(options, true, Math.min(STREAM_START_MS, left)));
     if (!res.body) throw new Error("The provider sent an empty response.");
     let yielded = false;
+    let usage: ChatUsage | null = null;
+    const onUsage = (u: ChatUsage) => {
+      usage = u;
+      options.onUsage?.(u);
+    };
     try {
-      for await (const delta of stripReasoningStream(readSseDeltas(res.body, options.onUsage, STREAM_IDLE_MS))) {
+      for await (const delta of stripReasoningStream(readSseDeltas(res.body, onUsage, STREAM_IDLE_MS))) {
         if (!delta) continue;
         yielded = true;
         yield delta;
@@ -210,6 +216,7 @@ async function* streamFrom(options: ChatOptions): AsyncGenerator<string> {
       await sleep(wait, options.signal);
       continue;
     }
+    reportUsage({ purpose: options.purpose ?? "other", model, usage });
     // Overloaded free providers sometimes end the stream without a word: ask once more.
     if (yielded || retriedEmpty || Date.now() + MIN_TRY_MS > deadline) return;
     retriedEmpty = true;
@@ -256,11 +263,14 @@ async function completeFrom(options: ChatOptions): Promise<string> {
   const deadline = options.deadline ?? Date.now() + DEFAULT_BUDGET_MS;
   const once = async (maxTokens: number) => {
     const json = await withRetry(options, deadline, async (left) => {
-      const { res, release } = await postOnce({ ...options, maxTokens }, false, Math.min(COMPLETE_MS, left));
+      const { res, release, model } = await postOnce({ ...options, maxTokens }, false, Math.min(COMPLETE_MS, left));
       try {
-        return (await res.json()) as {
+        const body = (await res.json()) as {
           choices?: { message?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string }[];
+          usage?: Parameters<typeof readUsage>[0];
         };
+        reportUsage({ purpose: options.purpose ?? "other", model, usage: readUsage(body.usage) });
+        return body;
       } catch (error) {
         throw asRetryable(error, new AbortController().signal, options.signal);
       } finally {

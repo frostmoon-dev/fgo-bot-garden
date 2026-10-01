@@ -185,6 +185,7 @@ async function sceneBoxFor(premise: string, names: string[]): Promise<string> {
       maxTokens: 220,
       // The story is waiting to start; without an answer soon, the scene text itself is used.
       deadline: Date.now() + 20_000,
+      purpose: "scene",
     });
     const scene = cleanScene(text);
     if (scene) return scene;
@@ -310,6 +311,7 @@ export async function startInterlude(characterId: string, n: number): Promise<Ac
       ],
       temperature: 0.9,
       maxTokens: 450,
+      purpose: "interlude",
     });
     const { title, scene } = parseInterlude(reply);
     if (!scene) throw new Error("The model sent back no scene. Try again, or try another model.");

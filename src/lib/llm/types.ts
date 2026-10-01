@@ -1,3 +1,4 @@
+import type { UsagePurpose } from "./usageReport";
 export type ChatRole = "system" | "user" | "assistant";
 
 export interface ChatMessage {
@@ -29,6 +30,8 @@ export interface ChatOptions {
   // Epoch ms by which the request, retries included, must have started answering. Failures that usually pass
   // (timeouts, overload, rate limits, dropped connections) are retried until then (lib/llm/retry.ts).
   deadline?: number;
+  // What the request is for, for the Usage page. Defaults to "other".
+  purpose?: UsagePurpose;
   // Called when the main model failed and the backup model is answering instead.
   onFallback?: (reason: string) => void;
   // False: one try only, errors reported at once (the connection test).

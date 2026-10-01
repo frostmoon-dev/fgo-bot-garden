@@ -219,6 +219,7 @@ export async function POST(request: Request) {
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,
     cacheKey: `bond-garden:${sessionId}`,
+    purpose: "reply",
     deadline: startedAt + RETRY_WINDOW_MS,
     onFallback: () => {
       usedBackup = true;

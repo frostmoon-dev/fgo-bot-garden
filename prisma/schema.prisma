@@ -281,3 +281,17 @@ model Moment {
 
   @@index([createdAt])
 }
+
+// Token counts of one AI request, for the Usage page. Null counts: the provider didn't report them.
+model Usage {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  // What the request was for: reply, scene, choices, summary, memory, write, interlude, test.
+  purpose          String
+  model            String
+  promptTokens     Int?
+  cachedTokens     Int?
+  completionTokens Int?
+
+  @@index([createdAt])
+}

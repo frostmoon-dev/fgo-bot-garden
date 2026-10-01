@@ -371,6 +371,13 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
 
       <section className="mt-14 border-t border-line pt-10">
         <SectionTitle>Developer</SectionTitle>
+        <p className="mb-4 text-sm text-muted">
+          How many tokens your stories use, and how much the provider served from its cache:{" "}
+          <a href="/usage" className="text-accent hover:underline">
+            Usage
+          </a>
+          .
+        </p>
         <Toggle
           title="Dev mode"
           hint="Shows prompt tokens (system, memory, history, notes) and parser repairs on the story screen."

@@ -82,6 +82,7 @@ export async function testConnection(input: ConnectionInput): Promise<ActionResu
         signal: AbortSignal.timeout(30_000),
         // A test reports what is wrong right away instead of retrying.
         retry: false,
+        purpose: "test",
       });
       return { ms: Date.now() - started, reply: reply.trim().slice(0, 80) };
     } catch (error) {
