@@ -49,7 +49,7 @@ export function Nav() {
             title="Search (Ctrl+K)"
           >
             Search
-            <kbd className="rounded border border-line bg-canvas px-1.5 font-mono text-[11px] text-muted">Ctrl K</kbd>
+            <kbd className="whitespace-nowrap rounded border border-line bg-canvas px-1.5 font-mono text-[11px] text-muted">Ctrl K</kbd>
           </button>
           <nav className="ml-auto hidden items-center gap-0.5 lg:flex xl:gap-1">
             {links.map((l) => (
