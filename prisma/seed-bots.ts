@@ -2,12 +2,10 @@
 // A bot that already exists (matched by name) is updated in place, so its stories, bond and memories stay.
 // Its expressions are added or updated but never removed (old messages may still use them).
 import "dotenv/config";
-import { existsSync, readFileSync } from "node:fs";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import type { PrismaClient } from "../src/generated/prisma/client";
 import { BOTS } from "./bots";
 import { SHEET, type Bot, type Profile } from "./bots/types";
+import { client } from "./seedClient";
 
 const PROFILE_KEYS: (keyof Profile)[] = [
   "description",
@@ -21,13 +19,6 @@ const PROFILE_KEYS: (keyof Profile)[] = [
   "openingScene",
 ];
 
-function client() {
-  const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
-  const local = !connectionString || /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString);
-  const caPath = process.env.DATABASE_CA_CERT ?? "certs/supabase-ca.crt";
-  const ssl = local ? undefined : caPath.includes("-----BEGIN") ? { ca: caPath } : existsSync(caPath) ? { ca: readFileSync(caPath, "utf8") } : true;
-  return new PrismaClient({ adapter: new PrismaPg(new Pool({ connectionString, ssl })) });
-}
 
 // Every profile field, "" when not given, so a field removed from a file is also cleared in the database.
 const overrides = (o: Partial<Profile> = {}) => Object.fromEntries(PROFILE_KEYS.map((k) => [k, o[k] ?? ""])) as unknown as Profile;
