@@ -335,6 +335,12 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
               onChange={(autoChoices) => update({ autoChoices })}
             />
             <Toggle
+              title="Inner thoughts"
+              hint="Characters may now and then show what they privately think but don't say, in a quieter style, marked with their name. Nobody in the story hears it. Some models overuse it; turn it off if they do."
+              checked={form.innerThoughts}
+              onChange={(innerThoughts) => update({ innerThoughts })}
+            />
+            <Toggle
               title="Stop at my name"
               hint="Stops the reply when the AI starts writing a line for your persona."
               checked={form.stopAtUser}

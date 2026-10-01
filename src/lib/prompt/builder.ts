@@ -10,6 +10,7 @@ import {
   pronounsOf,
   STRICT_RULES,
   SYSTEM_RULES,
+  THOUGHT_RULES,
   userReminder,
   type ReplyLength,
 } from "./rules";
@@ -37,6 +38,8 @@ export interface PromptOptions {
   // Tokens the model accepts in total, and how many of them are kept free for the reply.
   contextSize: number;
   replyTokens: number;
+  // Characters may write (thought:Name) lines.
+  innerThoughts: boolean;
 }
 
 export const DEFAULT_PROMPT_OPTIONS: PromptOptions = {
@@ -48,6 +51,7 @@ export const DEFAULT_PROMPT_OPTIONS: PromptOptions = {
   replyLength: "scene",
   contextSize: 16384,
   replyTokens: 900,
+  innerThoughts: false,
 };
 
 export interface PromptCharacter {
@@ -225,6 +229,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     SYSTEM_RULES,
     o.profile !== "balanced" && STRICT_RULES,
     MODE_RULES[input.mode],
+    o.innerThoughts && THOUGHT_RULES,
     lengthRule(input.mode, o.replyLength),
     main && formatExample(input.mode, main.name, main.expressions.map((e) => e.key)),
     `# CHARACTERS\n${cast

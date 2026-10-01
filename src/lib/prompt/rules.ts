@@ -54,6 +54,13 @@ export const MODE_RULES: Record<Mode, string> = {
 - Show actions and mood through what {{char}} says and through the expression id.`,
 };
 
+// Private thoughts, when the setting is on. Rare by design: they matter most when words and thoughts differ.
+export const THOUGHT_RULES = `INNER THOUGHTS
+- A character may think a line privately: (thought:Name) what they think, in their own first-person voice.
+- Nobody in the story hears a thought, {{user}} included; no one reacts to it as if it had been said.
+- Use it rarely: at most one or two per reply, and only when what a character thinks differs from what they say or show.
+- Never write {{user}}'s thoughts.`;
+
 // How long a reply is. "scene" reads like an FGO story script.
 export type ReplyLength = "short" | "scene" | "long";
 const LINES: Record<ReplyLength, string> = { short: "3 to 5", scene: "8 to 14", long: "14 to 22" };

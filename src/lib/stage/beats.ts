@@ -15,6 +15,8 @@ export interface Beat {
   stage: StageState;
   // A screen effect that plays when this beat starts.
   effect?: Effect;
+  // A narration beat that is a character's private thought.
+  thinker?: { id: string | null; name: string };
 }
 
 export interface BeatMessage {
@@ -69,7 +71,7 @@ export class BeatBuilder {
   }
 
   private toBeat(line: ScriptLine): Beat | null {
-    if (line.type !== "dialogue" && line.type !== "narration") return null;
+    if (line.type !== "dialogue" && line.type !== "narration" && line.type !== "thought") return null;
     if (!line.text) return null;
     const effect = this.pendingEffect;
     this.pendingEffect = undefined;
@@ -77,7 +79,8 @@ export class BeatBuilder {
       key: `${this.messageId}:${this.count++}`,
       messageId: this.messageId,
       role: "assistant",
-      kind: line.type,
+      kind: line.type === "thought" ? "narration" : line.type,
+      ...(line.type === "thought" && { thinker: { id: line.characterId, name: line.name } }),
       speakerId: line.type === "dialogue" ? line.characterId : null,
       speakerName: line.type === "dialogue" ? line.name : null,
       text: applyMacros(line.text, this.macros),

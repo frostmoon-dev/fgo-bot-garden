@@ -68,6 +68,8 @@ export interface SettingsView {
   windowOpacity: number;
   // Background music loudness, 0 to 1 (0 is off).
   musicVolume: number;
+  // Characters may write private thoughts: (thought:Name) text.
+  innerThoughts: boolean;
   loreScanDepth: number;
   contextBudget: number;
   keepRecent: number;

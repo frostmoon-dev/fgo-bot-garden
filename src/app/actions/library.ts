@@ -131,6 +131,7 @@ const settingsSchema = z.object({
   sceneTracker: z.boolean(),
   autoChoices: z.boolean(),
   characterMemory: z.boolean(),
+  innerThoughts: z.boolean(),
   replyLength: z.enum(["short", "scene", "long"]),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;

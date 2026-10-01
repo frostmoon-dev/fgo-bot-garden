@@ -14,6 +14,7 @@ export function toTranscript(text: string, ctx: ParserContext): string {
     .flatMap((l) => {
       if (l.type === "dialogue") return l.text ? [`${l.name}: ${l.text}`] : [];
       if (l.type === "narration") return [l.text];
+      if (l.type === "thought") return [`${l.name} (thinking, unheard): ${l.text}`];
       return [];
     })
     .join("\n");

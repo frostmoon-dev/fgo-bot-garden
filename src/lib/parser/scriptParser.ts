@@ -33,6 +33,8 @@ const BARE_TAG = /^([^\s|:[\](){}*"“][^|:[\](){}*"“]{0,40}?)\s*\|\s*([\w -]{
 // Name (expression): text, or Name: text. Only used when Name is a known character or the user.
 const NAME_LABEL = /^([^\s:[\](){}*"“][^:[\](){}*"“]{0,40}?)\s*(?:\(([\w -]{1,40})\))?\s*:\s*([\s\S]*)$/;
 const WRAPPED_NARRATION = /^(?:\(([\s\S]+)\)|\*([^*]+)\*)$/;
+// (thought:Name) text, also [thought:Name] and (thoughts|Name).
+const THOUGHT = /^[[(]\s*thoughts?\s*[:|]\s*([^\])]+?)\s*[\])]\s*:?\s*([\s\S]+)$/i;
 // Commands written without braces, often as narration: "(Enter:Shiru:center)", "JeanneAlter enters:right".
 const LOOSE_COMMAND = /^([a-z]{3,10})\s*:\s*([^:\s][^:]*(?::[^:]*)??)[.!]?$/i;
 const LOOSE_MOVE = /^(\S+(?:\s\S+)?)\s+(enters|exits|leaves)\s*:\s*([a-z]*)[.!]?$/i;
@@ -378,6 +380,8 @@ export class ScriptParser {
   }
 
   private textLine(text: string, depth = 0): ScriptLine[] {
+    const thought = text.match(THOUGHT);
+    if (thought) return this.thought(thought[1], thought[2]);
     const loose = this.looseCommand(text);
     if (loose) return loose;
     const head = readHead(text);
@@ -543,6 +547,19 @@ export class ScriptParser {
         text,
       },
     ];
+  }
+
+  // A character's private thought. Never the user's: what {{user}} thinks is theirs to write.
+  private thought(rawName: string, rawText: string): ScriptLine[] {
+    const name = rawName.trim();
+    if (this.isUser(name) || name.toLowerCase() === "you") {
+      this.warn(`Dropped a thought written for the user: "${rawText.trim().slice(0, 40)}"`);
+      return [];
+    }
+    const text = unquote(sanitize(rawText.trim().replace(/\)\s*$/, "")));
+    if (!text) return [];
+    const character = this.findCharacter(name);
+    return [{ type: "thought", characterId: character?.id ?? null, name: character?.name ?? name, text }];
   }
 
   private narration(raw: string): ScriptLine[] {
@@ -774,6 +791,8 @@ export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, 
         }
         case "narration":
           return `(narration) ${l.text}`;
+        case "thought":
+          return `(thought:${l.name}) ${l.text}`;
         case "scene":
           return `{scene:${l.backgroundKey}}`;
         case "enter":

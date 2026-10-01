@@ -245,6 +245,8 @@ model Settings {
   autoChoices      Boolean @default(false)
   // Characters remember the user across stories (Character.memories).
   characterMemory  Boolean @default(true)
+  // Characters may write private thoughts, shown quietly on the story screen.
+  innerThoughts    Boolean @default(false)
   // How many lines a reply should have: short, scene (an FGO-style scene) or long.
   replyLength      String  @default("scene")
 }

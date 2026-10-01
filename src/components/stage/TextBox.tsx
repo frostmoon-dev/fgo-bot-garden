@@ -66,7 +66,8 @@ export function TextBox({ beat, typed, color, waiting, pending, done, onLog }: P
             <SlowNote />
           </p>
         ) : (
-          <p className={`whitespace-pre-wrap ${narration ? "vn-narration" : ""}`}>
+          <p className={`whitespace-pre-wrap ${beat?.thinker ? "vn-thought" : narration ? "vn-narration" : ""}`}>
+            {beat?.thinker && <span className="vn-thinker">{beat.thinker.name} · thinking</span>}
             {text}
             {pending && <Dots />}
             {pending && <SlowNote />}

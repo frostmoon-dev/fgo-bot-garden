@@ -193,6 +193,7 @@ export async function POST(request: Request) {
       exampleMode: settings.exampleMode,
       memoryPlacement: settings.memoryPlacement,
       formatReminder: settings.formatReminder,
+      innerThoughts: settings.innerThoughts,
       customPrompt: settings.customPrompt,
       replyLength: settings.replyLength,
       contextSize: settings.contextSize,
