@@ -136,6 +136,34 @@ function field(label: string, value: string): string | null {
   return value.trim() ? `${label}: ${value.trim()}` : null;
 }
 
+// What the versions of one place have in common: "forest at dusk" and "forest at night" share "forest".
+// Cut back to the last comma or semicolon, so a half-shared word isn't kept.
+function sharedStart(texts: string[]): string {
+  let prefix = texts[0] ?? "";
+  for (const t of texts) while (!t.startsWith(prefix)) prefix = prefix.slice(0, -1);
+  if (texts.every((t) => t === prefix)) return prefix;
+  const cut = Math.max(prefix.lastIndexOf(","), prefix.lastIndexOf(";"));
+  return cut > 0 ? prefix.slice(0, cut).trim() : "";
+}
+
+// One line per place. Labels read "Place — Version" ("Forest — Night"), so a place with several versions
+// is listed once with all its keys: a large library stays small in the prompt that is sent with every reply.
+function backgroundLines(list: PromptInput["backgrounds"]): string[] {
+  const places = new Map<string, PromptInput["backgrounds"]>();
+  for (const b of list) {
+    const place = b.label.split(" — ")[0].trim() || b.key;
+    places.set(place, [...(places.get(place) ?? []), b]);
+  }
+  return [...places].map(([place, versions]) => {
+    if (versions.length === 1) {
+      const b = versions[0];
+      return `- ${b.key}${b.description || b.label ? ` — ${b.description || b.label}` : ""}`;
+    }
+    const about = sharedStart(versions.map((b) => b.description)) || versions[0].description;
+    return `- ${place}${about ? ` (${about})` : ""}: ${versions.map((b) => b.key).join(", ")}`;
+  });
+}
+
 function characterBlock(
   c: PromptCharacter,
   isMain: boolean,
@@ -209,9 +237,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     input.mode === "narrative" && input.backgrounds.length
       ? compact
         ? `# BACKGROUNDS (for {scene:…})\n${input.backgrounds.map((b) => b.key).join(", ")}`
-        : `# BACKGROUNDS (for {scene:…})\n${input.backgrounds
-            .map((b) => `- ${b.key}${b.description || b.label ? ` — ${b.description || b.label}` : ""}`)
-            .join("\n")}`
+        : `# BACKGROUNDS (for {scene:…})\n${backgroundLines(input.backgrounds).join("\n")}`
       : null;
   const persona = [
     `# {{user}} — the user's character. You never write for them. Keep every detail below consistent, including their pronouns.`,

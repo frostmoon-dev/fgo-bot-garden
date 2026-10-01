@@ -43,6 +43,17 @@ export function timeOfDay(time: string | undefined): TimeOfDay | null {
   return null;
 }
 
+// The time of day a background already shows, read from its key ("forest_night", "beach_sunset"). The stage
+// doesn't tint those again: a painted night under the night tint turns almost black.
+export function paintedTime(backgroundKey: string | null | undefined): TimeOfDay | null {
+  const k = `_${(backgroundKey ?? "").toLowerCase()}_`;
+  if (k.includes("_night_")) return "night";
+  if (/_(sunset|dusk|evening)_/.test(k)) return "dusk";
+  if (/_(dawn|sunrise)_/.test(k)) return "dawn";
+  if (/_(day|morning)_/.test(k)) return "day";
+  return null;
+}
+
 export type Weather = "rain" | "storm" | "snow" | "fog" | "petals";
 
 // Weather is only drawn outdoors; "indoors" or "outside the window" leaves the stage clear.
