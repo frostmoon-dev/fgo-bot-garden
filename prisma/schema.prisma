@@ -260,3 +260,22 @@ model Connection {
   apiKey    String   @default("")
   updatedAt DateTime @updatedAt
 }
+
+// A moment kept from a story: a snapshot of the screen, so the card still shows after the story,
+// character or background changes. sessionId only links back; the card stays when the story is deleted.
+model Moment {
+  id         String   @id @default(cuid())
+  sessionId  String?
+  storyTitle String   @default("")
+  // The background picture.
+  imageUrl   String   @default("")
+  // The character on screen: { sheetUrl, grid, cell } (see lib/moment.ts). Null for none.
+  sprite     Json?
+  speaker    String   @default("")
+  color      String   @default("")
+  text       String
+  narration  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

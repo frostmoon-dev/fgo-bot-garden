@@ -182,6 +182,7 @@ export function MenuPanel() {
   const setHideUi = usePlay((s) => s.setHideUi);
   const musicMuted = usePlay((s) => s.musicMuted);
   const toggleMusic = usePlay((s) => s.toggleMusic);
+  const keepMoment = usePlay((s) => s.keepMoment);
   const hasMusic = usePlay((s) => s.backgrounds.some((b) => b.musicUrl));
   const [title, setTitle] = useState(session.title);
 
@@ -212,7 +213,18 @@ export function MenuPanel() {
           <button type="button" className="btn btn-outline" onClick={() => setPanel("help")}>
             Controls
           </button>
-          {hasMusic && (
+          <button
+            type="button"
+            className="btn btn-outline"
+            title="Keep the line on screen as a card on the Moments page (K)"
+            onClick={() => {
+              setPanel(null);
+              void keepMoment();
+            }}
+          >
+            Keep this moment
+          </button>
+                    {hasMusic && (
             <button type="button" className="btn btn-outline" aria-pressed={!musicMuted} onClick={toggleMusic} title="V">
               {musicMuted ? "Music on" : "Music off"}
             </button>

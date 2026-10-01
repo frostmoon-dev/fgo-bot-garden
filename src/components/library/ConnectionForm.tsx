@@ -292,7 +292,7 @@ export function ConnectionForm({ view, slot = 1 }: { view: ConnectionView; slot?
         .
       </p>
 
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-0 flex flex-wrap items-center gap-3 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 flex flex-wrap items-center gap-3 border-t border-line bg-canvas py-4">
         <Button
           variant="primary"
           disabled={pending || !model.trim() || !baseUrl.trim() || needsKey}

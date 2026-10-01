@@ -163,7 +163,7 @@ export function ProfileForm({ character, backgrounds }: { character: CharacterVi
       <Section title="Writing samples" hint="Written in the tag format. They teach the model the voice.">
         {byKey("greeting", "exampleDialogues")}
       </Section>
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-0 mt-10 flex items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 mt-10 flex items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending}>
           {pending ? "Saving…" : "Save profile"}
         </Button>

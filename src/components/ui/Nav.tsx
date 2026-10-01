@@ -9,6 +9,7 @@ import { CommandPalette } from "./CommandPalette";
 const links = [
   { href: "/", label: "Home" },
   { href: "/characters", label: "Characters" },
+  { href: "/moments", label: "Moments" },
   { href: "/backgrounds", label: "Backgrounds" },
   { href: "/lorebook", label: "Lorebook" },
   { href: "/persona", label: "Persona" },
@@ -35,26 +36,26 @@ export function Nav() {
     <>
       <header className="site-nav sticky top-0 z-30 border-b border-line bg-canvas pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:h-16 sm:gap-6 sm:px-8">
-          <Link href="/" className="wordmark flex min-h-10 items-center gap-2.5 text-ink" aria-label="Bond Garden, home">
+          <Link href="/" className="wordmark flex min-h-10 shrink-0 items-center gap-2.5 whitespace-nowrap text-ink" aria-label="Bond Garden, home">
             <ChaldeaEmblem className="size-9 shrink-0 text-accent sm:size-10" />
             <span>Bond Garden</span>
           </Link>
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event("open-palette"))}
-            className="ml-auto hidden min-h-10 items-center gap-3 rounded-lg border border-line px-3 text-sm text-muted transition-colors hover:text-ink md:ml-0 md:inline-flex"
+            className="ml-auto hidden min-h-10 items-center gap-3 rounded-lg border border-line px-3 text-sm text-muted transition-colors hover:text-ink xl:ml-0 xl:inline-flex"
             title="Search (Ctrl+K)"
           >
             Search
             <kbd className="rounded border border-line bg-canvas px-1.5 font-mono text-[11px] text-muted">Ctrl K</kbd>
           </button>
-          <nav className="ml-auto hidden items-center gap-1 md:flex">
+          <nav className="ml-auto hidden items-center gap-0.5 lg:flex xl:gap-1">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 aria-current={active(l.href) ? "page" : undefined}
-                className={`flex min-h-10 items-center rounded-lg px-3 text-sm ${
+                className={`flex min-h-10 items-center whitespace-nowrap rounded-lg px-2.5 text-sm xl:px-3 ${
                   active(l.href) ? "bg-white/10 font-semibold text-ink" : "text-muted hover:bg-white/5 hover:text-ink"
                 }`}
               >
@@ -63,7 +64,7 @@ export function Nav() {
             ))}
             <button
               onClick={() => void logout(router)}
-              className="ml-2 flex min-h-10 items-center rounded-lg px-3 text-left text-sm text-muted hover:bg-white/5 hover:text-ink"
+              className="ml-1 flex min-h-10 items-center whitespace-nowrap rounded-lg px-2.5 text-left text-sm text-muted hover:bg-white/5 hover:text-ink xl:ml-2 xl:px-3"
             >
               Log out
             </button>
@@ -98,7 +99,7 @@ function TabBar({ active }: { active: (href: string) => boolean }) {
   return (
     <>
       {more && (
-        <div className="fade-in fixed inset-0 z-40 bg-black/55 [--fade:150ms] md:hidden" onClick={() => setMore(false)}>
+        <div className="fade-in fixed inset-0 z-40 bg-black/55 [--fade:150ms] lg:hidden" onClick={() => setMore(false)}>
           <nav
             aria-label="More pages"
             className="panel-in absolute inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] rounded-t-2xl border-t border-line bg-canvas px-3 pb-3 pt-2 shadow-2xl"
@@ -123,7 +124,7 @@ function TabBar({ active }: { active: (href: string) => boolean }) {
       )}
       <nav
         aria-label="Main"
-        className="site-nav fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="site-nav fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         <Link href="/" aria-current={active("/") && !pathname.startsWith("/scene") ? "page" : undefined} onClick={() => setMore(false)} className={tab(pathname === "/")}>
           Home

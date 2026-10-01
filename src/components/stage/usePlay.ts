@@ -13,6 +13,7 @@ import {
   type SessionPatch,
 } from "@/app/actions/sessions";
 import { refreshScene as refreshSceneAction, suggestChoices as suggestChoicesAction } from "@/app/actions/story";
+import { saveMoment as saveMomentAction } from "@/app/actions/moments";
 import { unwrap } from "@/lib/actionResult";
 import { bondLevel } from "@/lib/bond";
 import { namedOutsideCast } from "@/lib/story/formerCast";
@@ -21,6 +22,7 @@ import { activeContent, type MessageView, type SessionView, type SettingsView } 
 import { buildScene, type Scene, type SceneData } from "./buildScene";
 import type { ChatUsage } from "@/lib/llm/types";
 import { runChat, type PromptBreakdown } from "./chatStream";
+import { momentFromBeat } from "./moment";
 
 export type Panel = null | "log" | "saves" | "menu" | "help" | "scene";
 
@@ -94,6 +96,8 @@ interface PlayState extends PlayData {
   setSkip: (on: boolean) => void;
   setHideUi: (on: boolean) => void;
   toggleMusic: () => void;
+  // Keeps the line on screen as a moment card (the Moments page).
+  keepMoment: () => Promise<void>;
   setError: (error: string | null) => void;
   showToast: (text: string) => void;
   acceptCastSuggestion: () => void;
@@ -522,6 +526,18 @@ export function createPlayStore(data: PlayData): PlayStore {
     setAuto: (on) => set({ auto: on, skip: false }),
     setSkip: (on) => set({ skip: on, auto: false }),
     setHideUi: (on) => set({ hideUi: on, auto: false, skip: false }),
+    keepMoment: async () => {
+      const s = get();
+      const beats = s.scene.stageBeats;
+      const beat = beats[Math.min(s.cursor, beats.length - 1)];
+      if (!beat?.text.trim()) return showToast("There's no line on screen to keep yet.");
+      try {
+        unwrap(await saveMomentAction(momentFromBeat(s, beat)));
+        showToast("Moment kept. Find it under Moments.");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Could not keep this moment");
+      }
+    },
     toggleMusic: () => {
       const musicMuted = !get().musicMuted;
       set({ musicMuted });

@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { momentSpriteSchema, type MomentView } from "@/lib/moment";
 import type {
   BackgroundView,
   CharacterView,
@@ -137,6 +138,29 @@ export async function listInterludes(characterId: string): Promise<{ n: number; 
   });
   const seen = new Set<number>();
   return rows.flatMap((r) => (r.interlude && !seen.has(r.interlude) && seen.add(r.interlude) ? [{ n: r.interlude, storyId: r.id, title: r.title }] : []));
+}
+
+// Kept moments, newest first.
+export async function listMoments(): Promise<MomentView[]> {
+  const rows = await db.moment.findMany({ orderBy: { createdAt: "desc" } });
+  const ids = rows.flatMap((r) => (r.sessionId ? [r.sessionId] : []));
+  const alive = new Set((await db.session.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((s) => s.id));
+  return rows.map((r) => {
+    const sprite = momentSpriteSchema.safeParse(r.sprite);
+    return {
+      id: r.id,
+      sessionId: r.sessionId,
+      storyTitle: r.storyTitle,
+      imageUrl: r.imageUrl,
+      sprite: sprite.success ? sprite.data : null,
+      speaker: r.speaker,
+      color: r.color,
+      text: r.text,
+      narration: r.narration,
+      createdAt: r.createdAt.toISOString(),
+      storyExists: !!r.sessionId && alive.has(r.sessionId),
+    };
+  });
 }
 
 export async function listBonds(): Promise<Record<string, number>> {

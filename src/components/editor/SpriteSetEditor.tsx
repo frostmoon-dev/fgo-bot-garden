@@ -153,7 +153,7 @@ export function SpriteSetEditor({ set, expressions }: { set: SpriteSetView; expr
         </div>
       </section>
 
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 lg:bottom-0 flex flex-wrap items-center gap-4 border-t border-line bg-canvas py-4">
         <Button variant="primary" onClick={save} disabled={pending || !dirty}>
           {pending ? "Saving…" : dirty ? "Save sheet" : "Saved"}
         </Button>
