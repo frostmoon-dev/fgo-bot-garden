@@ -6,28 +6,32 @@ import { ColorDot } from "@/components/ui/ColorDot";
 import type { BackgroundView, CharacterView } from "@/lib/types";
 import { ExpressionEditor } from "./ExpressionEditor";
 import { ManageTab } from "./ManageTab";
-import { BondSection } from "./BondSection";
+import { BondSection, type PlayedInterlude } from "./BondSection";
 import { MemoriesTab } from "./MemoriesTab";
 import { ProfileForm } from "./ProfileForm";
 import { SpritesTab } from "./SpritesTab";
 
 const TABS = ["Profile", "Ascensions", "Expressions", "Bond & memories", "Manage"] as const;
-type Tab = (typeof TABS)[number];
+export type Tab = (typeof TABS)[number];
 
 export function CharacterEditor({
   character,
   backgrounds,
   memories,
   bond,
+  interludes,
   userName,
+  initialTab,
 }: {
   character: CharacterView;
   backgrounds: BackgroundView[];
   memories: string;
   bond: number;
+  interludes: PlayedInterlude[];
   userName: string;
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("Profile");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "Profile");
   return (
     <div>
       <Link href="/characters" className="text-sm text-muted hover:text-ink">
@@ -57,7 +61,7 @@ export function CharacterEditor({
       {tab === "Ascensions" && <SpritesTab character={character} />}
       {tab === "Bond & memories" && (
         <>
-          <BondSection character={character} points={bond} userName={userName} />
+          <BondSection character={character} points={bond} interludes={interludes} userName={userName} />
           <MemoriesTab character={character} memories={memories} userName={userName} />
         </>
       )}

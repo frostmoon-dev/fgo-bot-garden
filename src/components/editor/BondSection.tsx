@@ -1,17 +1,39 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { setBondLevel } from "@/app/actions/characters";
+import { startInterlude } from "@/app/actions/sessions";
 import { Button } from "@/components/ui/Button";
 import { askConfirm } from "@/components/ui/dialogs";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { useAsync } from "@/components/ui/useAsync";
 import { unwrap } from "@/lib/actionResult";
 import { bondLevel, bondProgress, MAX_BOND_LEVEL } from "@/lib/bond";
+import { INTERLUDES } from "@/lib/interlude";
 import type { CharacterView } from "@/lib/types";
 
+export interface PlayedInterlude {
+  n: number;
+  storyId: string;
+  title: string;
+}
+
 // The bond level, and setting it by hand: back to Lv 1 to start over, or any level to set the tone.
-export function BondSection({ character, points, userName }: { character: CharacterView; points: number; userName: string }) {
+export function BondSection({
+  character,
+  points,
+  interludes,
+  userName,
+}: {
+  character: CharacterView;
+  points: number;
+  interludes: PlayedInterlude[];
+  userName: string;
+}) {
+  const router = useRouter();
+  const [writing, setWriting] = useState<number | null>(null);
   const [current, setCurrent] = useState(points);
   const level = bondLevel(current);
   const [target, setTarget] = useState(level);
@@ -66,6 +88,52 @@ export function BondSection({ character, points, userName }: { character: Charac
         )}
       </div>
       <ErrorText error={error} />
+
+      <h3 className="mt-10 font-semibold">Interludes</h3>
+      <p className="mt-1 text-sm text-muted">
+        Private side stories that a growing bond unlocks. The AI writes each opening scene from {character.name}&apos;s definition and memories
+        (one small extra request), then it plays like any story.
+      </p>
+      <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
+        {INTERLUDES.map((i) => {
+          const played = interludes.find((p) => p.n === i.n);
+          const open = level >= i.level;
+          return (
+            <li key={i.n} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+              <span className="min-w-0 flex-1">
+                <span className={`block font-medium ${open ? "" : "text-muted"}`}>Interlude {i.n}</span>
+                <span className="block truncate text-sm text-muted">
+                  {!open ? `Unlocks at bond Lv ${i.level}` : played ? played.title : "Ready to play"}
+                </span>
+              </span>
+              {open && played && (
+                <Link href={`/play/${played.storyId}`} className="btn btn-outline">
+                  Continue
+                </Link>
+              )}
+              {open && (
+                <Button
+                  variant={played ? "quiet" : "secondary"}
+                  disabled={writing !== null}
+                  onClick={() =>
+                    run(async () => {
+                      setWriting(i.n);
+                      try {
+                        router.push(`/play/${unwrap(await startInterlude(character.id, i.n))}`);
+                      } catch (e) {
+                        setWriting(null);
+                        throw e;
+                      }
+                    })
+                  }
+                >
+                  {writing === i.n ? <span className="shimmer">Writing…</span> : played ? "Play again" : "Play"}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

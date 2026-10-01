@@ -10,6 +10,8 @@ import { pickAscension, pickProfile, resolveProfile } from "@/lib/ascension";
 import { cleanScene, normalizeScene, parseScene } from "@/lib/scene";
 import { completeChat } from "@/lib/llm/client";
 import { aboutUser, scenePrompt } from "@/lib/prompt/rules";
+import { bondLevel } from "@/lib/bond";
+import { interludeFor, interludePrompt, parseInterlude } from "@/lib/interlude";
 import { applyMacros } from "@/lib/stage/beats";
 import { getPersona } from "@/lib/data/queries";
 import { formChangeLine, readFormChange } from "@/lib/story/formChange";
@@ -58,10 +60,20 @@ async function startStory(
     mode: string;
     backgroundId: string | null;
     premise?: string;
+    title?: string;
+    interlude?: number | null;
   },
 ): Promise<string> {
   // A story that began from a written scene starts from that scene again, without a greeting.
-  if (setup?.premise) return createPremiseStory({ ...setup, premise: setup.premise, mainCharacterId: characterId });
+  if (setup?.premise) {
+    return createPremiseStory({
+      ...setup,
+      premise: setup.premise,
+      mainCharacterId: characterId,
+      // An interlude played again keeps its name; other written scenes get a fresh title.
+      title: setup.interlude ? setup.title : undefined,
+    });
+  }
   const { character, set, profile, openingScene } = await ascensionProfile(characterId, spriteSetId);
   const titleName = set && character.spriteSets.length > 1 ? `${character.name} (${set.name})` : character.name;
   const others = (setup?.cast ?? []).filter((c) => c.characterId !== character.id);
@@ -102,6 +114,8 @@ export async function restartStory(sessionId: string): Promise<ActionResult<stri
         mode: true,
         backgroundId: true,
         premise: true,
+        title: true,
+        interlude: true,
         cast: { select: { characterId: true, spriteSetId: true } },
       },
     });
@@ -116,6 +130,8 @@ async function createPremiseStory(input: {
   mainCharacterId: string;
   mode: string;
   backgroundId: string | null;
+  title?: string;
+  interlude?: number | null;
 }): Promise<string> {
   const characters = await db.character.findMany({
     where: { id: { in: input.cast.map((c) => c.characterId) } },
@@ -126,7 +142,8 @@ async function createPremiseStory(input: {
   const place = parseScene(scene).Location;
   const session = await db.session.create({
     data: {
-      title: `${names.join(", ")} — ${place && place.length <= 40 ? place : new Date().toLocaleDateString("en-GB")}`.slice(0, 120),
+      title: (input.title || `${names.join(", ")} — ${place && place.length <= 40 ? place : new Date().toLocaleDateString("en-GB")}`).slice(0, 120),
+      interlude: input.interlude ?? null,
       mainCharacterId: input.mainCharacterId,
       mode: input.mode,
       backgroundId: input.backgroundId,
@@ -245,6 +262,66 @@ export async function branchStory(sessionId: string, messageId: string): Promise
     });
     revalidatePath("/");
     return created.id;
+  });
+}
+
+// Starts an interlude: the AI writes its opening scene from the character's definition and memories,
+// then it plays like a written scene. Each costs one small extra request.
+export async function startInterlude(characterId: string, n: number): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const interlude = interludeFor(z.number().int().parse(n));
+    if (!interlude) throw new Error("No such interlude");
+    const [character, persona] = await Promise.all([
+      db.character.findUniqueOrThrow({ where: { id: characterId }, include: { spriteSets: true } }),
+      getPersona(),
+    ]);
+    if (bondLevel(character.bond) < interlude.level) {
+      throw new Error(`Interlude ${interlude.n} unlocks at bond Lv ${interlude.level}.`);
+    }
+    const set = pickAscension(character, null);
+    const profile = resolveProfile(pickProfile(character), set);
+    const macros = { user: persona.name, char: character.name };
+    const definition = [
+      profile.description && `Description: ${profile.description}`,
+      profile.personality && `Personality: ${profile.personality}`,
+      profile.relationship && `Relationship with ${persona.name}: ${profile.relationship}`,
+      profile.lore && `Background: ${profile.lore.slice(0, 1500)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const reply = await completeChat({
+      messages: [
+        { role: "system", content: interludePrompt(character.name, persona.name, interlude.theme) },
+        {
+          role: "user",
+          content: applyMacros(
+            [
+              aboutUser(persona, 400),
+              `About ${character.name}:\n${definition || "(no definition written)"}`,
+              character.memories.trim() && `What ${character.name} remembers of ${persona.name}:\n${character.memories.trim()}`,
+              `---\nWrite Interlude ${interlude.n} now: the Title line, then the Scene.`,
+            ]
+              .filter(Boolean)
+              .join("\n\n"),
+            macros,
+          ),
+        },
+      ],
+      temperature: 0.9,
+      maxTokens: 450,
+    });
+    const { title, scene } = parseInterlude(reply);
+    if (!scene) throw new Error("The model sent back no scene. Try again, or try another model.");
+    return createPremiseStory({
+      premise: applyMacros(scene, macros),
+      cast: [{ characterId, spriteSetId: set?.id ?? null }],
+      mainCharacterId: characterId,
+      mode: "narrative",
+      backgroundId: character.defaultBackgroundId,
+      title: `${character.name} — Interlude ${interlude.n}${title ? `: ${title}` : ""}`,
+      interlude: interlude.n,
+    });
   });
 }
 

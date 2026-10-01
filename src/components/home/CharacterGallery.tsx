@@ -92,7 +92,16 @@ function AscensionDialog({
   );
 }
 
-export function CharacterGallery({ characters, bonds }: { characters: CharacterView[]; bonds: Record<string, number> }) {
+export function CharacterGallery({
+  characters,
+  bonds,
+  interludeReady = {},
+}: {
+  characters: CharacterView[];
+  bonds: Record<string, number>;
+  // Character id → the interlude unlocked and not started yet.
+  interludeReady?: Record<string, number>;
+}) {
   const router = useRouter();
   const { pending, error, run } = useAsync();
   const [choosing, setChoosing] = useState<CharacterView | null>(null);
@@ -141,6 +150,11 @@ export function CharacterGallery({ characters, bonds }: { characters: CharacterV
               <div className="mt-1.5">
                 <BondBadge points={bonds[c.id] ?? 0} />
               </div>
+              {interludeReady[c.id] && (
+                <Link href={`/characters/${c.id}?tab=bond`} className="inline-flex min-h-10 items-center text-sm font-medium text-accent hover:underline">
+                  Interlude {interludeReady[c.id]} unlocked
+                </Link>
+              )}
               <p className="mt-2 line-clamp-2 h-[2.75em] text-sm leading-snug text-muted">{c.description || "No description yet."}</p>
               <div className="mt-3 flex flex-wrap items-center gap-1 sm:mt-4">
                 <button type="button" disabled={pending} onClick={() => begin(c)} className="btn btn-outline flex-1 px-3">

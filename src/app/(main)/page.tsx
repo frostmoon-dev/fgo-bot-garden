@@ -4,6 +4,8 @@ import { TimeGreeting } from "@/components/home/TimeGreeting";
 import { resolveCell } from "@/components/sprite/sheet";
 import { SectionTitle } from "@/components/ui/PageHeader";
 import { pickAscension } from "@/lib/ascension";
+import { bondLevel } from "@/lib/bond";
+import { INTERLUDES } from "@/lib/interlude";
 import Link from "next/link";
 import { getPersona, listBonds, listCharacters, listSessions } from "@/lib/data/queries";
 import { connectionView } from "@/lib/llm/connection";
@@ -46,6 +48,14 @@ export default async function HomePage() {
     connectionView(),
   ]);
   const byId = new Map(characters.map((c) => [c.id, c]));
+  // The first interlude each character has unlocked but not started yet, for a "ready" hint on their card.
+  const interludeReady = Object.fromEntries(
+    characters.flatMap((c) => {
+      const started = new Set(sessions.filter((s) => s.mainCharacterId === c.id && s.interlude).map((s) => s.interlude));
+      const next = INTERLUDES.find((i) => bondLevel(bonds[c.id] ?? 0) >= i.level && !started.has(i.n));
+      return next ? [[c.id, next.n]] : [];
+    }),
+  );
 
   const rows: SessionRow[] = sessions.map((s) => {
     const main = byId.get(s.mainCharacterId);
@@ -129,7 +139,7 @@ export default async function HomePage() {
             <span className="text-sm text-muted">Or set up your own opening and choose who is in it.</span>
           </div>
         )}
-        <CharacterGallery characters={characters} bonds={bonds} />
+        <CharacterGallery characters={characters} bonds={bonds} interludeReady={interludeReady} />
       </section>
     </>
   );

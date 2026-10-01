@@ -128,6 +128,17 @@ export async function getBond(characterId: string): Promise<number> {
   return row?.bond ?? 0;
 }
 
+// The interludes already started with a character, newest first per interlude.
+export async function listInterludes(characterId: string): Promise<{ n: number; storyId: string; title: string }[]> {
+  const rows = await db.session.findMany({
+    where: { mainCharacterId: characterId, interlude: { not: null } },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, title: true, interlude: true },
+  });
+  const seen = new Set<number>();
+  return rows.flatMap((r) => (r.interlude && !seen.has(r.interlude) && seen.add(r.interlude) ? [{ n: r.interlude, storyId: r.id, title: r.title }] : []));
+}
+
 export async function listBonds(): Promise<Record<string, number>> {
   const rows = await db.character.findMany({ select: { id: true, bond: true } });
   return Object.fromEntries(rows.map((r) => [r.id, r.bond]));

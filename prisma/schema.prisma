@@ -141,6 +141,8 @@ model Session {
   scene           String   @default("")
   // The scene the user wrote for this story (Write a scene). It replaces the main character's scenario.
   premise         String   @default("")
+  // Which interlude this story is (1 to 3, unlocked by bond level). Null for ordinary stories.
+  interlude       Int?
   // The last message already folded into the characters' memories.
   rememberedUntil Int      @default(-1)
   createdAt       DateTime @default(now())
