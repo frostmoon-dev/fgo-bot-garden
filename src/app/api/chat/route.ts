@@ -17,6 +17,7 @@ import type { Mode, ParserContext } from "@/lib/parser/types";
 import { buildPrompt } from "@/lib/prompt/builder";
 import { formChangeNote, pendingFormChanges, readFormChange } from "@/lib/story/formChange";
 import { latestForms } from "@/lib/story/storyForms";
+import { findRepetition, repetitionNote } from "@/lib/story/repetition";
 import { formerCast } from "@/lib/story/formerCast";
 import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
@@ -151,6 +152,14 @@ export async function POST(request: Request) {
   const past = target.kind === "variant" ? session.messages.slice(0, -1) : session.messages;
   // Characters taken out of the cast who still have lines in the history: the model is told they are gone.
   const absent = formerCast(session.messages.map(content), everyone, new Set(cast.map(({ character: c }) => c.id))).map((c) => c.name);
+  // Phrases and topics the last few replies keep coming back to: the next one is told to move on.
+  const repetition = repetitionNote(
+    findRepetition(
+      past.filter((m) => m.role === "assistant").slice(-6).map(content),
+      userText,
+      [persona.name, ...cast.flatMap(({ character: c }) => [c.name, ...c.aliases])],
+    ),
+  );
   const events = pendingFormChanges(past.map((m) => ({ role: m.role, content: content(m) }))).map(formChangeNote);
   // Once the user has replied, a scenario only says how the story began. If the main character has changed
   // form since, their current form's scenario never happened in this story, so it is left out: sending it
@@ -188,6 +197,7 @@ export async function POST(request: Request) {
     memory: session.memory,
     scene: session.scene,
     events,
+    repetition,
     absent,
     storyStarted,
     premise: session.premise,

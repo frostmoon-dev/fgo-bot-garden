@@ -96,6 +96,8 @@ export interface PromptInput {
   scene?: string;
   // Things that just happened outside the text, such as a form change. Sent with this reply only.
   events?: string[];
+  // Phrases and topics the recent replies keep repeating (lib/story/repetition), already written as a note.
+  repetition?: string | null;
   // Characters with lines in the history who were taken out of the cast.
   absent?: string[];
   history: PromptHistoryItem[];
@@ -302,6 +304,7 @@ export function buildPrompt(input: PromptInput): BuiltPrompt {
     input.scene?.trim() && `# CURRENT SCENE\n${input.scene.trim()}`,
     input.mode === "narrative" && stageNote(input, cast),
     !!input.events?.length && `# JUST HAPPENED\n${input.events.map((e) => `- ${e}`).join("\n")}`,
+    input.repetition,
     !!input.absent?.length &&
       `# NO LONGER IN THIS STORY\n${input.absent.join(", ")}: out of the story from now on. They do not appear, speak or act, and nobody treats them as present; their earlier lines are only history. If it matters, they have gone elsewhere.`,
     input.lore.length > 0 &&

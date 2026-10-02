@@ -180,10 +180,11 @@ Use these headings and skip any that would be empty:
 Situation: where they are, who is present, what is happening now
 About the user's character: what the others have learned about them (likes, dislikes, habits, past, worries, what they said about themselves)
 Relationships: how each character feels about the others and about the user's character, and why
-Key events: what happened that still matters
+Key events: what happened that still matters, oldest first, one line each
 Promises and secrets: plans, open threads, things someone is hiding
 Facts: names, places, preferences and details that were established
-Rules: at most 300 words. Never drop anything under "About the user's character", "Promises and secrets" or a relationship change unless it stopped being true; shorten other sections first. No quotes of dialogue. Refer to the user's character by name and with the pronouns from their description. Use the language the story is written in.`;
+Already done: jokes, games, teases, gifts and topics already used, a few words each, so they are not replayed as if new
+Rules: at most 450 words. Never drop anything under "About the user's character", "Promises and secrets" or a relationship change unless it stopped being true; shorten other sections first. When Key events grows long, merge the oldest lines into one instead of deleting them. No quotes of dialogue. Refer to the user's character by name and with the pronouns from their description. Use the language the story is written in.`;
 
 // A character's memory of the user across all their stories together (Character.memories).
 export function characterMemoryPrompt(char: string, user: string): string {

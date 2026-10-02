@@ -21,7 +21,7 @@ export async function summarize(
       },
     ],
     temperature: 0.3,
-    maxTokens: 700,
+    maxTokens: 900,
     purpose: "summary",
   });
   return text.trim() || previous;
