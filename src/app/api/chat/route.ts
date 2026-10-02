@@ -235,6 +235,7 @@ export async function POST(request: Request) {
     topP: settings.topP,
     frequencyPenalty: settings.frequencyPenalty,
     presencePenalty: settings.presencePenalty,
+    topK: settings.topK,
     // Stop the model before it starts a line for the user's character.
     stop: settings.stopAtUser ? [`\n${user}:`, `\n[${user}|`, `\n[${user}]`, `\n${user}|`] : undefined,
     signal: abort.signal,

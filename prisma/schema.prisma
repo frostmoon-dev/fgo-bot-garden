@@ -236,6 +236,8 @@ model Settings {
   topP             Float   @default(1)
   frequencyPenalty Float   @default(0)
   presencePenalty  Float   @default(0)
+  // 0 = not sent. Not every provider accepts top_k.
+  topK             Int     @default(0)
   memoryPlacement  String  @default("end")
   exampleMode      String  @default("auto")
   formatReminder   Boolean @default(true)

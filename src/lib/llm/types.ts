@@ -22,6 +22,7 @@ export interface ChatOptions {
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
+  topK?: number;
   // The model stops before writing any of these (for example the user's name as a speaker).
   stop?: string[];
   signal?: AbortSignal;

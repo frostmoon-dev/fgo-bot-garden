@@ -18,6 +18,7 @@ type NumKey =
   | "topP"
   | "frequencyPenalty"
   | "presencePenalty"
+  | "topK"
   | "textSpeed"
   | "autoSpeed"
   | "uiScale"
@@ -67,6 +68,14 @@ const SAMPLING: Slider[] = [
   { key: "temperature", title: "Temperature", hint: "Higher is more creative. Lower is more focused and keeps weaker models on format.", min: 0, max: 2, step: 0.05 },
   { key: "maxTokens", title: "Max reply length", hint: "Upper limit for one reply, in tokens. Also kept free in the context.", min: 100, max: 4000, step: 50 },
   { key: "topP", title: "Top P", hint: "1 turns it off. Around 0.9 cuts unlikely words.", min: 0.5, max: 1, step: 0.01 },
+  {
+    key: "topK",
+    title: "Top K",
+    hint: "Picks only from the K likeliest words. 0 turns it off (not sent). Gemma's recommended value is 64. Some providers reject it; if replies start failing, set it back to 0.",
+    min: 0,
+    max: 200,
+    step: 1,
+  },
   { key: "frequencyPenalty", title: "Frequency penalty", hint: "Above 0 discourages repeating the same words. 0 turns it off.", min: 0, max: 1.5, step: 0.05 },
   { key: "presencePenalty", title: "Presence penalty", hint: "Above 0 nudges the story toward new topics. 0 turns it off.", min: 0, max: 1.5, step: 0.05 },
 ];

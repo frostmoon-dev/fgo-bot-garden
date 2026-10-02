@@ -123,6 +123,7 @@ const settingsSchema = z.object({
   topP: z.number().min(0.01).max(1),
   frequencyPenalty: z.number().min(-2).max(2),
   presencePenalty: z.number().min(-2).max(2),
+  topK: z.number().int().min(0).max(500),
   memoryPlacement: z.enum(["end", "top"]),
   exampleMode: z.enum(["auto", "always", "never"]),
   formatReminder: z.boolean(),

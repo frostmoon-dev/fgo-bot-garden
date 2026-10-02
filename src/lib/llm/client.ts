@@ -124,6 +124,7 @@ async function postOnce(
         ...(options.topP !== undefined && options.topP < 1 && { top_p: options.topP }),
         ...(options.frequencyPenalty && { frequency_penalty: options.frequencyPenalty }),
         ...(options.presencePenalty && { presence_penalty: options.presencePenalty }),
+        ...(options.topK && options.topK > 0 && { top_k: options.topK }),
         ...(options.stop?.length && { stop: options.stop.slice(0, 4) }),
         // OpenAI routes requests with the same key to the same cache. Other providers may reject the field.
         ...(options.cacheKey && hostOf(connection) === "api.openai.com" && { prompt_cache_key: options.cacheKey }),

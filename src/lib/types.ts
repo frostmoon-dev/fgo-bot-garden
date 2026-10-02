@@ -88,6 +88,7 @@ export interface SettingsView {
   topP: number;
   frequencyPenalty: number;
   presencePenalty: number;
+  topK: number;
   memoryPlacement: MemoryPlacement;
   exampleMode: ExampleMode;
   formatReminder: boolean;
