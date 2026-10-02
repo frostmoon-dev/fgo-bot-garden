@@ -199,6 +199,25 @@ Reply with the bullet points only.`;
 }
 
 // "Write a scene": the player drafts where their story starts, and the model finishes the draft.
+// "Next scene": the story so far in, a short setup for where it goes next out. Played as a direction.
+export function nextScenePrompt(user: string): string {
+  return `You are a writing assistant, not a character. A visual novel is in progress. Write the setup for its NEXT scene: where the story goes from here.
+- It must follow from what has happened: the same characters, their relationships as they stand now, threads left open, the mood the last scene ended on.
+- Move it forward: a new place, a later time, or a new situation. Not a replay of the current scene.
+- If the player gave an idea, build the scene around it and keep every detail of it.
+- Use only the characters listed, plus ${user}. Do not invent other named characters.
+- ${user} is the player's character. Never write their words, feelings, thoughts or choices.
+- Present tense, third person. One or two short paragraphs, at most 110 words.
+- End at the moment the scene begins, with something about to happen.
+- No dialogue lines, no title, no markdown, no notes to the player. Use the language the story is written in.
+Reply with the scene setup only.`;
+}
+
+// Plays a "Next scene" setup in the running story: the next reply jumps there.
+export function nextSceneDirection(scene: string): string {
+  return `Move the story on to its next scene now. Start the reply with {effect:fade} and/or {scene:background_id} for the new time or place, bring in who is there, then play the first moments of this scene and stop where {{user}} can act:\n${scene.trim()}`;
+}
+
 export function sceneWriterPrompt(user: string): string {
   return `You are a writing assistant, not a character. The player is setting up the opening scene of a visual novel and wrote a rough draft. Finish it into a complete scene.
 - Keep every idea, name and fact in the draft. Keep the player's own sentences where they work; finish sentences that stop halfway.

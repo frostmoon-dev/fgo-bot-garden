@@ -36,7 +36,13 @@ export function buildScene(data: SceneData, messages: MessageView[]): Scene {
   const cast = castCharacters(data);
   const main = data.characters[data.session.mainCharacterId];
   const ctx: ParserContext = {
-    characters: cast.map((c) => ({ id: c.id, name: c.name, aliases: c.aliases, expressions: c.expressions.map((e) => e.key) })),
+    characters: cast.map((c) => ({
+      id: c.id,
+      name: c.name,
+      aliases: c.aliases,
+      expressions: c.expressions.map((e) => e.key),
+      forms: c.spriteSets.map((s) => ({ id: s.id, name: s.name })),
+    })),
     backgrounds: data.backgrounds.map((b) => b.key),
     mode: data.session.mode,
     mainCharacterId: data.session.mainCharacterId,

@@ -12,7 +12,7 @@ export function momentFromBeat(data: SceneData, beat: Beat): MomentInput {
   const slot =
     slots.find((s) => s.characterId === beat.speakerId) ?? stage.slots.center ?? slots[0] ?? null;
   const character = slot ? data.characters[slot.characterId] : undefined;
-  const chosen = data.session.cast.find((c) => c.characterId === character?.id)?.spriteSetId;
+  const chosen = (character && stage.forms?.[character.id]) ?? data.session.cast.find((c) => c.characterId === character?.id)?.spriteSetId;
   const set = character ? pickAscension(character, chosen) : null;
   const speaker = beat.kind === "dialogue" ? (beat.speakerName ?? "") : beat.kind === "user" ? data.persona.name : "";
   return {

@@ -14,6 +14,7 @@ import { narrationSubject } from "./subject";
 import { ReplyBar } from "./ReplyBar";
 import { SavePanel } from "./SavePanel";
 import { SceneBox } from "./SceneBox";
+import { NextScenePanel } from "./NextScenePanel";
 import { ScenePanel } from "./ScenePanel";
 import { StageButton } from "./StageButton";
 import { CastSuggestionCard, HelpPanel, PlaceCard, RecapCard, StageToast } from "./StageOverlays";
@@ -213,6 +214,7 @@ function Stage() {
       {s.panel === "menu" && <MenuPanel />}
       {s.panel === "help" && <HelpPanel />}
       {s.panel === "scene" && <ScenePanel />}
+      {s.panel === "next" && <NextScenePanel />}
     </div>
     </div>
   );

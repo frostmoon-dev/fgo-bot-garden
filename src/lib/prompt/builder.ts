@@ -181,6 +181,9 @@ function characterBlock(
     c.form
       ? `Current form: ${c.form}${c.otherForms?.length ? ` (other forms: ${c.otherForms.join(", ")})` : ""}. Everything below describes this form. It is still the same ${c.name}: a form changes how they look and act, never what they know. They remember everything that has happened in this story and everything in their memories.`
       : null,
+    c.form && c.otherForms?.length
+      ? `Changing form: when ${c.name} actually changes into one of the other forms in the story, write {form:${c.name}:Form name} on its own line at that moment (for example {form:${c.name}:${c.otherForms[0]}}); their sprite switches there. Only for a real change, not when they just talk about one.`
+      : null,
     field("Description", c.description),
     opts.brief ? null : field("Personality", c.personality),
     field("Speech style", c.speechStyle),

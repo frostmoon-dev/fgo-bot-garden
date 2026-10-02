@@ -50,7 +50,8 @@ export const CharacterLayer = memo(function CharacterLayer({
       {POSITIONS.map((position) => {
         const slot = stage.slots[position];
         const character = slot ? characters[slot.characterId] : undefined;
-        const chosen = session.cast.find((c) => c.characterId === character?.id)?.spriteSetId;
+        // A form the story switched to by this line, else the one chosen for the story.
+        const chosen = (character && stage.forms?.[character.id]) ?? session.cast.find((c) => c.characterId === character?.id)?.spriteSetId;
         const set = character ? pickAscension(character, chosen) : null;
         const content: SlotContent | null =
           slot && character && set ? { slot, character, set, motion: resolveMotion(character.motion, set.motion) } : null;

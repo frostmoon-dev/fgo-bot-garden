@@ -8,6 +8,8 @@ export interface SlotState {
 export interface StageState {
   backgroundKey: string | null;
   slots: Record<Position, SlotState | null>;
+  // Ascensions the story itself switched to ({form:…}), by character id. Others use the story's chosen one.
+  forms?: Record<string, string>;
 }
 
 export interface StageOptions {
@@ -32,7 +34,11 @@ function findSlot(stage: StageState, characterId: string): Position | null {
 const AUTO_ENTER_ORDER: Position[] = ["center", "left", "right"];
 
 export function applyLine(stage: StageState, line: ScriptLine, opts: StageOptions): StageState {
-  const next: StageState = { backgroundKey: stage.backgroundKey, slots: { ...stage.slots } };
+  const next: StageState = { backgroundKey: stage.backgroundKey, slots: { ...stage.slots }, ...(stage.forms && { forms: stage.forms }) };
+  if (line.type === "form") {
+    next.forms = { ...stage.forms, [line.characterId]: line.spriteSetId };
+    return next;
+  }
 
   if (opts.mode === "dialogue") {
     // One character, always in the center.

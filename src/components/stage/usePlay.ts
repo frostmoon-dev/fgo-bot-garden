@@ -24,7 +24,7 @@ import type { ChatUsage } from "@/lib/llm/types";
 import { runChat, type PromptBreakdown } from "./chatStream";
 import { momentFromBeat } from "./moment";
 
-export type Panel = null | "log" | "saves" | "menu" | "help" | "scene";
+export type Panel = null | "log" | "saves" | "menu" | "help" | "scene" | "next";
 
 export interface PlayData extends SceneData {
   settings: SettingsView;
@@ -117,6 +117,11 @@ function readMusicMuted(): boolean {
 }
 
 // "BB", "BB and Meltryllis", "BB, Meltryllis and Kiara".
+// The ascension a character is in now: the last form change in the story, else the one chosen for it.
+export function storyForm(s: Pick<PlayState, "scene" | "session">, characterId: string): string | null {
+  return s.scene.stageBeats.at(-1)?.stage.forms?.[characterId] ?? s.session.cast.find((c) => c.characterId === characterId)?.spriteSetId ?? null;
+}
+
 export function listNames(names: string[]): string {
   return names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }

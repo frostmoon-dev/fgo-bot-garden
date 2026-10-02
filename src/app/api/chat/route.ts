@@ -16,6 +16,7 @@ import { userTextForPrompt } from "@/lib/userInput";
 import type { Mode, ParserContext } from "@/lib/parser/types";
 import { buildPrompt } from "@/lib/prompt/builder";
 import { formChangeNote, pendingFormChanges, readFormChange } from "@/lib/story/formChange";
+import { latestForms } from "@/lib/story/storyForms";
 import { formerCast } from "@/lib/story/formerCast";
 import { updateCharacterMemories } from "@/lib/memory/characterMemory";
 import { foldHistory } from "@/lib/summary/fold";
@@ -75,9 +76,19 @@ export async function POST(request: Request) {
   if (!session) return jsonError(404, "Session not found");
 
   const mode = session.mode as Mode;
+  const content = (m: (typeof session.messages)[number]) =>
+    (m.variants[m.activeVariant] ?? m.variants.at(-1))?.content ?? "";
+  // A form change written into the story ({form:…}) decides the ascension from then on. It is read from the
+  // history, so regenerating or switching away from the reply that made it also undoes it.
+  const regenerating = action === "regenerate" && session.messages.at(-1)?.role === "assistant";
+  const storyForms = latestForms(
+    (regenerating ? session.messages.slice(0, -1) : session.messages).filter((m) => m.role === "assistant").map(content),
+    session.cast.map(({ character: c }) => ({ id: c.id, name: c.name, aliases: c.aliases, expressions: [], forms: c.spriteSets })),
+    mode,
+  );
   // Each cast member speaks as the ascension chosen for this story: its definition and its faces.
-  const cast = session.cast.map(({ character: c, spriteSetId }) => {
-    const set = pickAscension(c, spriteSetId);
+  const cast = session.cast.map(({ character: c, spriteSetId: chosen }) => {
+    const set = pickAscension(c, storyForms.get(c.id) ?? chosen);
     const faces = set ? Object.fromEntries(set.faces.map((f) => [f.expression.key, f.cellIndex])) : null;
     // With one ascension there's nothing to tell apart, so the form is only named when there are several.
     const forms = c.spriteSets.length > 1 && set ? { form: set.name, otherForms: c.spriteSets.filter((s) => s.id !== set.id).map((s) => s.name) } : {};
@@ -89,6 +100,7 @@ export async function POST(request: Request) {
       name: c.name,
       aliases: c.aliases,
       expressions: expressions.map((e) => e.key),
+      forms: c.spriteSets.map((s) => ({ id: s.id, name: s.name })),
     })),
     backgrounds: backgrounds.map((b) => b.key),
     mode,
@@ -97,8 +109,6 @@ export async function POST(request: Request) {
     userAliases: userAliases(persona.addressAs),
   };
 
-  const content = (m: (typeof session.messages)[number]) =>
-    (m.variants[m.activeVariant] ?? m.variants.at(-1))?.content ?? "";
   // The model copies its own earlier replies, so it gets them back in clean script format.
   let history = session.messages.map((m) => ({
     order: m.order,
@@ -147,7 +157,7 @@ export async function POST(request: Request) {
   // made the model jump to that form's opening scene and act as if nothing had happened before.
   const storyStarted = session.messages.some((m) => m.role === "user") || !!userText;
   const mainName = cast.find(({ character: c }) => c.id === session.mainCharacterId)?.character.name;
-  const mainChangedForm = session.messages.some((m) => readFormChange(content(m))?.name === mainName);
+  const mainChangedForm = storyForms.has(session.mainCharacterId) || session.messages.some((m) => readFormChange(content(m))?.name === mainName);
 
   const scanTexts = history.slice(-settings.loreScanDepth).map((m) => m.content);
   const lore = await getTriggeredLore(localLoreProvider, scanTexts);

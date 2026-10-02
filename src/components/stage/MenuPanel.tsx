@@ -13,16 +13,16 @@ import { pickAscension } from "@/lib/ascension";
 import { bondLevel } from "@/lib/bond";
 import { storyFileName, storyText } from "./exportStory";
 import { PanelShell } from "./PanelShell";
-import { usePlay } from "./usePlay";
+import { storyForm, usePlay } from "./usePlay";
 
 // The main character's ascensions. Switching one changes their definition, sprites and greeting.
 function AscensionPicker() {
-  const session = usePlay((s) => s.session);
   const main = usePlay((s) => s.characters[s.session.mainCharacterId]);
   const streaming = usePlay((s) => s.streaming);
   const switchAscension = usePlay((s) => s.switchAscension);
+  const formId = usePlay((s) => storyForm(s, s.session.mainCharacterId));
   if (!main || main.spriteSets.length < 2) return null;
-  const current = pickAscension(main, session.cast.find((c) => c.characterId === main.id)?.spriteSetId);
+  const current = pickAscension(main, formId);
 
   return (
     <section>
@@ -55,6 +55,7 @@ function CastManager() {
   const setCast = usePlay((s) => s.setCast);
   const switchAscension = usePlay((s) => s.switchAscension);
   const bonds = usePlay((s) => s.bonds);
+  const forms = usePlay((s) => s.scene.stageBeats.at(-1)?.stage.forms);
   const all = Object.values(characters).sort((a, b) => a.name.localeCompare(b.name));
 
   const toggle = (id: string, on: boolean) =>
@@ -82,7 +83,7 @@ function CastManager() {
             {entry && !isMain && c.spriteSets.length > 1 && (
               <select
                 className="field w-auto text-sm"
-                value={entry.spriteSetId ?? ""}
+                value={forms?.[c.id] ?? entry.spriteSetId ?? ""}
                 onChange={(e) => setSprite(c.id, e.target.value || null)}
                 aria-label={`${c.name} ascension`}
               >
@@ -193,6 +194,9 @@ export function MenuPanel() {
       <div className="divide-y divide-line [&>section]:py-6 [&>section:first-child]:pt-2">
         {/* The story screen's other controls. With FGO frames the top bar shows only Auto, Skip and Menu. */}
         <section className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-outline" onClick={() => setPanel("next")}>
+            Next scene
+          </button>
           <button type="button" className="btn btn-outline" onClick={() => setPanel("scene")}>
             Scene
           </button>

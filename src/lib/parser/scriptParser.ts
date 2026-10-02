@@ -1,10 +1,11 @@
+import { readFormChange } from "@/lib/story/formChange";
 import { closeAsterisks } from "@/lib/userInput";
 import { EFFECTS, POSITIONS, type Effect, type ParserCharacter, type ParserContext, type Position, type ScriptLine } from "./types";
 
 // Any {word:args}. Misspelled command names are matched in command(); anything else is dropped,
 // so braces never reach the text box.
 const COMMAND = /\{\s*([a-z]{3,10})\s*:([^{}]*)\}/gi;
-const COMMANDS = ["scene", "enter", "exit", "effect"] as const;
+const COMMANDS = ["scene", "enter", "exit", "effect", "form"] as const;
 const LEADING_BRACES = /^\{[^{}]*\}/;
 // A tag word at the start of a line: (narration) [Narrator] {narartion} <dialogue>, or Narration:
 const HEAD = /^[[({<]\s*([A-Za-z][A-Za-z' ]{0,18}?)\s*[\])}>]\s*:?\s*/;
@@ -121,6 +122,21 @@ const SYNONYMS: [RegExp, string[]][] = [
 
 function norm(value: string): string {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function matchForm<F extends { name: string }>(forms: F[], raw: string): F | undefined {
+  const key = norm(raw.replace(/["'’]/g, "").replace(/(?:^|_)(?:form|ascension)$/, ""));
+  if (!key || forms.length < 2) return undefined;
+  const exact = forms.find((f) => norm(f.name) === key);
+  if (exact) return exact;
+  // "2" or "ascension_2" for "Ascension 2".
+  const number = key.match(/(\d+)$/)?.[1];
+  const numbered = number ? forms.filter((f) => norm(f.name).match(/(\d+)$/)?.[1] === number) : [];
+  if (numbered.length === 1) return numbered[0];
+  const partial = forms.filter((f) => norm(f.name).includes(key) || key.includes(norm(f.name)));
+  if (partial.length === 1) return partial[0];
+  const fuzzy = forms.filter((f) => near(key, norm(f.name)));
+  return fuzzy.length === 1 ? fuzzy[0] : undefined;
 }
 
 // "smiling" and "smile" -> "smil"; "angrily" and "angry" -> "angr".
@@ -328,6 +344,9 @@ export class ScriptParser {
     }
 
     const body = rest ? this.segments(rest).flatMap((s) => this.textLine(s)) : [];
+    // A form switched from the Menu adds "(narration) Name changes form: Form." The sprite follows it.
+    const change = readFormChange(rest);
+    if (change) after.push(...this.formLine(change.name, change.form, true));
     return [...before, ...body, ...after];
   }
 
@@ -672,13 +691,15 @@ export class ScriptParser {
       this.warn(`Ignored unknown command ${raw}`);
       return [];
     }
+    const word = m[1].toLowerCase();
+    const kind = COMMANDS.find((c) => c === word || near(word, c));
+    const args = m[2].split(":").map((a) => a.trim());
+    // A form change is about the character, not the stage, so it counts in dialogue mode too.
+    if (kind === "form") return args.length >= 2 ? this.formLine(args[0], args.slice(1).join(":")) : this.formOnly(args[0] ?? "");
     if (this.ctx.mode === "dialogue") {
       this.warn(`Command ${raw} ignored in dialogue mode`);
       return [];
     }
-    const word = m[1].toLowerCase();
-    const kind = COMMANDS.find((c) => c === word || near(word, c));
-    const args = m[2].split(":").map((a) => a.trim());
 
     if (kind === "effect") {
       const name = (args[0] ?? "").toLowerCase();
@@ -729,6 +750,31 @@ export class ScriptParser {
     return [];
   }
 
+  // {form:Name:Form}. The form is matched loosely: "Vortigern", "vortigern form", "2" for "Ascension 2".
+  private formLine(name: string, form: string, silent = false): ScriptLine[] {
+    const character = this.findCharacter(name);
+    if (!character) {
+      this.warn(`Unknown character "${name}" in a form change — ignored`);
+      return [];
+    }
+    const set = matchForm(character.forms ?? [], form);
+    if (!set) {
+      this.warn(`${character.name} has no form "${form}" — ignored`);
+      return [];
+    }
+    return [{ type: "form", characterId: character.id, spriteSetId: set.id, ...(silent && { silent }) }];
+  }
+
+  // {form:Vortigern} without a name: the one character who has a form by that name.
+  private formOnly(form: string): ScriptLine[] {
+    const owners = this.ctx.characters.filter((c) => matchForm(c.forms ?? [], form));
+    if (owners.length !== 1) {
+      this.warn(`Form change "${form}" names no character — ignored`);
+      return [];
+    }
+    return this.formLine(owners[0].name, form);
+  }
+
   private findCharacter(name: string): ParserCharacter | undefined {
     const key = norm(name);
     if (!key) return undefined;
@@ -777,7 +823,7 @@ export class ScriptParser {
 
 // Writes parsed lines back in the canonical format. The model copies its own earlier replies,
 // so a cleaned-up history keeps weaker models on format.
-export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, "id" | "name">[]): string {
+export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, "id" | "name" | "forms">[]): string {
   const nameOf = (id: string) => characters.find((c) => c.id === id)?.name ?? id;
   const expressionOf = new Map<string, string>();
   return lines
@@ -804,6 +850,12 @@ export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, 
           return "";
         case "effect":
           return `{effect:${l.effect}}`;
+        case "form": {
+          if (l.silent) return "";
+          const character = characters.find((c) => c.id === l.characterId);
+          const form = character?.forms?.find((f) => f.id === l.spriteSetId)?.name;
+          return character && form ? `{form:${character.name}:${form}}` : "";
+        }
       }
     })
     .filter(Boolean)

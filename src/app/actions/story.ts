@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { getPersona } from "@/lib/data/queries";
 import { completeChat } from "@/lib/llm/client";
-import { aboutUser, choicesPrompt, choicesRequest, scenePrompt, sceneWriterPrompt } from "@/lib/prompt/rules";
+import { aboutUser, choicesPrompt, choicesRequest, nextScenePrompt, scenePrompt, sceneWriterPrompt } from "@/lib/prompt/rules";
 import { safe } from "@/lib/safeAction";
 import { cleanScene } from "@/lib/scene";
 import { loadStoryContext } from "@/lib/story/context";
@@ -129,6 +129,47 @@ export async function completeScene(input: { text: string; characterIds: string[
     });
     const scene = reply
       .replace(/^\s*(#+\s*|\*\*)?(scene|finished scene)\s*:?\**\s*$/gim, "")
+      .replace(/\*\*|__/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    if (!scene) throw new Error("The model sent back nothing. Try again, or try another model.");
+    return scene;
+  });
+}
+
+// "Next scene": where the story goes from here, written from the story so far. The player can edit it,
+// then play it in this story (as a direction for the next reply) or start a new story with it.
+export async function writeNextScene(sessionId: string, idea: string): Promise<ActionResult<string>> {
+  return safe(async () => {
+    await requireAuth();
+    const wish = z.string().max(2000).parse(idea).trim();
+    const { session, persona, transcript, absent } = await loadStoryContext(sessionId, 12);
+    const cast = session.cast.map((c) => c.character.name).join(", ");
+    const context = [
+      aboutUser(persona, 400),
+      cast && `Characters in this story: ${cast}.`,
+      absent.length > 0 && `No longer in the story (leave them out): ${absent.join(", ")}.`,
+      session.premise.trim() && `How the story began:\n${session.premise.trim()}`,
+      session.memory.trim() && `Story notes (always true):\n${session.memory.trim()}`,
+      session.summary.trim() && `Earlier in the story:\n${session.summary.trim()}`,
+      session.scene && `Scene now:\n${session.scene}`,
+      `Latest lines (latest last):\n${transcript || "(the story has only just begun)"}`,
+      wish && `The player's idea for the next scene:\n${wish}`,
+      "---\nWrite the next scene's setup now. Only the setup.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const reply = await completeChat({
+      messages: [
+        { role: "system", content: nextScenePrompt(persona.name) },
+        { role: "user", content: context },
+      ],
+      temperature: 0.85,
+      maxTokens: 300,
+      purpose: "write",
+    });
+    const scene = reply
+      .replace(/^\s*(#+\s*|\*\*)?(next scene|scene|setup)\s*:?\**\s*$/gim, "")
       .replace(/\*\*|__/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
