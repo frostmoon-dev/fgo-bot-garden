@@ -2,9 +2,41 @@ export type Mode = "narrative" | "dialogue";
 export type Position = "left" | "center" | "right";
 export const POSITIONS: Position[] = ["left", "center", "right"];
 
-// Screen effects the model may trigger: {effect:shake}.
-export const EFFECTS = ["shake", "flash", "fade"] as const;
+// Screen effects the model may trigger: {effect:shake}. Only fade clears the stage.
+export const EFFECTS = ["shake", "flash", "fade", "hit", "dark", "zoom", "dizzy", "dream", "glitch", "jump"] as const;
 export type Effect = (typeof EFFECTS)[number];
+
+// Other words models use for the same effects.
+export const EFFECT_ALIASES: Record<string, Effect> = {
+  impact: "shake",
+  quake: "shake",
+  tremble: "shake",
+  light: "flash",
+  white: "flash",
+  blackout: "fade",
+  damage: "hit",
+  hurt: "hit",
+  pain: "hit",
+  red: "hit",
+  darken: "dark",
+  dim: "dark",
+  ominous: "dark",
+  shadow: "dark",
+  closeup: "zoom",
+  close_up: "zoom",
+  focus: "zoom",
+  blur: "dizzy",
+  daze: "dizzy",
+  faint: "dizzy",
+  haze: "dream",
+  memory: "dream",
+  flashback: "dream",
+  static: "glitch",
+  distort: "glitch",
+  bounce: "jump",
+  surprise: "jump",
+  hop: "jump",
+};
 
 export type ScriptLine =
   | { type: "effect"; effect: Effect }

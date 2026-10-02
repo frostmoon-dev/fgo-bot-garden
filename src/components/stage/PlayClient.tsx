@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Effect } from "@/lib/parser/types";
 import { paintedTime, parseScene, timeOfDay, weatherOf } from "@/lib/scene";
 import { TimeTint, WeatherLayer } from "./Ambience";
 import { BackgroundLayer } from "./BackgroundLayer";
@@ -24,7 +25,8 @@ import { createPlayStore, PlayStoreProvider, usePlay, usePlayApi, type PlayData 
 import { usePlaybackEffects } from "./usePlaybackEffects";
 import { VariantControls } from "./VariantControls";
 
-const EFFECTS: Record<string, { target: "scene" | "flash" | "fade"; frames: Keyframe[]; duration: number }> = {
+// Short and subtle, and all of them off under prefers-reduced-motion.
+const EFFECTS: Record<Effect, { target: "scene" | "flash" | "fade" | "hit"; frames: Keyframe[]; duration: number }> = {
   shake: {
     target: "scene",
     frames: [0, -1.2, 1.2, -0.8, 0.8, -0.3, 0].map((x) => ({ translate: `${x}% 0` })),
@@ -32,6 +34,53 @@ const EFFECTS: Record<string, { target: "scene" | "flash" | "fade"; frames: Keyf
   },
   flash: { target: "flash", frames: [{ opacity: 0 }, { opacity: 0.85 }, { opacity: 0 }], duration: 500 },
   fade: { target: "fade", frames: [{ opacity: 0 }, { opacity: 1, offset: 0.4 }, { opacity: 1, offset: 0.6 }, { opacity: 0 }], duration: 1600 },
+  // Pain, a blow, sudden anger: a red pulse with a small jolt.
+  hit: { target: "hit", frames: [{ opacity: 0 }, { opacity: 0.45, offset: 0.15 }, { opacity: 0 }], duration: 600 },
+  // Something ominous: the room dims for a moment, without ending the scene as fade does.
+  // Only the scene darkens, so the line about it stays readable.
+  dark: {
+    target: "scene",
+    frames: [{ filter: "brightness(1)" }, { filter: "brightness(0.45)", offset: 0.3 }, { filter: "brightness(0.45)", offset: 0.7 }, { filter: "brightness(1)" }],
+    duration: 2200,
+  },
+  // A dramatic beat: the camera pushes in a little, then eases back.
+  zoom: { target: "scene", frames: [{ scale: 1 }, { scale: 1.06, offset: 0.35 }, { scale: 1.06, offset: 0.75 }, { scale: 1 }], duration: 1800 },
+  // Dizzy, dazed, about to faint.
+  dizzy: {
+    target: "scene",
+    frames: [
+      { filter: "blur(0)", rotate: "0deg" },
+      { filter: "blur(4px)", rotate: "-0.6deg", offset: 0.3 },
+      { filter: "blur(2px)", rotate: "0.6deg", offset: 0.6 },
+      { filter: "blur(0)", rotate: "0deg" },
+    ],
+    duration: 1500,
+  },
+  // A dream, a memory, a fairy's illusion: a soft bright haze.
+  dream: {
+    target: "scene",
+    frames: [
+      { filter: "blur(0) brightness(1) saturate(1)" },
+      { filter: "blur(3px) brightness(1.25) saturate(0.7)", offset: 0.4 },
+      { filter: "blur(0) brightness(1) saturate(1)" },
+    ],
+    duration: 2000,
+  },
+  // Digital interference: BB's screens, a broken signal.
+  glitch: {
+    target: "scene",
+    frames: [
+      { translate: "0 0", filter: "none" },
+      { translate: "-1.5% 0", filter: "hue-rotate(70deg) contrast(1.4)", offset: 0.15 },
+      { translate: "1% 0", filter: "none", offset: 0.3 },
+      { translate: "-0.5% 0", filter: "hue-rotate(-50deg) saturate(1.6)", offset: 0.5 },
+      { translate: "0 0", filter: "none", offset: 0.65 },
+      { translate: "0 0", filter: "none" },
+    ],
+    duration: 600,
+  },
+  // Surprise or comic shock: the scene hops once.
+  jump: { target: "scene", frames: [0, -2, 0, -0.6, 0].map((y) => ({ translate: `0 ${y}%` })), duration: 420 },
 };
 
 function Stage() {
@@ -118,13 +167,16 @@ function Stage() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
+  const hitRef = useRef<HTMLDivElement>(null);
   const effect = shownBeat?.effect;
   const effectKey = shownBeat?.key;
   useEffect(() => {
     if (!effect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const fx = EFFECTS[effect];
-    const el = { scene: sceneRef, flash: flashRef, fade: fadeRef }[fx.target].current;
+    const el = { scene: sceneRef, flash: flashRef, fade: fadeRef, hit: hitRef }[fx.target].current;
     el?.animate(fx.frames, { duration: fx.duration, easing: "ease-out" });
+    // A hit also jolts the scene a little.
+    if (effect === "hit") sceneRef.current?.animate([0, 0.8, -0.6, 0.2, 0].map((x) => ({ translate: `${x}% 0` })), { duration: 300, easing: "ease-out" });
   }, [effect, effectKey]);
 
   return (
@@ -150,6 +202,7 @@ function Stage() {
       </div>
       <div ref={flashRef} aria-hidden className="pointer-events-none absolute inset-0 z-30 bg-white opacity-0" />
       <div ref={fadeRef} aria-hidden className="pointer-events-none absolute inset-0 z-30 bg-black opacity-0" />
+      <div ref={hitRef} aria-hidden className="pointer-events-none absolute inset-0 z-30 bg-danger opacity-0" />
 
       <PlaceCard />
       <MusicPlayer url={musicUrl} volume={s.settings.musicVolume} />

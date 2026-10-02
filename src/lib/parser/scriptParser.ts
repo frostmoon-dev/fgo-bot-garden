@@ -1,6 +1,6 @@
 import { readFormChange } from "@/lib/story/formChange";
 import { closeAsterisks } from "@/lib/userInput";
-import { EFFECTS, POSITIONS, type Effect, type ParserCharacter, type ParserContext, type Position, type ScriptLine } from "./types";
+import { EFFECT_ALIASES, EFFECTS, POSITIONS, type Effect, type ParserCharacter, type ParserContext, type Position, type ScriptLine } from "./types";
 
 // Any {word:args}. Misspelled command names are matched in command(); anything else is dropped,
 // so braces never reach the text box.
@@ -703,7 +703,8 @@ export class ScriptParser {
 
     if (kind === "effect") {
       const name = (args[0] ?? "").toLowerCase();
-      const effect: Effect | undefined = EFFECTS.find((e) => e === name || near(name, e));
+      const effect: Effect | undefined =
+        EFFECTS.find((e) => e === name) ?? EFFECT_ALIASES[norm(name)] ?? EFFECTS.find((e) => near(name, e));
       if (!effect) {
         this.warn(`Unknown effect "${args[0]}" — ignored`);
         return [];

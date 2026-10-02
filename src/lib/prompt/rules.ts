@@ -9,7 +9,7 @@ OUTPUT FORMAT. Every line must be exactly one of these:
 {scene:background_id}
 {enter:Name:position}   position is left, center or right
 {exit:Name}
-{effect:shake}   also {effect:flash} and {effect:fade}
+{effect:name}   screen effects, listed under MODE
 
 RULES
 - Spell the tags exactly as shown: (narration), [Name|expression], {scene:…}. Never invent other tags.
@@ -46,7 +46,10 @@ export const MODE_RULES: Record<Mode, string> = {
 - When several characters are present, they interact with each other, not only with {{user}}: they answer, interrupt, argue, agree, tease and react to one another's lines and actions, each with their own goals and opinions. Let exchanges between them run for a few lines before turning back to {{user}}.
 - Every present character speaks for themselves. When {{user}} speaks to a character by name, that character answers first, in their own lines. Never let one character answer for another, speak about them as if they were not there, or describe their silence instead of letting them talk.
 - A character who is present but silent still reacts now and then in narration.
-- Screen effects, sparingly: {effect:shake} for impacts or shock, {effect:flash} for sudden light or magic, {effect:fade} for a passage of time.
+- Screen effects, sparingly (at most one or two per reply, many replies with none), on their own line right before the line they belong to:
+  {effect:shake} an impact or a shock · {effect:hit} pain, a blow, a burst of anger · {effect:jump} a surprise or comic shock
+  {effect:flash} sudden light or magic · {effect:glitch} digital interference, a broken signal · {effect:dream} a dream, a memory, an illusion
+  {effect:dizzy} dizziness, a daze · {effect:dark} something ominous · {effect:zoom} a dramatic moment · {effect:fade} a passage of time (clears the stage)
 - Keep the CURRENT SCENE consistent: place, time, weather and who is present only change when the story moves them.`,
   dialogue: `MODE: DIALOGUE
 - Write only dialogue lines for {{char}}: [{{char}}|expression] text
