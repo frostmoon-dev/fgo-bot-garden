@@ -268,7 +268,19 @@ export const CHARACTER_THEMES: Record<string, { theme: string; forms?: Record<st
   // Dreams, then the night of the World Tree, then the hollow at the bottom of everything.
   Oberon: {
     theme: "amor-kana-fleeting-dream-in-fog.m4a",
-    forms: { "Traveler's Cloak": "amor-kana-night-of-the-world-tree.m4a", Vortigern: "cnoc-hollow-path.m4a" },
+    forms: {
+      "Traveler's Cloak": "amor-kana-night-of-the-world-tree.m4a",
+      Vortigern: "cnoc-hollow-path.m4a",
+      "Vortigern (Jacket)": "cnoc-hollow-path.m4a",
+      "Vortigern (Hood)": "cnoc-hollow-path.m4a",
+      // The hollow that swallows the world.
+      "Abyssal Wyrm": "cnoc-demons-disposition.m4a",
+      // Off duty.
+      "White Coat": "amor-kana-dancing-fairies.m4a",
+      "White Coat (Sunglasses)": "amor-kana-dancing-fairies.m4a",
+      "Little Oberon": "music-egg-little-joys.m4a",
+      "Little Oberon (Moth Hood)": "music-egg-little-joys.m4a",
+    },
   },
   // A cruel fairy at play.
   "Tam Lin Tristan": { theme: "cnoc-witchs-frolic.m4a" },
