@@ -110,12 +110,31 @@ describe("character themes", () => {
     const base = { storyId: "s", backgroundMusic: "/bg.m4a", mainTheme: "/main.m4a", themeOf: (id: string) => (id === "bb" ? "/bb.m4a" : null) };
     expect(musicFor({ ...base, cue: undefined, scene: { Mood: "relaxed" } })).toBe("/main.m4a");
     expect(musicFor({ ...base, cue: undefined, scene: { Mood: "quiet", Time: "night" } })).toBe("/main.m4a");
+    expect(musicFor({ ...base, cue: undefined, scene: { Mood: "playful teasing" } })).toBe("/main.m4a");
     expect(musicFor({ ...base, cue: undefined, scene: { Mood: "tense" } })).toMatch(/^\/music\//);
+    expect(musicFor({ ...base, cue: undefined, scene: { Mood: "sad" } })).toMatch(/^\/music\//);
     expect(musicFor({ ...base, cue: "theme:bb", scene: { Mood: "tense" } })).toBe("/bb.m4a");
     expect(musicFor({ ...base, mainTheme: null, cue: undefined, scene: { Mood: "calm" } })).toBe("/bg.m4a");
   });
 
   it("can be cued by name", () => {
     expect(new ScriptParser(makeCtx().ctx).parseLine("{music:BB}")).toEqual([{ type: "music", cue: "theme:bb" }]);
+  });
+});
+
+describe("spotlight", () => {
+  it("goes to whoever walks on stage last, and back when they leave", () => {
+    const { ctx } = makeCtx();
+    const { beats } = buildBeats(
+      [
+        { id: "a", role: "assistant", content: "[Oberon|neutral] Quiet night.\n{enter:BB:left}\n[BB|smirk] Senpai!\n[Oberon|neutral] Ugh.\n{exit:BB}\n(narration) Silence returns." },
+      ],
+      ctx,
+      { mode: "narrative", mainCharacterId: "oberon" },
+      initialStage(null, "oberon"),
+      { user: "Ritsuka", char: "Oberon" },
+      "Ritsuka",
+    );
+    expect(beats.map((b) => b.stage.spotlight ?? null)).toEqual([null, "bb", "bb", null]);
   });
 });

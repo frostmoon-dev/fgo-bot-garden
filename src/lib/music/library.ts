@@ -202,14 +202,17 @@ export function pickTrack(storyId: string, mood: MusicMood): Track | null {
   return list[Math.abs(hash) % list.length];
 }
 
-// Which music plays: the AI's cue, else the scene's mood. In calm or unknown moods the main character's
-// theme plays, else a background's own track, so the story has its own sound until something happens.
+const THEME_MOODS = new Set<MusicMood>(["calm", "night", "sea", "cheerful", "playful"]);
+
+// Which music plays: the AI's cue, else the scene's mood. In light moods (calm, cheerful, playful) the
+// leading character's theme plays, else a background's own track; heavier moods get mood music.
 export function musicFor(opts: {
   storyId: string;
   cue: MusicCue | undefined;
   scene: SceneFields | null;
   backgroundMusic: string | null;
-  // The main character's theme in their current ascension.
+  // The theme of whoever leads the scene (the last to walk on stage, else the main character), in their
+  // current ascension.
   mainTheme?: string | null;
   // Character id -> theme, for {music:Name} cues.
   themeOf?: (characterId: string) => string | null;
@@ -221,8 +224,9 @@ export function musicFor(opts: {
   }
   const cued = opts.cue && !opts.cue.startsWith("theme:") ? (opts.cue as MusicMood) : undefined;
   const mood = cued ?? (opts.scene ? moodOfScene(opts.scene) : null);
-  const quiet = !mood || mood === "calm" || mood === "night" || mood === "sea";
-  if (quiet && !cued && opts.mainTheme) return opts.mainTheme;
+  // Light moods are carried by the leading character's theme; heavier ones get mood music.
+  const light = !mood || THEME_MOODS.has(mood);
+  if (light && !cued && opts.mainTheme) return opts.mainTheme;
   if ((!mood || mood === "calm") && opts.backgroundMusic) return opts.backgroundMusic;
   const track = pickTrack(opts.storyId, mood ?? "calm");
   return track ? trackUrl(track) : opts.backgroundMusic;

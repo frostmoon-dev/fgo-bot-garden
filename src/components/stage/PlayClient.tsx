@@ -114,7 +114,8 @@ function Stage() {
         cue: stage.music,
         scene: s.settings.sceneTracker ? parseScene(s.session.scene) : null,
         backgroundMusic: s.backgrounds.find((b) => b.key === stage.backgroundKey)?.musicUrl || null,
-        mainTheme: themeOf(s.session.mainCharacterId),
+        // The last one to walk on stage leads, else the main character.
+        mainTheme: (stage.spotlight && themeOf(stage.spotlight)) || themeOf(s.session.mainCharacterId),
         themeOf,
       });
   const speakerId = shownBeat?.kind === "dialogue" ? shownBeat.speakerId : null;

@@ -13,6 +13,8 @@ export interface StageState {
   forms?: Record<string, string>;
   // The AI's music cue for this reply ({music:…}). Cleared when the next reply starts.
   music?: MusicCue;
+  // Whoever walked on stage last. In calm moments their theme plays while they are on stage.
+  spotlight?: string;
 }
 
 export interface StageOptions {
@@ -36,7 +38,23 @@ function findSlot(stage: StageState, characterId: string): Position | null {
 
 const AUTO_ENTER_ORDER: Position[] = ["center", "left", "right"];
 
+function onStage(stage: StageState): string[] {
+  return POSITIONS.flatMap((p) => (stage.slots[p] ? [stage.slots[p]!.characterId] : []));
+}
+
 export function applyLine(stage: StageState, line: ScriptLine, opts: StageOptions): StageState {
+  const next = applyStageLine(stage, line, opts);
+  // A newcomer takes the spotlight; it ends when they leave.
+  const before = new Set(onStage(stage));
+  const now = onStage(next);
+  const newcomer = now.filter((id) => !before.has(id)).at(-1);
+  const spotlight = newcomer ?? (stage.spotlight && now.includes(stage.spotlight) ? stage.spotlight : undefined);
+  if (spotlight) next.spotlight = spotlight;
+  else delete next.spotlight;
+  return next;
+}
+
+function applyStageLine(stage: StageState, line: ScriptLine, opts: StageOptions): StageState {
   const next: StageState = {
     backgroundKey: stage.backgroundKey,
     slots: { ...stage.slots },
