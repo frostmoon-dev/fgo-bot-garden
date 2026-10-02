@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Effect } from "@/lib/parser/types";
-import { musicFor } from "@/lib/music/library";
+import { pickAscension } from "@/lib/ascension";
+import { characterTheme, musicFor } from "@/lib/music/library";
 import { paintedTime, parseScene, timeOfDay, weatherOf } from "@/lib/scene";
 import { TimeTint, WeatherLayer } from "./Ambience";
 import { BackgroundLayer } from "./BackgroundLayer";
@@ -98,6 +99,13 @@ function Stage() {
   const lastMessage = s.messages.at(-1);
   const onLatest = !!beat && beat.messageId === lastMessage?.id && lastMessage.role === "assistant";
   const bgUrl = s.backgrounds.find((b) => b.key === stage.backgroundKey)?.imageUrl ?? null;
+  // A character's signature theme, in the ascension they are in at this line.
+  const themeOf = (id: string) => {
+    const c = s.characters[id];
+    if (!c) return null;
+    const formId = stage.forms?.[id] ?? s.session.cast.find((x) => x.characterId === id)?.spriteSetId;
+    return characterTheme(c.name, pickAscension(c, formId)?.name);
+  };
   // Music follows the atmosphere: the AI's {music:…} cue, else the scene box's mood (see lib/music).
   const musicUrl = s.musicMuted
     ? null
@@ -106,6 +114,8 @@ function Stage() {
         cue: stage.music,
         scene: s.settings.sceneTracker ? parseScene(s.session.scene) : null,
         backgroundMusic: s.backgrounds.find((b) => b.key === stage.backgroundKey)?.musicUrl || null,
+        mainTheme: themeOf(s.session.mainCharacterId),
+        themeOf,
       });
   const speakerId = shownBeat?.kind === "dialogue" ? shownBeat.speakerId : null;
   const pending = !!shownBeat && shownBeat.role === "user" && atEnd && s.streaming;

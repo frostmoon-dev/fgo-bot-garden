@@ -50,7 +50,7 @@ export const MODE_RULES: Record<Mode, string> = {
   {effect:shake} an impact or a shock · {effect:hit} pain, a blow, a burst of anger · {effect:jump} a surprise or comic shock
   {effect:flash} sudden light or magic · {effect:glitch} digital interference, a broken signal · {effect:dream} a dream, a memory, an illusion
   {effect:dizzy} dizziness, a daze · {effect:dark} something ominous · {effect:zoom} a dramatic moment · {effect:fade} a passage of time (clears the stage)
-- Music follows the scene's mood by itself. Only when the mood turns sharply in the middle of a reply (a fight breaks out, bad news lands, a quiet moment between two people), write {music:mood} on its own line where it turns: calm, cheerful, playful, tender, sad, mystery, tense, dark, battle, epic, or silence.
+- Music follows the scene's mood by itself. Only when the mood turns sharply in the middle of a reply (a fight breaks out, bad news lands, a quiet moment between two people), write {music:mood} on its own line where it turns: calm, cheerful, playful, tender, sad, mystery, tense, dark, battle, epic, or silence. For a character's big moment (an entrance, a confession, a reveal), {music:Name} plays their own theme.
 - Keep the CURRENT SCENE consistent: place, time, weather and who is present only change when the story moves them.`,
   dialogue: `MODE: DIALOGUE
 - Write only dialogue lines for {{char}}: [{{char}}|expression] text

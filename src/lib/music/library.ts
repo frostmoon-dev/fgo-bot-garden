@@ -7,8 +7,8 @@ import { timeOfDay } from "@/lib/scene";
 
 export const MUSIC_MOODS = ["calm", "cheerful", "playful", "tender", "sad", "night", "mystery", "tense", "dark", "battle", "epic", "sea"] as const;
 export type MusicMood = (typeof MUSIC_MOODS)[number];
-// What a {music:…} line can ask for: a mood, or silence.
-export type MusicCue = MusicMood | "silence";
+// What a {music:…} line can ask for: a mood, silence, or a character's theme ("theme:<character id>").
+export type MusicCue = MusicMood | "silence" | `theme:${string}`;
 
 export interface Track {
   file: string;
@@ -202,17 +202,76 @@ export function pickTrack(storyId: string, mood: MusicMood): Track | null {
   return list[Math.abs(hash) % list.length];
 }
 
-// Which music plays: the AI's cue, else the scene's mood. A background's own track plays for calm or
-// unknown moods, so a place with its own theme keeps it until something happens.
+// Which music plays: the AI's cue, else the scene's mood. In calm or unknown moods the main character's
+// theme plays, else a background's own track, so the story has its own sound until something happens.
 export function musicFor(opts: {
   storyId: string;
   cue: MusicCue | undefined;
   scene: SceneFields | null;
   backgroundMusic: string | null;
+  // The main character's theme in their current ascension.
+  mainTheme?: string | null;
+  // Character id -> theme, for {music:Name} cues.
+  themeOf?: (characterId: string) => string | null;
 }): string | null {
   if (opts.cue === "silence") return null;
-  const mood = opts.cue ?? (opts.scene ? moodOfScene(opts.scene) : null);
+  if (opts.cue?.startsWith("theme:")) {
+    const theme = opts.themeOf?.(opts.cue.slice(6));
+    if (theme) return theme;
+  }
+  const cued = opts.cue && !opts.cue.startsWith("theme:") ? (opts.cue as MusicMood) : undefined;
+  const mood = cued ?? (opts.scene ? moodOfScene(opts.scene) : null);
+  const quiet = !mood || mood === "calm" || mood === "night" || mood === "sea";
+  if (quiet && !cued && opts.mainTheme) return opts.mainTheme;
   if ((!mood || mood === "calm") && opts.backgroundMusic) return opts.backgroundMusic;
   const track = pickTrack(opts.storyId, mood ?? "calm");
   return track ? trackUrl(track) : opts.backgroundMusic;
+}
+
+// Each character's signature theme, by name, with optional themes per ascension (by its name).
+// Picked from the titles and each character's personality; change any of them here.
+export const CHARACTER_THEMES: Record<string, { theme: string; forms?: Record<string, string> }> = {
+  // BB Channel is a variety show.
+  BB: { theme: "on-jin-bgm-loop-variety-r01.m4a", forms: { Swimsuit: "came-lia-marine-blue.m4a" } },
+  // The child of prophecy, carrying everyone's wishes.
+  Castoria: { theme: "senses-circuit-wish.m4a" },
+  // A paladin from the age of heroic tales.
+  Charlemagne: { theme: "music-egg-the-preparing-people.m4a" },
+  // The lonely queen of the underworld.
+  Ereshkigal: { theme: "amor-kana-lone-world.m4a" },
+  // Carrying a light through the journey.
+  Fujimaru: { theme: "music-egg-lamp-in-one-hand.m4a" },
+  // The King of Heroes and his kingdom.
+  Gilgamesh: { theme: "cnoc-dqesque-continent.m4a" },
+  // The fairy-tale writer at his desk.
+  Hans: { theme: "hagall-inventionear-piano.m4a" },
+  // Venus: bright, colourful, a little vain.
+  Ishtar: { theme: "amor-kana-colorful-destination.m4a" },
+  // Gothic vengeance.
+  "Jeanne Alter": { theme: "came-lia-dance-of-death.m4a" },
+  // A doll-like Alter Ego: a music box.
+  Kazuradrop: { theme: "amor-kana-ocean-of-the-heart-music-box.m4a" },
+  // Sweet on the surface, a nightmare underneath.
+  Kiara: { theme: "came-lia-gentle-nightmare.m4a" },
+  // The prima ballerina: a waltz.
+  Meltryllis: { theme: "music-egg-waltz-of-destiny.m4a" },
+  // The queen of a doomed Britain.
+  Morgan: { theme: "amor-kana-fates-lamentation.m4a" },
+  // A swordsmith among iron and old blades.
+  Muramasa: { theme: "hagall-rusted-chain.m4a" },
+  // The emperor who loves to perform.
+  Nero: { theme: "amor-kana-holy-concert.m4a" },
+  // Dreams, then the night of the World Tree, then the hollow at the bottom of everything.
+  Oberon: {
+    theme: "amor-kana-fleeting-dream-in-fog.m4a",
+    forms: { "Traveler's Cloak": "amor-kana-night-of-the-world-tree.m4a", Vortigern: "cnoc-hollow-path.m4a" },
+  },
+  // A cruel fairy at play.
+  "Tam Lin Tristan": { theme: "cnoc-witchs-frolic.m4a" },
+};
+
+export function characterTheme(name: string, form?: string | null): string | null {
+  const entry = CHARACTER_THEMES[name];
+  if (!entry) return null;
+  return `/music/${(form && entry.forms?.[form]) || entry.theme}`;
 }

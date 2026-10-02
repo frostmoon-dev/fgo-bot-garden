@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ScriptParser } from "@/lib/parser";
 import { makeCtx } from "@/lib/parser/__tests__/fixtures";
 import { buildBeats, initialStage } from "@/lib/stage";
-import { MUSIC_MOODS, TRACKS, moodOfScene, musicFor, pickTrack } from "../library";
+import { CHARACTER_THEMES, MUSIC_MOODS, TRACKS, characterTheme, moodOfScene, musicFor, pickTrack } from "../library";
 
 describe("music library", () => {
   it("has a file in public/music for every track", () => {
@@ -80,5 +80,42 @@ describe("{music:…}", () => {
       "Ritsuka",
     );
     expect(beats.map((b) => b.stage.music)).toEqual([undefined, "battle", "battle", undefined]);
+  });
+});
+
+describe("character themes", () => {
+  it("point at tracks in the library", () => {
+    const files = new Set(TRACKS.map((t) => t.file));
+    const used = Object.values(CHARACTER_THEMES).flatMap((c) => [c.theme, ...Object.values(c.forms ?? {})]);
+    expect(used.filter((f) => !files.has(f))).toEqual([]);
+  });
+
+  it("cover every bundled character", () => {
+    const names = fs
+      .readdirSync(path.join(process.cwd(), "prisma/bots"))
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => fs.readFileSync(path.join(process.cwd(), "prisma/bots", f), "utf8").match(/^\s+name: "([^"]+)"/m)?.[1])
+      .filter((n): n is string => !!n);
+    expect(names.length).toBeGreaterThan(5);
+    expect(names.filter((n) => !CHARACTER_THEMES[n])).toEqual([]);
+  });
+
+  it("follow the ascension", () => {
+    expect(characterTheme("Oberon", "Vortigern")).toBe("/music/cnoc-hollow-path.m4a");
+    expect(characterTheme("Oberon", "Fairy King")).toBe("/music/amor-kana-fleeting-dream-in-fog.m4a");
+    expect(characterTheme("Nobody")).toBeNull();
+  });
+
+  it("play in quiet moments and on a cue, and give way to strong moods", () => {
+    const base = { storyId: "s", backgroundMusic: "/bg.m4a", mainTheme: "/main.m4a", themeOf: (id: string) => (id === "bb" ? "/bb.m4a" : null) };
+    expect(musicFor({ ...base, cue: undefined, scene: { Mood: "relaxed" } })).toBe("/main.m4a");
+    expect(musicFor({ ...base, cue: undefined, scene: { Mood: "quiet", Time: "night" } })).toBe("/main.m4a");
+    expect(musicFor({ ...base, cue: undefined, scene: { Mood: "tense" } })).toMatch(/^\/music\//);
+    expect(musicFor({ ...base, cue: "theme:bb", scene: { Mood: "tense" } })).toBe("/bb.m4a");
+    expect(musicFor({ ...base, mainTheme: null, cue: undefined, scene: { Mood: "calm" } })).toBe("/bg.m4a");
+  });
+
+  it("can be cued by name", () => {
+    expect(new ScriptParser(makeCtx().ctx).parseLine("{music:BB}")).toEqual([{ type: "music", cue: "theme:bb" }]);
   });
 });

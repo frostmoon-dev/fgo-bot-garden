@@ -788,6 +788,9 @@ export class ScriptParser {
   // {music:tense}. Unknown moods are dropped quietly; the scene's own mood keeps playing.
   private musicLine(raw: string): ScriptLine[] {
     const key = norm(raw);
+    // {music:BB}: that character's theme.
+    const character = this.ctx.characters.find((c) => norm(c.name) === key || c.aliases.some((a) => norm(a) === key));
+    if (character) return [{ type: "music", cue: `theme:${character.id}` }];
     const cue =
       (["silence", ...MUSIC_MOODS] as MusicCue[]).find((m) => m === key) ??
       MUSIC_ALIASES[key] ??
@@ -900,7 +903,7 @@ export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, 
         case "effect":
           return `{effect:${l.effect}}`;
         case "music":
-          return `{music:${l.cue}}`;
+          return `{music:${l.cue.startsWith("theme:") ? nameOf(l.cue.slice(6)) : l.cue}}`;
         case "form": {
           if (l.silent) return "";
           const character = characters.find((c) => c.id === l.characterId);
