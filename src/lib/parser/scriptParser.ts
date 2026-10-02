@@ -377,9 +377,10 @@ export class ScriptParser {
     }
 
     const body = rest ? this.segments(rest).flatMap((s) => this.textLine(s)) : [];
-    // A form switched from the Menu adds "(narration) Name changes form: Form." The sprite follows it.
+    // A form switched from the Menu adds "(narration) Name changes form: Form." The sprite changes as the
+    // line shows, so the switch goes before it: nothing may follow the line until the next reply.
     const change = readFormChange(rest);
-    if (change) after.push(...this.formLine(change.name, change.form, true));
+    if (change) before.push(...this.formLine(change.name, change.form, true));
     return [...before, ...body, ...after];
   }
 

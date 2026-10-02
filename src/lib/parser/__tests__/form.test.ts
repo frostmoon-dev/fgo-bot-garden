@@ -52,8 +52,8 @@ describe("form changes", () => {
     const { ctx } = withForms();
     const lines = new ScriptParser(ctx).parseLine("(narration) Oberon changes form: Vortigern.");
     expect(lines).toEqual([
-      { type: "narration", text: "Oberon changes form: Vortigern." },
       { type: "form", characterId: "oberon", spriteSetId: "vort", silent: true },
+      { type: "narration", text: "Oberon changes form: Vortigern." },
     ]);
     expect(toScript(lines, ctx.characters)).toBe("(narration) Oberon changes form: Vortigern.");
     expect(toScript(new ScriptParser(ctx).parseLine("{form:Oberon:vortigern}"), ctx.characters)).toBe("{form:Oberon:Vortigern}");
@@ -70,6 +70,19 @@ describe("form changes", () => {
       "Ritsuka",
     );
     expect(beats.map((b) => b.stage.forms?.oberon)).toEqual([undefined, "vort"]);
+  });
+
+  it("shows the new form on the Menu's change line itself", () => {
+    const { ctx } = withForms();
+    const { beats } = buildBeats(
+      [{ id: "m1", role: "assistant", content: "(narration) Oberon changes form: Traveler's Cloak." }],
+      ctx,
+      { mode: "narrative", mainCharacterId: "oberon" },
+      initialStage(null, "oberon"),
+      { user: "Ritsuka", char: "Oberon" },
+      "Ritsuka",
+    );
+    expect(beats.map((b) => b.stage.forms?.oberon)).toEqual(["cloak"]);
   });
 
   it("finds the latest form in a story", () => {
