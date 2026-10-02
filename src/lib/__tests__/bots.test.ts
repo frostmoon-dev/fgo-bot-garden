@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BOTS } from "../../../prisma/bots";
 import { ScriptParser } from "../parser/scriptParser";
@@ -25,6 +27,15 @@ describe.each(BOTS.map((b) => [b.name, b] as const))("%s", (_, bot) => {
       for (const line of parsed) if (line.type === "dialogue") expect(line.characterId).toBe("self");
     }
     expect(warnings).toEqual([]);
+  });
+
+  // A renamed or deleted sheet makes the character silently lose their sprite in the app (and in every
+  // database that was seeded with the old path).
+  it("points every ascension at a sprite sheet that exists", () => {
+    for (const set of bot.spriteSets) {
+      if (!set.sheetUrl.startsWith("/")) continue;
+      expect(existsSync(path.join(process.cwd(), "public", set.sheetUrl)), `${set.name}: ${set.sheetUrl}`).toBe(true);
+    }
   });
 
   it("has a face for every expression in every ascension", () => {
