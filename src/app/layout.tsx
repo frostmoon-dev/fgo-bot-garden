@@ -1,4 +1,5 @@
 import "@fontsource/opendyslexic/400.css";
+import { ClickSound } from "@/components/ui/ClickSound";
 import { DialogHost } from "@/components/ui/DialogHost";
 import "@fontsource/opendyslexic/700.css";
 import type { Metadata, Viewport } from "next";
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full">
         {children}
         <DialogHost />
+        <ClickSound />
       </body>
     </html>
   );

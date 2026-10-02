@@ -49,7 +49,9 @@ export class BeatBuilder {
     private readonly macros: Macros,
   ) {
     this.parser = new ScriptParser(parserCtx);
-    this.stage = startStage;
+    // A music cue lasts for the reply that gave it; after that the scene box's mood takes over again.
+    const { music: _music, ...rest } = startStage;
+    this.stage = rest;
   }
 
   pushLine(raw: string): Beat[] {

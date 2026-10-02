@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Effect } from "@/lib/parser/types";
+import { musicFor } from "@/lib/music/library";
 import { paintedTime, parseScene, timeOfDay, weatherOf } from "@/lib/scene";
 import { TimeTint, WeatherLayer } from "./Ambience";
 import { BackgroundLayer } from "./BackgroundLayer";
@@ -97,7 +98,15 @@ function Stage() {
   const lastMessage = s.messages.at(-1);
   const onLatest = !!beat && beat.messageId === lastMessage?.id && lastMessage.role === "assistant";
   const bgUrl = s.backgrounds.find((b) => b.key === stage.backgroundKey)?.imageUrl ?? null;
-  const musicUrl = s.musicMuted ? null : s.backgrounds.find((b) => b.key === stage.backgroundKey)?.musicUrl || null;
+  // Music follows the atmosphere: the AI's {music:…} cue, else the scene box's mood (see lib/music).
+  const musicUrl = s.musicMuted
+    ? null
+    : musicFor({
+        storyId: s.session.id,
+        cue: stage.music,
+        scene: s.settings.sceneTracker ? parseScene(s.session.scene) : null,
+        backgroundMusic: s.backgrounds.find((b) => b.key === stage.backgroundKey)?.musicUrl || null,
+      });
   const speakerId = shownBeat?.kind === "dialogue" ? shownBeat.speakerId : null;
   const pending = !!shownBeat && shownBeat.role === "user" && atEnd && s.streaming;
   // On a crowded phone screen only one character shows: the speaker, or during narration the last one who spoke.

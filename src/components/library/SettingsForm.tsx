@@ -5,6 +5,7 @@ import { reloadData, saveSettings } from "@/app/actions/library";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { Label, TextArea } from "@/components/ui/Field";
+import { ClickSoundToggle } from "@/components/ui/ClickSound";
 import { SectionTitle } from "@/components/ui/PageHeader";
 import { useAsync } from "@/components/ui/useAsync";
 import { unwrap } from "@/lib/actionResult";
@@ -56,7 +57,7 @@ const READING: Slider[] = [
   {
     key: "musicVolume",
     title: "Music volume",
-    hint: "Background music set on the Backgrounds page. 0% turns it off; V mutes it in a story.",
+    hint: "Music follows each story's mood (tense, tender, sad, a fight…); a background's own track plays in calm moments. 0% turns it off; V mutes it in a story.",
     min: 0,
     max: 1,
     step: 0.05,
@@ -242,6 +243,9 @@ export function SettingsForm({ settings }: { settings: SettingsView }) {
           />
         </fieldset>
         {sliders(READING)}
+        <div className="mt-6">
+          <ClickSoundToggle />
+        </div>
       </section>
 
       <section className="mt-14 border-t border-line pt-10">

@@ -1,3 +1,4 @@
+import type { MusicCue } from "@/lib/music/library";
 import { POSITIONS, type Mode, type Position, type ScriptLine } from "@/lib/parser/types";
 
 export interface SlotState {
@@ -10,6 +11,8 @@ export interface StageState {
   slots: Record<Position, SlotState | null>;
   // Ascensions the story itself switched to ({form:…}), by character id. Others use the story's chosen one.
   forms?: Record<string, string>;
+  // The AI's music cue for this reply ({music:…}). Cleared when the next reply starts.
+  music?: MusicCue;
 }
 
 export interface StageOptions {
@@ -34,7 +37,16 @@ function findSlot(stage: StageState, characterId: string): Position | null {
 const AUTO_ENTER_ORDER: Position[] = ["center", "left", "right"];
 
 export function applyLine(stage: StageState, line: ScriptLine, opts: StageOptions): StageState {
-  const next: StageState = { backgroundKey: stage.backgroundKey, slots: { ...stage.slots }, ...(stage.forms && { forms: stage.forms }) };
+  const next: StageState = {
+    backgroundKey: stage.backgroundKey,
+    slots: { ...stage.slots },
+    ...(stage.forms && { forms: stage.forms }),
+    ...(stage.music && { music: stage.music }),
+  };
+  if (line.type === "music") {
+    next.music = line.cue;
+    return next;
+  }
   if (line.type === "form") {
     next.forms = { ...stage.forms, [line.characterId]: line.spriteSetId };
     return next;

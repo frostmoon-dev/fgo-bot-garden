@@ -186,7 +186,6 @@ export function MenuPanel() {
   const toggleMusic = usePlay((s) => s.toggleMusic);
   const keepMoment = usePlay((s) => s.keepMoment);
   const beats = usePlay((s) => s.scene.beats);
-  const hasMusic = usePlay((s) => s.backgrounds.some((b) => b.musicUrl));
   const [title, setTitle] = useState(session.title);
 
   return (
@@ -230,11 +229,9 @@ export function MenuPanel() {
           >
             Keep this moment
           </button>
-                    {hasMusic && (
-            <button type="button" className="btn btn-outline" aria-pressed={!musicMuted} onClick={toggleMusic} title="V">
-              {musicMuted ? "Music on" : "Music off"}
-            </button>
-          )}
+          <button type="button" className="btn btn-outline" aria-pressed={!musicMuted} onClick={toggleMusic} title="V">
+            {musicMuted ? "Music on" : "Music off"}
+          </button>
         </section>
 
         <AscensionPicker />

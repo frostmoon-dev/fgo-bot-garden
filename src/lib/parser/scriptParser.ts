@@ -1,3 +1,4 @@
+import { MUSIC_MOODS, type MusicCue } from "@/lib/music/library";
 import { readFormChange } from "@/lib/story/formChange";
 import { closeAsterisks } from "@/lib/userInput";
 import { EFFECT_ALIASES, EFFECTS, POSITIONS, type Effect, type ParserCharacter, type ParserContext, type Position, type ScriptLine } from "./types";
@@ -5,7 +6,7 @@ import { EFFECT_ALIASES, EFFECTS, POSITIONS, type Effect, type ParserCharacter, 
 // Any {word:args}. Misspelled command names are matched in command(); anything else is dropped,
 // so braces never reach the text box.
 const COMMAND = /\{\s*([a-z]{3,10})\s*:([^{}]*)\}/gi;
-const COMMANDS = ["scene", "enter", "exit", "effect", "form"] as const;
+const COMMANDS = ["scene", "enter", "exit", "effect", "form", "music"] as const;
 const LEADING_BRACES = /^\{[^{}]*\}/;
 // A tag word at the start of a line: (narration) [Narrator] {narartion} <dialogue>, or Narration:
 const HEAD = /^[[({<]\s*([A-Za-z][A-Za-z' ]{0,18}?)\s*[\])}>]\s*:?\s*/;
@@ -123,6 +124,38 @@ const SYNONYMS: [RegExp, string[]][] = [
 function norm(value: string): string {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
+
+// Other words models use for music moods.
+const MUSIC_ALIASES: Record<string, MusicCue> = {
+  none: "silence",
+  stop: "silence",
+  off: "silence",
+  quiet: "silence",
+  peaceful: "calm",
+  relaxed: "calm",
+  happy: "cheerful",
+  fun: "cheerful",
+  comedy: "playful",
+  funny: "playful",
+  romantic: "tender",
+  romance: "tender",
+  love: "tender",
+  melancholy: "sad",
+  sorrow: "sad",
+  mysterious: "mystery",
+  dream: "mystery",
+  suspense: "tense",
+  danger: "tense",
+  ominous: "dark",
+  horror: "dark",
+  fight: "battle",
+  combat: "battle",
+  action: "battle",
+  heroic: "epic",
+  solemn: "epic",
+  beach: "sea",
+  ocean: "sea",
+};
 
 function matchForm<F extends { name: string }>(forms: F[], raw: string): F | undefined {
   const key = norm(raw.replace(/["'’]/g, "").replace(/(?:^|_)(?:form|ascension)$/, ""));
@@ -694,6 +727,7 @@ export class ScriptParser {
     const word = m[1].toLowerCase();
     const kind = COMMANDS.find((c) => c === word || near(word, c));
     const args = m[2].split(":").map((a) => a.trim());
+    if (kind === "music") return this.musicLine(args[0] ?? "");
     // A form change is about the character, not the stage, so it counts in dialogue mode too.
     if (kind === "form") return args.length >= 2 ? this.formLine(args[0], args.slice(1).join(":")) : this.formOnly(args[0] ?? "");
     if (this.ctx.mode === "dialogue") {
@@ -749,6 +783,20 @@ export class ScriptParser {
 
     this.warn(`Ignored unknown command ${raw}`);
     return [];
+  }
+
+  // {music:tense}. Unknown moods are dropped quietly; the scene's own mood keeps playing.
+  private musicLine(raw: string): ScriptLine[] {
+    const key = norm(raw);
+    const cue =
+      (["silence", ...MUSIC_MOODS] as MusicCue[]).find((m) => m === key) ??
+      MUSIC_ALIASES[key] ??
+      (["silence", ...MUSIC_MOODS] as MusicCue[]).find((m) => near(key, m));
+    if (!cue) {
+      this.warn(`Unknown music mood "${raw}" — ignored`);
+      return [];
+    }
+    return [{ type: "music", cue }];
   }
 
   // {form:Name:Form}. The form is matched loosely: "Vortigern", "vortigern form", "2" for "Ascension 2".
@@ -851,6 +899,8 @@ export function toScript(lines: ScriptLine[], characters: Pick<ParserCharacter, 
           return "";
         case "effect":
           return `{effect:${l.effect}}`;
+        case "music":
+          return `{music:${l.cue}}`;
         case "form": {
           if (l.silent) return "";
           const character = characters.find((c) => c.id === l.characterId);

@@ -164,7 +164,7 @@ describe("ScriptParser — commands", () => {
 
   it("ignores unknown command types", () => {
     const { ctx, warnings } = makeCtx();
-    expect(new ScriptParser(ctx).parseLine("{music:battle}")).toEqual([]);
+    expect(new ScriptParser(ctx).parseLine("{sound:battle}")).toEqual([]);
     expect(warnings[0]).toMatch(/unknown command/);
   });
 

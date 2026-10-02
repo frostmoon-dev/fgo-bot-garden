@@ -1,3 +1,4 @@
+import type { MusicCue } from "@/lib/music/library";
 export type Mode = "narrative" | "dialogue";
 export type Position = "left" | "center" | "right";
 export const POSITIONS: Position[] = ["left", "center", "right"];
@@ -51,7 +52,9 @@ export type ScriptLine =
   | { type: "arrive"; characterId: string }
   // The character changes ascension: {form:Name:Form name}. Their sprite switches from this line on.
   // `silent` when it was read from the "changes form" narration a manual switch writes, which says it already.
-  | { type: "form"; characterId: string; spriteSetId: string; silent?: boolean };
+  | { type: "form"; characterId: string; spriteSetId: string; silent?: boolean }
+  // The music changes to fit the moment: {music:tense}, or {music:silence}. Lasts until the reply ends.
+  | { type: "music"; cue: MusicCue };
 
 export interface ParserCharacter {
   id: string;
